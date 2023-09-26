@@ -1,8 +1,9 @@
-[package]
-name = "sqlparser-visitor-toolkit"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+resolver = "2"
+members = [
+    "packages/*"
+]
 
-[dependencies]
+[profile.dev.build-override]
+debug = 2

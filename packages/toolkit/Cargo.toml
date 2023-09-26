@@ -1,0 +1,41 @@
+[package]
+name = "sqlparser_ast_toolkit"
+resolver = "2"
+description = "Comprehensive & composable Visitor implementation for sqlparser to support sophisticated SQL analysis workloads"
+version = "0.1.0"
+edition = "2021"
+authors = ["James Sadler <james@cipherstash.com>"]
+homepage = "https://github.com/cipherstash/sqlparser-ast-toolkit"
+documentation = "https://docs.rs/sqlparser-ast-toolkit/"
+keywords = ["ansi", "sql", "lexer", "parser", "visitor", "analyze", "analyse", "cipherstash"]
+repository = "https://github.com/cipherstash/sqlparser-ast-toolkit"
+license = "Apache-2.0"
+include = [
+    "src/**/*.rs",
+    "Cargo.toml",
+    "LICENSE.TXT",
+]
+
+[lib]
+name = "sqlparser_ast_toolkit"
+path = "src/lib.rs"
+
+[features]
+default = ["bigdecimal"]
+bigdecimal = ["dep:bigdecimal", "sqlparser/bigdecimal", "sqlparser_ast_toolkit_derive/bigdecimal"]
+
+[dependencies]
+sqlparser = { version = "^0.39.0" }
+sqlparser_ast_toolkit_derive = { path = "../derive" }
+bigdecimal = { version = "^0.4.2", optional = true }
+
+[build-dependencies]
+sqlparser = { version = "^0.39.0", features = ["bigdecimal"]}
+sqlparser_ast_toolkit_codegen = { path = "../codegen" }
+bigdecimal = { version = "^0.4.2" }
+
+[package.metadata.release]
+# Instruct `cargo release` to not run `cargo publish` locally:
+# https://github.com/sunng87/cargo-release/blob/master/docs/reference.md#config-fields
+# See docs/releasing.md for details.
+publish = false
