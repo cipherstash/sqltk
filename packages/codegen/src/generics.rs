@@ -7,10 +7,7 @@ pub enum ContainerType {
 }
 
 pub(crate) fn is_generic_type(path: &TypePath) -> bool {
-    match path.path.segments.last().unwrap().arguments {
-        PathArguments::AngleBracketed(_) => true,
-        _ => false,
-    }
+    matches!(path.path.segments.last().unwrap().arguments, PathArguments::AngleBracketed(_))
 }
 
 pub(crate) fn expect_type_path(ty: &Type) -> &TypePath {
@@ -65,10 +62,7 @@ pub(crate) fn compose_generic_type(parts: &[TypePath]) -> TypePath {
 pub(crate) fn extract_generic_argument(path: &TypePath) -> TypePath {
     match path.path.segments.last().unwrap().arguments {
         PathArguments::AngleBracketed(ref generic) => match generic.args.first().unwrap() {
-            syn::GenericArgument::Type(ty) => match ty {
-                syn::Type::Path(type_path) => type_path.clone(),
-                _ => unreachable!(),
-            },
+            syn::GenericArgument::Type(syn::Type::Path(type_path)) => type_path.clone(),
             _ => unreachable!(),
         },
         _ => unreachable!(),

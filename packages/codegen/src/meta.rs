@@ -115,7 +115,7 @@ impl SqlParserMetaQuery {
 
         main_nodes.sort();
 
-        
+
 
         main_nodes
             .into_iter()
@@ -307,7 +307,7 @@ impl From<TypePath> for PrimitiveNode {
             .iter()
             .find(|item| item.type_path() == value)
             .unwrap_or_else(|| panic!("Unexpected primitive: {}",
-                quote!(#value).to_string()))
+                quote!(#value)))
             .clone()
     }
 }

@@ -75,14 +75,11 @@ impl SqlParserAstAnalyser {
                     );
                     path.pop();
                 }
-                Item::Mod(ItemMod { content, ident, .. }) => match content {
-                    Some((_, items)) => {
-                        path.push(ident.clone());
-                        self.parse_mod_recursively(items, path);
-                        path.pop();
-                    }
-                    None => {}
-                },
+                Item::Mod(ItemMod { content: Some((_, items)), ident, .. }) => {
+                    path.push(ident.clone());
+                    self.parse_mod_recursively(items, path);
+                    path.pop();
+                }
                 Item::Impl(ItemImpl {
                     trait_: Some((_, trait_path, _)),
                     self_ty,
@@ -90,14 +87,11 @@ impl SqlParserAstAnalyser {
                 }) => {
                     if is_impl_of_sqlparser_visit(trait_path) {
                         let type_path = syn_type_to_path(path, self_ty.deref());
-                        match self
+                        if let Some(ty) = self
                             .internal_types
                             .get_mut(&InternalTypePath(type_path.clone()))
                         {
-                            Some(ty) => {
-                                ty.has_visit_impl = true;
-                            }
-                            None => {}
+                            ty.has_visit_impl = true;
                         }
                     }
                 }
@@ -150,21 +144,15 @@ impl SqlParserAstAnalyser {
     }
 
     fn convert_generics_to_fully_qualified_form(&self, field: &mut Field) {
-        match field.ty {
-            Type::Path(ref type_path) => {
-                if is_generic_type(type_path) {
-                    let mut parts = decompose_generic_type(type_path);
-                    match self.resolve_fully_qualified_type(parts.last().unwrap()) {
-                        Some(resolved) => {
-                            let last_idx = parts.len() - 1;
-                            parts[last_idx] = resolved;
-                            field.ty = Type::Path(compose_generic_type(&parts));
-                        }
-                        None => {}
-                    }
+        if let Type::Path(ref type_path) = field.ty {
+            if is_generic_type(type_path) {
+                let mut parts = decompose_generic_type(type_path);
+                if let Some(resolved) = self.resolve_fully_qualified_type(parts.last().unwrap()) {
+                    let last_idx = parts.len() - 1;
+                    parts[last_idx] = resolved;
+                    field.ty = Type::Path(compose_generic_type(&parts));
                 }
             }
-            _ => {}
         }
     }
 
@@ -179,7 +167,10 @@ impl SqlParserAstAnalyser {
 
         let resolved = match self.public_types.get(base_ident) {
             Some(PubTypePath(found)) => Some(found.clone()),
-            None => self.internal_types_by_basename.get(base_ident).map(|InternalTypePath(found)| found.clone()),
+            None => self
+                .internal_types_by_basename
+                .get(base_ident)
+                .map(|InternalTypePath(found)| found.clone()),
         };
 
         match resolved {
@@ -187,13 +178,13 @@ impl SqlParserAstAnalyser {
                 eprintln!(
                     "cargo:message=type_path:[{}] => [{}]",
                     &type_path.to_token_stream().to_string(),
-                    quote!(#type_path).to_string()
+                    quote!(#type_path)
                 );
             }
             None => {
                 eprintln!(
                     "cargo:message=type_path:[{}] => [UNRESOLVED]",
-                    &type_path.to_token_stream().to_string()
+                    &type_path.to_token_stream()
                 );
             }
         }
@@ -313,9 +304,10 @@ impl SqlParserAstAnalyser {
 
         // This is the return type of sqlparser's parser. It's not discoverable
         // by examining the AST so we need to add it manually.
-        container_nodes.insert(ContainerNode::Vec(
-            Syn(syn::parse2(quote!(Vec<sqlparser::ast::Statement>)).unwrap())
-        ));
+        container_nodes.insert(ContainerNode::Vec(Syn(syn::parse2(quote!(
+            Vec<sqlparser::ast::Statement>
+        ))
+        .unwrap())));
 
         let primitive_nodes = PrimitiveNode::all().iter().cloned().collect();
 

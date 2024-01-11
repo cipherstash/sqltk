@@ -45,7 +45,7 @@ fn walk_struct_fields(fields: &Fields) -> TokenStream {
             for field in fields.iter() {
                 let ident = field.ident.clone().unwrap();
                 tokens.append_all(quote! {
-                    (&self.#ident).accept_with_id_iter(visitor, node_builder)?;
+                    self.#ident.accept_with_id_iter(visitor, node_builder)?;
                 });
             }
         }
@@ -56,7 +56,7 @@ fn walk_struct_fields(fields: &Fields) -> TokenStream {
             for (idx, _) in fields.iter() {
                 let field_idx = syn::Index::from(*idx);
                 tokens.append_all(quote! {
-                    (&self.#field_idx).accept_with_id_iter(visitor, node_builder)?;
+                    self.#field_idx.accept_with_id_iter(visitor, node_builder)?;
                 });
             }
         }
@@ -146,7 +146,6 @@ fn match_variants(
             #tokens
             #unreachable_match_arm_handler
         }
-        // std::ops::ControlFlow::Continue(Navigation::Visit)
     }
 }
 

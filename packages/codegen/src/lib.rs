@@ -372,6 +372,12 @@ pub fn generate_concrete_node_enum_match_macro(dest_file: &PathBuf) {
     output.append_all(quote! {
         macro_rules! match_concrete_node {
             ($node:ident, $handler:expr) => {
+                // Due to macro hygeine reasons code is generated using a
+                // closure.  Changing this macro to a proc macro would allow
+                // control over hygeine and we can implement the macro correctly
+                // and avoid clippy complaining.
+                // TODO: refactor into proc macro to satisfy clippy
+                #[allow(clippy::redundant_closure_call)]
                 match $node {
                     #(
                         ConcreteNode::#main_node_variants => { $handler(node) }
