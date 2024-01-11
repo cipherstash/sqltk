@@ -4,6 +4,12 @@ pub struct NodeBuilder {
     next_id: usize,
 }
 
+impl Default for NodeBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NodeBuilder {
     pub fn new() -> Self {
         Self { next_id: 0 }

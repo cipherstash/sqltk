@@ -86,7 +86,7 @@ mod test {
 
         assert_eq!(
             decomposed,
-            vec![quote!(Vec), quote!(Option), quote!(Expr),]
+            [quote!(Vec), quote!(Option), quote!(Expr)]
                 .iter()
                 .map(|tp| syn::parse2::<syn::TypePath>(tp.clone()).unwrap())
                 .collect::<Vec<_>>()

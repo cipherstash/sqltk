@@ -34,7 +34,7 @@ impl<'ast, T: AstNode<'ast>> AstNode<'ast> for Box<T> where Node<'ast, Box<T>>: 
         node_builder: &mut NodeBuilder,
     ) -> VisitorControlFlow {
         visit(node_builder.new_node(self).into(), visitor, || {
-            (&**self).accept_with_id_iter(visitor, node_builder)
+            (**self).accept_with_id_iter(visitor, node_builder)
         })
     }
 }

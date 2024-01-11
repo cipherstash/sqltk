@@ -43,11 +43,11 @@ fn define_visitor_dispatch_trait() -> TokenStream {
 
             fn dispatch_exit(&self, concrete_node: ConcreteNode<'ast>) -> VisitorControlFlow;
         }
-    }.into()
+    }
 }
 
 fn define_visitor_dispatch_impl() -> TokenStream {
-    let bounds: proc_macro2::TokenStream = define_visitor_dispatch_trait_bounds().into();
+    let bounds: proc_macro2::TokenStream = define_visitor_dispatch_trait_bounds();
 
     quote! {
         impl<'ast, V> VisitorDispatch<'ast> for V
@@ -62,7 +62,7 @@ fn define_visitor_dispatch_impl() -> TokenStream {
                 match_concrete_node!(concrete_node, |node| { self.dispatch_node_exit(node) })
             }
         }
-    }.into()
+    }
 }
 
 fn define_visitor_dispatch_trait_bounds() -> TokenStream {
@@ -72,7 +72,7 @@ fn define_visitor_dispatch_trait_bounds() -> TokenStream {
         VisitorDispatchNode<'ast, #node>
     });
 
-    quote! { #(#bounds +)* }.into()
+    quote! { #(#bounds +)* }
 }
 
 pub fn generate_visitable_impls(dest_file: &PathBuf) {
@@ -117,7 +117,7 @@ pub fn generate_node_list_file(dest_file: &PathBuf) {
         .expect("Failed to serialise sqlparser metadata to file")
 }
 
-pub fn generated_concrete_node_enum(dest_file: &PathBuf) -> () {
+pub fn generated_concrete_node_enum(dest_file: &PathBuf) {
     // FIXME: ensure sqlparser is built with correct set of features
     let query = SqlParserMetaQuery::from(sqlparser_node_extractor::extract(vec![]));
 
@@ -187,7 +187,7 @@ pub fn generated_concrete_node_enum(dest_file: &PathBuf) -> () {
                 .to_pascal_case()
         );
 
-        let decomposed_generics = generics::decompose_generic_type(&type_path_of_generic);
+        let decomposed_generics = generics::decompose_generic_type(type_path_of_generic);
 
         let variant_ident = format_ident!(
             "{}",
@@ -304,7 +304,7 @@ pub fn generated_concrete_node_enum(dest_file: &PathBuf) -> () {
         .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()));
 }
 
-pub fn generate_concrete_node_enum_match_macro(dest_file: &PathBuf) -> () {
+pub fn generate_concrete_node_enum_match_macro(dest_file: &PathBuf) {
     // FIXME: ensure sqlparser is built with correct set of features
     let query = SqlParserMetaQuery::from(sqlparser_node_extractor::extract(vec![]));
 
@@ -336,7 +336,7 @@ pub fn generate_concrete_node_enum_match_macro(dest_file: &PathBuf) -> () {
         let type_path = &node.type_path();
         let type_path_of_generic = &generics::extract_generic_argument(type_path);
 
-        let decomposed_generics = generics::decompose_generic_type(&type_path_of_generic);
+        let decomposed_generics = generics::decompose_generic_type(type_path_of_generic);
 
         let variant_ident = format_ident!(
             "{}",
@@ -439,7 +439,7 @@ pub(crate) fn impl_ast_node_for_primitive_nodes(
     output
 }
 
-pub fn generate_identifiable_impls(dest_file: &PathBuf) -> () {
+pub fn generate_identifiable_impls(dest_file: &PathBuf) {
     // FIXME: ensure sqlparser is built with correct set of features
     let query = SqlParserMetaQuery::from(sqlparser_node_extractor::extract(vec![]));
 

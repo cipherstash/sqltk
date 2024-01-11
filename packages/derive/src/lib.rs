@@ -59,7 +59,7 @@ fn impl_node_support(visitor: &Ident) -> proc_macro2::TokenStream {
         });
     }
 
-    output.into()
+    output
 }
 
 fn check_visits(visitor: &Ident, node: &TypePath) -> proc_macro2::TokenStream {
@@ -82,5 +82,4 @@ fn check_visits(visitor: &Ident, node: &TypePath) -> proc_macro2::TokenStream {
 
         <Visits::<#visitor, #node>>::ANSWER
     }
-    .into()
 }

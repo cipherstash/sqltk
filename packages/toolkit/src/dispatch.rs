@@ -2,7 +2,7 @@ use crate::{AstNode, Node, Visitor, VisitorControlFlow};
 
 pub struct FallbackVisitor;
 
-pub const FALLBACK_VISITOR: &'static FallbackVisitor = &FallbackVisitor;
+pub const FALLBACK_VISITOR: &FallbackVisitor = &FallbackVisitor;
 
 include!(concat!(env!("OUT_DIR"), "/generated_concrete_node_enum.rs"));
 include!(concat!(env!("OUT_DIR"), "/generated_concrete_node_enum_match_macro.rs"));

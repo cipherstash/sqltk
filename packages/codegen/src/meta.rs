@@ -78,16 +78,14 @@ impl SqlParserMetaQuery {
         all_nodes.extend(
             self.meta
                 .main_nodes
-                .keys()
-                .map(|k| k.clone())
+                .keys().cloned()
                 .chain(
                     self.meta
                         .container_nodes
                         .iter()
                         .map(|c| c.type_path().clone()),
                 )
-                .chain(self.meta.primitive_nodes.iter().map(|c| c.type_path()))
-                .map(|type_path| type_path.clone()),
+                .chain(self.meta.primitive_nodes.iter().map(|c| c.type_path())),
         );
 
         all_nodes.sort();
@@ -117,12 +115,12 @@ impl SqlParserMetaQuery {
 
         main_nodes.sort();
 
-        let main_nodes = main_nodes
-            .into_iter()
-            .map(|(Syn(type_path), type_def)| (type_path, type_def))
-            .collect();
+        
 
         main_nodes
+            .into_iter()
+            .map(|(Syn(type_path), type_def)| (type_path, type_def))
+            .collect()
     }
 
     pub fn container_nodes(&self) -> Vec<ContainerNode> {
@@ -169,8 +167,7 @@ impl SqlParserMeta {
         primitive_nodes: HashSet<PrimitiveNode>,
     ) -> Self {
         let mut all_nodes: Vec<Syn<TypePath>> = main_nodes
-            .keys()
-            .map(|syn_type_path| syn_type_path.clone())
+            .keys().cloned()
             .chain(
                 container_nodes
                     .iter()
@@ -309,10 +306,8 @@ impl From<TypePath> for PrimitiveNode {
         ALL_PRIMITIVE_NODES
             .iter()
             .find(|item| item.type_path() == value)
-            .expect(&format!(
-                "Unexpected primitive: {}",
-                quote!(#value).to_string()
-            ))
+            .unwrap_or_else(|| panic!("Unexpected primitive: {}",
+                quote!(#value).to_string()))
             .clone()
     }
 }
@@ -384,7 +379,7 @@ impl<'de, T: ToTokens + Parse + Eq + Hash + Clone> Deserialize<'de> for Syn<T> {
 
 impl<T: ToTokens + Parse + Eq + Hash + Clone> PartialOrd for Syn<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(&other))
+        Some(self.cmp(other))
     }
 }
 

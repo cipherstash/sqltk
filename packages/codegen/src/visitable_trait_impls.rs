@@ -13,7 +13,7 @@ impl<'a> ToTokens for AstNodeImpl<'a> {
         let (ref path, ref body) = match &self.1.ty {
             SqlParserTypeDefKind::Enum(item_enum) => (
                 self.0,
-                match_variants(self.0, &item_enum, self.1.is_non_exhaustive),
+                match_variants(self.0, item_enum, self.1.is_non_exhaustive),
             ),
             SqlParserTypeDefKind::Struct(item_struct) => (self.0, walk_struct_fields(&item_struct.fields)),
         };
