@@ -1,5 +1,5 @@
 [package]
-name = "sqlparser_ast_toolkit_derive"
+name = "sqltk_derive"
 resolver = "2"
 description = "Produces AST node metadata from sqlparser types and provides macros to generate Visitor implementations"
 version = "0.1.0"
@@ -36,7 +36,7 @@ cargo_metadata = "0.18.0"
 topological-sort = "0.2.2"
 darling = "0.20.3"
 static-include-bytes = "2.0.0"
-sqlparser_ast_toolkit_codegen = { path = "../codegen" }
+sqltk_codegen = { path = "../codegen" }
 serde_json = "1.0.108"
 impls = "*"
 
@@ -47,7 +47,7 @@ impls = "*"
 publish = false
 
 [build-dependencies]
-sqlparser_ast_toolkit_codegen = { path = "../codegen" }
+sqltk_codegen = { path = "../codegen" }
 syn = { version = "2.0.37", features = ["full", "extra-traits", "visit-mut"] }
 proc-macro2 = { version = "1.0.67", features = ["span-locations"] }
 quote = { version = "1" }

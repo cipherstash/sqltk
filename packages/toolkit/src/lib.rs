@@ -2,6 +2,8 @@
 //! This crate implements an enhanced Visitor implementation suitable for
 //! semantic analysis of SQL.
 //!
+//! The AST is provided by the `sqlparser` crate - which this crate re-exports.
+//!
 //! ## Key features
 //!
 //! 1. Full coverage of all AST node types from `sqlparser` (including all field
@@ -17,14 +19,15 @@
 //! ## Installation
 //!
 //! ```shell
-//! $ cargo add sqlparser_ast_toolkit
+//! $ cargo install cargo-expand
+//! $ cargo add sqltk
 //! ```
 //!
 //! If your crate makes use of `sqlparser`'s `bigdecimal` feature then add
-//! `sqlparser_ast_toolkit` with the `bigdecimal` feature:
+//! `sqltk` with the `bigdecimal` feature:
 //!
 //! ```shell
-//! $ cargo add sqlparser_ast_toolkit --features bigdecimal
+//! $ cargo add sqltk --features bigdecimal
 //! ```
 
 mod access;
@@ -45,7 +48,7 @@ pub use node::*;
 #[doc(hidden)]
 pub mod private;
 
-pub use sqlparser_ast_toolkit_derive::*;
+pub use sqltk_derive::*;
 
 use std::ops::ControlFlow;
 use private::visit;
@@ -141,11 +144,11 @@ pub fn nav_break() -> VisitorControlFlow {
 
 #[cfg(test)]
 pub mod test {
-    use crate::{self as sqlparser_ast_toolkit};
+    use crate::{self as sqltk};
     use sqlparser::ast::Expr;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
-    use sqlparser_ast_toolkit::{
+    use sqltk::{
         nav_visit, Node, AstNode, Visitor, VisitorControlFlow, VisitorDispatch,
     };
     use std::cell::RefCell;

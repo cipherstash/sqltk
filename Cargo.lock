@@ -418,17 +418,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "sqlparser_ast_toolkit"
+name = "sqltk"
 version = "0.1.0"
 dependencies = [
  "bigdecimal",
  "sqlparser",
- "sqlparser_ast_toolkit_codegen",
- "sqlparser_ast_toolkit_derive",
+ "sqltk_codegen",
+ "sqltk_derive",
 ]
 
 [[package]]
-name = "sqlparser_ast_toolkit_codegen"
+name = "sqltk_codegen"
 version = "0.1.0"
 dependencies = [
  "Inflector",
@@ -447,7 +447,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sqlparser_ast_toolkit_derive"
+name = "sqltk_derive"
 version = "0.1.0"
 dependencies = [
  "built",
@@ -462,18 +462,18 @@ dependencies = [
  "quote",
  "serde_json",
  "sqlparser",
- "sqlparser_ast_toolkit_codegen",
+ "sqltk_codegen",
  "static-include-bytes",
  "syn 2.0.38",
  "topological-sort",
 ]
 
 [[package]]
-name = "sqlparser_ast_toolkit_example"
+name = "sqltk_example"
 version = "0.1.0"
 dependencies = [
  "sqlparser",
- "sqlparser_ast_toolkit",
+ "sqltk",
 ]
 
 [[package]]

@@ -1,10 +1,10 @@
-extern crate self as sqlparser_ast_toolkit;
+extern crate self as sqltk;
 
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use proc_macro_crate::{crate_name, FoundCrate};
 use quote::{quote, TokenStreamExt};
-use sqlparser_ast_toolkit_codegen::{SqlParserMeta, SqlParserMetaQuery};
+use sqltk_codegen::{SqlParserMeta, SqlParserMetaQuery};
 use static_include_bytes::static_include_bytes;
 use syn::{parse_macro_input, DeriveInput, TypePath};
 
@@ -24,8 +24,8 @@ fn node_meta() -> SqlParserMetaQuery {
 }
 
 fn resolve_crate() -> proc_macro2::TokenStream {
-    let found_crate = crate_name("sqlparser_ast_toolkit")
-        .expect("sqlparser_ast_toolkit is present in `Cargo.toml`");
+    let found_crate = crate_name("sqltk")
+        .expect("sqltk is present in `Cargo.toml`");
 
     match found_crate {
         FoundCrate::Itself => quote!(crate),

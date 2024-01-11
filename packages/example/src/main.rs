@@ -1,5 +1,5 @@
 use sqlparser::ast::{Expr, Statement};
-use sqlparser_ast_toolkit::{Visitor, VisitorControlFlow, nav_visit, Node};
+use sqltk::{Visitor, VisitorControlFlow, nav_visit, Node};
 
 // #[derive(UniversalVisitor)]
 // #[universal_visitor(visits(Expr, Statement))]

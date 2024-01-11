@@ -1,10 +1,10 @@
 [package]
-name = "sqlparser_ast_toolkit_example"
+name = "sqltk_example"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sqlparser_ast_toolkit = { path = "../toolkit" }
+sqltk = { path = "../toolkit" }
 sqlparser = "0.39.0"

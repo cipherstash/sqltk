@@ -1,5 +1,5 @@
 [package]
-name = "sqlparser_ast_toolkit_codegen"
+name = "sqltk_codegen"
 resolver = "2"
 description = "Produces AST node metadata from sqlparser types and provides macros to generate Visitor implementations"
 version = "0.1.0"

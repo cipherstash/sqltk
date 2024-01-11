@@ -67,7 +67,7 @@ It does this by running `cargo expand` and consuming the output. Note that `carg
 3. Define a Visitor
 
 ```rust
-use sqlparser_ast_toolkit::{VisitorDispatch, Visitor};
+use sqltk::{VisitorDispatch, Visitor};
 use sqlparser::ast::Expr;
 use sqlparser::dialect::GenericDialect;
 use sqlparser::parser::Parser;

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use sqlparser_ast_toolkit_codegen::{
+use sqltk_codegen::{
     generate_dispatch_impls, generate_visitable_impls, generated_concrete_node_enum,
     generate_concrete_node_enum_match_macro,
 };

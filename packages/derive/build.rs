@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use sqlparser_ast_toolkit_codegen::generate_node_list_file;
+use sqltk_codegen::generate_node_list_file;
 
 fn main() {
     let dest_file =
