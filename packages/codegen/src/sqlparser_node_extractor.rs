@@ -31,7 +31,10 @@ pub fn extract(sqlparser_features: Vec<String>) -> SqlParserMeta {
             .unwrap(),
     );
 
-    println!("cargo:rerun-if-changed={}", sql_parser_dir.as_os_str().to_str().unwrap());
+    println!(
+        "cargo:rerun-if-changed={}",
+        sql_parser_dir.as_os_str().to_str().unwrap()
+    );
 
     // TODO: instead of depending on cargo-expand, just invoke rustc the same
     // way that cargo-expand does and remove a dependency.

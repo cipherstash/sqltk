@@ -1,8 +1,8 @@
-# sqlparser-ast-toolkit
+# sqltk
 
 This crate is an extension for the [`sqlparser`](https://crates.io/crates/sqlparser) crate to support semantic analysis and transformation of arbitrary SQL.
 
-At its core, `sqlparser-ast-toolkit` provides a replacement [Visitor](https://en.wikipedia.org/wiki/Visitor_design_pattern) implementation that addresses a shortcoming of the implementation provided by `sqlparser`.
+At its core, `sqltk` provides a replacement [Visitor](https://en.wikipedia.org/wiki/Visitor_design_pattern) implementation that addresses a shortcoming of the implementation provided by `sqlparser`.
 
 `sqlparser`'s Visitor does not provide callbacks for every node type - which means it is not useful for any workload which requires whole-of-AST analysis.
 
@@ -20,7 +20,7 @@ A Visitor implementation should maintain one piece of state to keep code modular
 
 But analysing SQL is non-trivial and can require management of a number of pieces of independent state.
 
-To make this manageable, `sqlparser-ast-toolkit` provides the ability to compose multiple Visitors into a *pipeline*.
+To make this manageable, `sqltk` provides the ability to compose multiple Visitors into a *pipeline*.
 
 State flows down the pipeline uni-directionally - and successive Visitors in the pipeline can opt-in to what state they consume from the previous steps.
 
@@ -42,7 +42,7 @@ Maintains the expanded (fully-qualified) identifiers for all identifier nodes. C
 
 `Transform`
 
-`sqlparser-ast-toolkit` provides no mechanism to mutate the AST during traversal. Instead, this crate provides a means to describe edits as values and to collect those edits during traversal.
+`sqltk` provides no mechanism to mutate the AST during traversal. Instead, this crate provides a means to describe edits as values and to collect those edits during traversal.
 
 The `Transform` visitor can build a new AST by traversing the existing AST and copying it to a new one while applying edits.
 
@@ -58,9 +58,9 @@ It does this by running `cargo expand` and consuming the output. Note that `carg
 
 `$ cargo install cargo-expand`
 
-  > NOTE: `cargo-expand` invokes Rust *nightly* to do its job. Therefore a nightly Rust toolchain must be installed. However, `sqlparser-ast-toolkit`'s generated code does not require a nightly compiler.
+  > NOTE: `cargo-expand` invokes Rust *nightly* to do its job. Therefore a nightly Rust toolchain must be installed. However, `sqltk`'s generated code does not require a nightly compiler.
 
-2. Add `sqlparser-ast-toolkit` to your Cargo project
+2. Add `sqltk` to your Cargo project
 
 `$ cargo add sqlparser-ast-tookit`
 
@@ -105,9 +105,9 @@ println!("There were {} Expr nodes in the statement!", visitor.count);
 
 ## FAQ
 
-### Q: are there any plans to include the `sqlparser-ast-toolkit` functionality in `sqlparser` itself?
+### Q: are there any plans to include the `sqltk` functionality in `sqlparser` itself?
 
-As authors of `sqlparser-ast-toolkit`, we are not opposed to the idea (assuming of course that the `sqlparser` maintainers would consider it).
+As authors of `sqltk`, we are not opposed to the idea (assuming of course that the `sqlparser` maintainers would consider it).
 
 However, we ([CipherStash](https://cipherstash.com)) depend heavily on this codebase and it's still in its infancy. We would like to retain the freedom of ownership over this functionality until we consider it stable.
 
@@ -115,4 +115,4 @@ Making breaking changes will be more difficult after it is included upstream.
 
 ## Misc.
 
-`sqlparser-ast-toolkit` is maintained by CipherStash and is a core component of [Tandem](https://docs.cipherstash.com/getting-started/step3.html), our encryption-in-use database proxy.
+`sqltk` is maintained by CipherStash and is a core component of [Tandem](https://docs.cipherstash.com/getting-started/step3.html), our encryption-in-use database proxy.

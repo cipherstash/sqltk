@@ -4,15 +4,15 @@ use crate::{ConcreteNode, Navigation, VisitorControlFlow, VisitorDispatch};
 
 pub fn visit<'ast, V, F>(
     node: ConcreteNode<'ast>,
-    visitor: &V,
-    visit_children: F,
+    visitor: &mut V,
+    mut visit_children: F,
 ) -> VisitorControlFlow
 where
     V: VisitorDispatch<'ast>,
-    F: FnOnce() -> VisitorControlFlow,
+    F: FnMut(&mut V) -> VisitorControlFlow,
 {
     let result = match visitor.dispatch_enter(node.clone()) {
-        ControlFlow::Continue(Navigation::Visit) => visit_children(),
+        ControlFlow::Continue(Navigation::Visit) => visit_children(visitor),
         other => other,
     };
 

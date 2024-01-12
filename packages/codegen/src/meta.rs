@@ -13,7 +13,7 @@ use syn::{parse::Parse, ItemEnum, ItemStruct};
 
 use super::*;
 
-/// Serializable/deserializable data structture that captures AST node metadata
+/// Serializable/deserializable data structure that captures AST node metadata
 /// extracted from `sqlparser`.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SqlParserMeta {
@@ -78,7 +78,8 @@ impl SqlParserMetaQuery {
         all_nodes.extend(
             self.meta
                 .main_nodes
-                .keys().cloned()
+                .keys()
+                .cloned()
                 .chain(
                     self.meta
                         .container_nodes
@@ -99,7 +100,8 @@ impl SqlParserMetaQuery {
     }
 
     pub fn all_nodes_with_node_id(&self) -> Vec<(TypePath, usize)> {
-        let mut nodes: Vec<_> = self.all_nodes()
+        let mut nodes: Vec<_> = self
+            .all_nodes()
             .iter()
             .map(|type_path| (type_path.clone(), self.lookup_node_id(type_path).unwrap()))
             .collect();
@@ -114,8 +116,6 @@ impl SqlParserMetaQuery {
             self.meta.main_nodes.clone().into_iter().collect();
 
         main_nodes.sort();
-
-
 
         main_nodes
             .into_iter()
@@ -167,7 +167,8 @@ impl SqlParserMeta {
         primitive_nodes: HashSet<PrimitiveNode>,
     ) -> Self {
         let mut all_nodes: Vec<Syn<TypePath>> = main_nodes
-            .keys().cloned()
+            .keys()
+            .cloned()
             .chain(
                 container_nodes
                     .iter()
@@ -306,8 +307,7 @@ impl From<TypePath> for PrimitiveNode {
         ALL_PRIMITIVE_NODES
             .iter()
             .find(|item| item.type_path() == value)
-            .unwrap_or_else(|| panic!("Unexpected primitive: {}",
-                quote!(#value)))
+            .unwrap_or_else(|| panic!("Unexpected primitive: {}", quote!(#value)))
             .clone()
     }
 }

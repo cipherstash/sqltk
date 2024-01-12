@@ -1,4 +1,4 @@
-# sqlparser-ast-toolkit
+# sqltk
 
 [X] Walk Statement type to discover all reachable AST nodes
 
