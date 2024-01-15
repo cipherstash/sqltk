@@ -24,8 +24,7 @@ fn node_meta() -> SqlParserMetaQuery {
 }
 
 fn resolve_crate() -> proc_macro2::TokenStream {
-    let found_crate = crate_name("sqltk")
-        .expect("sqltk is present in `Cargo.toml`");
+    let found_crate = crate_name("sqltk").expect("sqltk is present in `Cargo.toml`");
 
     match found_crate {
         FoundCrate::Itself => quote!(crate),

@@ -104,7 +104,6 @@
 //     type Output = False;
 // }
 
-
 // impl<A, B, Tail: TList + Has<A>> Has<A> for Cons<B, Tail>
 // where
 //     (A, B): IsSameType,

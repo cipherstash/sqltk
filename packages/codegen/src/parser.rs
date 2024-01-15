@@ -75,7 +75,11 @@ impl SqlParserAstAnalyser {
                     );
                     path.pop();
                 }
-                Item::Mod(ItemMod { content: Some((_, items)), ident, .. }) => {
+                Item::Mod(ItemMod {
+                    content: Some((_, items)),
+                    ident,
+                    ..
+                }) => {
                     path.push(ident.clone());
                     self.parse_mod_recursively(items, path);
                     path.pop();
@@ -165,31 +169,13 @@ impl SqlParserAstAnalyser {
         // 3. return None
         let base_ident = &type_path.path.segments.last().unwrap().ident;
 
-        let resolved = match self.public_types.get(base_ident) {
+        match self.public_types.get(base_ident) {
             Some(PubTypePath(found)) => Some(found.clone()),
             None => self
                 .internal_types_by_basename
                 .get(base_ident)
                 .map(|InternalTypePath(found)| found.clone()),
-        };
-
-        match resolved {
-            Some(ref type_path) => {
-                eprintln!(
-                    "cargo:message=type_path:[{}] => [{}]",
-                    &type_path.to_token_stream().to_string(),
-                    quote!(#type_path)
-                );
-            }
-            None => {
-                eprintln!(
-                    "cargo:message=type_path:[{}] => [UNRESOLVED]",
-                    &type_path.to_token_stream()
-                );
-            }
         }
-
-        resolved
     }
 
     fn finish(&mut self) -> SqlParserMeta {

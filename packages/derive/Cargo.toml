@@ -5,10 +5,10 @@ description = "Produces AST node metadata from sqlparser types and provides macr
 version = "0.1.0"
 edition = "2021"
 authors = ["James Sadler <james@cipherstash.com>"]
-homepage = "https://github.com/cipherstash/sqlparser-ast-toolkit"
-documentation = "https://docs.rs/sqlparser-ast-toolkit/"
+homepage = "https://github.com/cipherstash/sqltk"
+documentation = "https://docs.rs/sqltk/"
 keywords = ["ansi", "sql", "lexer", "parser", "ast", "analyze", "cipherstash"]
-repository = "https://github.com/cipherstash/sqlparser-ast-toolkit"
+repository = "https://github.com/cipherstash/sqltk"
 license = "Apache-2.0"
 include = [
     "src/**/*.rs",

@@ -7,13 +7,17 @@ pub enum ContainerType {
 }
 
 pub(crate) fn is_generic_type(path: &TypePath) -> bool {
-    matches!(path.path.segments.last().unwrap().arguments, PathArguments::AngleBracketed(_))
+    matches!(
+        path.path.segments.last().unwrap().arguments,
+        PathArguments::AngleBracketed(_)
+    )
 }
 
 pub(crate) fn expect_type_path(ty: &Type) -> &TypePath {
-    match ty {
-        Type::Path(ref type_path) => type_path,
-        _ => panic!("Expected Type::Path(TypePath)"),
+    if let Type::Path(ref type_path) = ty {
+        type_path
+    } else {
+        panic!("Expected Type::Path(TypePath)")
     }
 }
 
@@ -47,6 +51,14 @@ pub(crate) fn decompose_generic_type(ty: &TypePath) -> Vec<TypePath> {
     }
     output.push(ty.clone());
     output
+}
+
+pub(crate) fn innermost_generic_type(ty: &TypePath) -> TypePath {
+    let mut ty: TypePath = ty.clone();
+    while is_generic_type(&ty) {
+        ty = extract_generic_argument(&ty);
+    }
+    ty
 }
 
 pub(crate) fn compose_generic_type(parts: &[TypePath]) -> TypePath {
@@ -92,9 +104,6 @@ mod test {
         let type_path: syn::TypePath = syn::parse2(quote!(Vec<Option<Expr>>)).unwrap();
         let decomposed = super::decompose_generic_type(&type_path);
 
-        assert_eq!(
-            type_path,
-            super::compose_generic_type(&decomposed),
-        );
+        assert_eq!(type_path, super::compose_generic_type(&decomposed),);
     }
 }
