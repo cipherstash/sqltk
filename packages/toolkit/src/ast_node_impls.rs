@@ -25,12 +25,16 @@ where
     where
         V: VisitorDispatch<'ast>,
     {
-        visit(node_builder.new_node(self).into(), visitor, |visitor| {
-            for child in self.iter() {
-                child.accept_with_node_builder(visitor, node_builder)?;
-            }
-            nav_visit()
-        })
+        if self.is_empty() {
+            nav_skip()
+        } else {
+            visit(node_builder.new_node(self).into(), visitor, |visitor| {
+                for child in self.iter() {
+                    child.accept_with_node_builder(visitor, node_builder)?;
+                }
+                nav_visit()
+            })
+        }
     }
 }
 
@@ -58,10 +62,14 @@ where
         visitor: &mut V,
         node_builder: &mut NodeBuilder,
     ) -> VisitorControlFlow {
-        visit(node_builder.new_node(self).into(), visitor, |visitor| match self {
-            Some(child) => child.accept_with_node_builder(visitor, node_builder),
-            None => nav_skip(),
-        })
+        if self.is_none() {
+            nav_skip()
+        } else {
+            visit(node_builder.new_node(self).into(), visitor, |visitor| match self {
+                Some(child) => child.accept_with_node_builder(visitor, node_builder),
+                None => nav_skip(),
+            })
+        }
     }
 }
 

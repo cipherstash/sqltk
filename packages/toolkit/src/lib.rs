@@ -152,7 +152,8 @@ pub fn nav_break() -> VisitorControlFlow {
 #[cfg(test)]
 pub mod test {
     use crate::{self as sqltk, ConcreteNode};
-    use sqlparser::ast::{Expr};
+    use sqlparser::ast;
+    use sqlparser::ast::Expr;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
     use sqltk::{nav_visit, AstNode, Node, Visitor, VisitorControlFlow, VisitorDispatch};
@@ -207,6 +208,74 @@ pub mod test {
         let _result = ast.accept(&mut visitor);
 
         assert_eq!(visitor.count, 0usize);
+    }
+
+    #[test]
+    fn visit_useless() {
+        #[derive(VisitorDispatch)]
+        #[derive(Default)]
+        pub struct Recorder {
+            pub items_enter: Vec<(String, usize)>,
+        }
+
+        // TODO: this feels like a massive hack; I would like to be able to
+        // specify the enter(), but _only_ for Option<With>, Option<Expr>,
+        // Vec<TableWithJoins> and Vec<SelectItem>, and no others.
+
+        // types that should _not_ be visited because we know it'll be None/empty with
+        // the `sql` expression below.
+        impl<'ast> Visitor<'ast, Option<ast::With>> for Recorder {
+            fn enter(&mut self, node: Node<'ast, Option<ast::With>>) -> VisitorControlFlow {
+                self.items_enter.push(("Option<With>".into(), node.id()));
+                nav_visit()
+            }
+        }
+        impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>> for Recorder {
+            fn enter(&mut self, node: Node<'ast, Vec<ast::TableWithJoins>>) -> VisitorControlFlow {
+                self.items_enter.push(("Vec<TableWithJoins>".into(), node.id()));
+                nav_visit()
+            }
+        }
+
+        // types that _should_ be visited because we know they'll be present after
+        // parsing the `sql` expression below.
+        impl<'ast> Visitor<'ast, Option<ast::Expr>> for Recorder {
+            fn enter(&mut self, node: Node<'ast, Option<ast::Expr>>) -> VisitorControlFlow {
+                self.items_enter.push(("Option<Expr>".into(), node.id()));
+                nav_visit()
+            }
+        }
+        impl<'ast> Visitor<'ast, Vec<ast::SelectItem>> for Recorder {
+            fn enter(&mut self, node: Node<'ast, Vec<ast::SelectItem>>) -> VisitorControlFlow {
+                self.items_enter.push(("Vec<SelectItem>".into(), node.id()));
+                nav_visit()
+            }
+        }
+
+        let dialect = GenericDialect {};
+
+        let sql = "SELECT 1 as a \
+                   WHERE a > 0";
+
+        let ast = Parser::parse_sql(&dialect, sql).unwrap();
+
+        let mut visitor = Recorder::default();
+
+        ast.accept(&mut visitor);
+
+        // HACK: This is a fragile test because the IDs are included in the string
+        //       to be compared with.
+        // TODO: Work out how to use DisplayType to create our own to_string()
+        //       equivalent that doesn't bake in the IDs.
+
+        let mut expected_items = Vec::<(String, usize)>::new();
+        expected_items.push(("Option<Expr>".to_string(), 16usize));
+        expected_items.push(("Vec<SelectItem>".to_string(), 8usize));
+
+        let mut visitor_items = visitor.items_enter;
+        visitor_items.sort();
+
+        assert_eq!(visitor_items, expected_items);
     }
 
     #[test]
