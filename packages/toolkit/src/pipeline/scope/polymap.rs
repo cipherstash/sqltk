@@ -32,14 +32,14 @@ use std::rc::Rc;
 ///
 /// let mut polymap = PolyMap::new();
 ///
-/// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// #[derive(PartialEq, Eq, PartialOrd, Ord)]
 /// struct MyVecOfBool;
 ///
 /// impl PolyMapKey for MyVecOfBool {
 ///     type PolyMapValue = Vec<bool>;
 /// }
 ///
-/// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// #[derive(PartialEq, Eq, PartialOrd, Ord)]
 /// struct MyVecOfString;
 ///
 /// impl PolyMapKey for MyVecOfString {
@@ -89,6 +89,7 @@ use std::rc::Rc;
 /// The unsafe function [`Rc::from_raw`] is used to convert a raw pointer back
 /// into a `Rc<RefCell<T>>`.
 ///
+#[derive(Default)]
 pub struct PolyMap {
     config: RefCell<HashMap<InternalKey, InternalValue>>,
 }
@@ -103,9 +104,9 @@ impl PolyMap {
 }
 
 /// Trait for types used as keys in a `PolyMap`.
-pub trait PolyMapKey: 'static + Debug {
+pub trait PolyMapKey: 'static {
     /// The type of the value retrieved by this key.
-    type PolyMapValue: Debug;
+    type PolyMapValue;
 }
 
 impl PolyMap {
@@ -157,9 +158,7 @@ impl PolyMap {
         let key = InternalKey {
             type_id: TypeId::of::<Key>(),
             type_name: type_name::<Key>(),
-            clone_to_other: Rc::new(RefCell::new(Box::new(
-                |_: &PolyMap, _: &mut PolyMap| {},
-            ))),
+            clone_to_other: Rc::new(RefCell::new(Box::new(|_: &PolyMap, _: &mut PolyMap| {}))),
         };
 
         let config_hash = self.config.borrow();
@@ -212,7 +211,7 @@ impl Clone for PolyMap {
         for key in clone_keys() {
             // Key has access to concrete type of value, it can safely
             // reconstruct an `Rc` for the value and put it into the new PolyMap.
-            (*key.clone_to_other.borrow())(&self, &mut new_polymap);
+            (*key.clone_to_other.borrow())(self, &mut new_polymap);
         }
 
         new_polymap
@@ -306,7 +305,7 @@ impl InternalValue {
     /// while eliding its type.  But `InternalValue` upholds the safety
     /// guarantees by ensuring that the strong reference count of the `Rc` is
     /// decremented when the `InternalValue` is dropped.
-    fn new<V: Debug>(value: Rc<RefCell<V>>) -> Self {
+    fn new<V>(value: Rc<RefCell<V>>) -> Self {
         // Capture the memory address to the content of the Rc and save it.
         // Turning an `Rc` into an address means that the type parameter `V`
         // can be discarded.
@@ -324,9 +323,7 @@ impl InternalValue {
     }
 
     fn decr_strong_count_on_drop<V>(ptr: usize) -> Box<dyn Fn()> {
-        Box::new(move || {
-            unsafe { Rc::decrement_strong_count(ptr as *const RefCell<V>) }
-        })
+        Box::new(move || unsafe { Rc::decrement_strong_count(ptr as *const RefCell<V>) })
     }
 
     /// Gets the Rc<RefCell<V>> out of the [`InternalVal`].
@@ -336,7 +333,7 @@ impl InternalValue {
     /// This function is unsafe because calling it with the wrong `V` is
     /// undefined behaviour. However this function is private and is only
     /// invoked when the type for `V` is know to be correct.
-    unsafe fn get<V: Debug>(&self) -> Rc<RefCell<V>> {
+    unsafe fn get<V>(&self) -> Rc<RefCell<V>> {
         let ptr = self.ptr as *const RefCell<V>;
         // The `Rc` returned from `from_raw` will go out of scope at the end of
         // this function, but the `PolyMap` must retain a strong reference as it
@@ -427,6 +424,29 @@ mod test {
         }
 
         match polymap.get::<BarKey>() {
+            Ok(_value) => assert!(true),
+            Err(msg) => assert!(false, "{msg}"),
+        }
+    }
+
+    #[test]
+    fn clone_and_drop_original() {
+        let mut polymap = PolyMap::new();
+
+        polymap.insert::<FooKey>(FooValue).unwrap();
+        polymap.insert::<BarKey>(BarValue).unwrap();
+
+        let polymap = polymap;
+
+        let cloned = polymap.clone();
+        drop(polymap);
+
+        match cloned.get::<FooKey>() {
+            Ok(_value) => assert!(true),
+            Err(msg) => assert!(false, "{msg}"),
+        }
+
+        match cloned.get::<BarKey>() {
             Ok(_value) => assert!(true),
             Err(msg) => assert!(false, "{msg}"),
         }
@@ -537,7 +557,7 @@ mod test {
 
         {
             let mut number = value1.borrow_mut();
-            *number = *number * 2;
+            *number *= 2;
             assert_eq!(246913578, *number);
         }
 

@@ -28,6 +28,7 @@ bigdecimal = ["dep:bigdecimal", "sqlparser/bigdecimal", "sqltk_derive/bigdecimal
 sqlparser = { version = "^0.39.0" }
 sqltk_derive = { path = "../derive" }
 bigdecimal = { version = "^0.4.2", optional = true }
+tynm = "0.1.8"
 
 [build-dependencies]
 sqlparser = { version = "^0.39.0", features = ["bigdecimal"]}

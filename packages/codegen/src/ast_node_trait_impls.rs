@@ -195,10 +195,7 @@ impl<'a> AstNodeImpl<'a> {
         let ty: TypePath = syn::parse_quote!(#ty);
         let ty = generics::innermost_generic_type(&ty);
 
-        eprintln!(
-            "cargo:message=GEN {}",
-            (&ty).into_token_stream().to_string()
-        );
+        eprintln!("cargo:message=GEN {}", (&ty).into_token_stream());
         ty.path.segments.last().unwrap().ident.clone()
     }
 
@@ -207,10 +204,9 @@ impl<'a> AstNodeImpl<'a> {
         if self.primitive_nodes.contains(&normalised) {
             false
         } else {
-            *self.reachability.get(&normalised).expect(&format!(
-                "Could not find type {:?} in reachability data",
-                &field.ty
-            ))
+            *self.reachability.get(&normalised).unwrap_or_else(|| {
+                panic!("Could not find type {:?} in reachability data", &field.ty)
+            })
         }
     }
 }

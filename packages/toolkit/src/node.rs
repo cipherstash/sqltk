@@ -61,11 +61,6 @@ where
     DisplayType<T>: Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} (ID: {})",
-            DisplayType::<T>::new().to_string(),
-            self.id
-        )
+        write!(f, "{} (ID: {})", DisplayType::<T>::new(), self.id)
     }
 }

@@ -6,7 +6,7 @@ use proc_macro_crate::{crate_name, FoundCrate};
 use quote::{quote, TokenStreamExt};
 use sqltk_codegen::{SqlParserMeta, SqlParserMetaQuery};
 use static_include_bytes::static_include_bytes;
-use syn::{parse_macro_input, DeriveInput, TypePath};
+use syn::{parse_macro_input, DeriveInput, Generics, TypePath};
 
 static_include_bytes!(
     #[no_mangle]
@@ -37,22 +37,26 @@ fn resolve_crate() -> proc_macro2::TokenStream {
 
 #[proc_macro_derive(VisitorDispatch)]
 pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
-    let DeriveInput { ident, .. } = parse_macro_input!(input);
+    let DeriveInput {
+        ident, generics, ..
+    } = parse_macro_input!(input);
 
-    impl_node_support(&ident).into()
+    impl_node_support(&ident, &generics).into()
 }
 
-fn impl_node_support(visitor: &Ident) -> proc_macro2::TokenStream {
+fn impl_node_support(visitor: &Ident, generics: &Generics) -> proc_macro2::TokenStream {
     let krate = resolve_crate();
     let meta = node_meta();
+
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
     let mut output = proc_macro2::TokenStream::new();
 
     for node in meta.all_nodes() {
-        let check = check_visits(visitor, &node);
+        let check = check_visits(visitor, generics, &node);
 
         output.append_all(quote! {
-            impl #krate::NodeSupport<#node> for #visitor {
+            impl #impl_generics #krate::NodeSupport<#node> for #visitor #type_generics #where_clause {
                 type Supported = #krate::Condition<{#check}>;
             }
         });
@@ -61,8 +65,13 @@ fn impl_node_support(visitor: &Ident) -> proc_macro2::TokenStream {
     output
 }
 
-fn check_visits(visitor: &Ident, node: &TypePath) -> proc_macro2::TokenStream {
+fn check_visits(
+    visitor: &Ident,
+    _generics: &Generics,
+    node: &TypePath,
+) -> proc_macro2::TokenStream {
     let krate = resolve_crate();
+    // let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
     quote! {
         trait AssumeNotImplemented { const ANSWER: bool = false; }

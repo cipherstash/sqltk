@@ -23,17 +23,19 @@ where
     fn dispatch_node_exit(&mut self, node: Node<'ast, N>) -> VisitorControlFlow;
 }
 
-impl<'ast, N: AstNode<'ast>, V> VisitorDispatchNode<'ast, N> for V
+impl<'ast, N: AstNode<'ast>, Target, V> VisitorDispatchNode<'ast, N> for V
 where
     N: 'ast,
-    Self: NodeSupport<N> + MaybeFallback<'ast, N, <Self as NodeSupport<N>>::Supported>,
+    Target: Visitor<'ast, N>,
+    Self: NodeSupport<N>
+        + MaybeFallback<'ast, N, <Self as NodeSupport<N>>::Supported, Target = Target>,
 {
     fn dispatch_node_enter(&mut self, node: Node<'ast, N>) -> VisitorControlFlow {
-        self.visitor().enter(node)
+        self.target().enter(node)
     }
 
     fn dispatch_node_exit(&mut self, node: Node<'ast, N>) -> VisitorControlFlow {
-        self.visitor().exit(node)
+        self.target().exit(node)
     }
 }
 
@@ -44,8 +46,8 @@ pub trait NodeSupport<Node: ?Sized> {
 impl<'ast, N: AstNode<'ast>> Visitor<'ast, N> for FallbackVisitor {}
 
 pub trait MaybeFallback<'ast, N: AstNode<'ast>, Supported> {
-    type Visitor: Visitor<'ast, N>;
-    fn visitor(&mut self) -> &mut Self::Visitor;
+    type Target;
+    fn target(&mut self) -> &mut Self::Target;
 }
 
 pub struct Condition<const BOOL: bool>;
@@ -55,9 +57,9 @@ where
     N: AstNode<'ast>,
     V: NodeSupport<N, Supported = Condition<true>> + Visitor<'ast, N>,
 {
-    type Visitor = Self;
+    type Target = Self;
 
-    fn visitor(&mut self) -> &mut Self::Visitor {
+    fn target(&mut self) -> &mut Self::Target {
         self
     }
 }
@@ -67,9 +69,9 @@ where
     N: AstNode<'ast>,
     V: NodeSupport<N, Supported = Condition<false>>,
 {
-    type Visitor = FallbackVisitor;
+    type Target = FallbackVisitor;
 
-    fn visitor(&mut self) -> &mut Self::Visitor {
+    fn target(&mut self) -> &mut Self::Target {
         // SAFETY: `FallbackVisitor` has no state so this is actually safe
         // A new instance of the visitor cannot be created here because it
         // is returned by reference.

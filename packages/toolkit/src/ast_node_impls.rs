@@ -65,10 +65,14 @@ where
         if self.is_none() {
             nav_skip()
         } else {
-            visit(node_builder.new_node(self).into(), visitor, |visitor| match self {
-                Some(child) => child.accept_with_node_builder(visitor, node_builder),
-                None => nav_skip(),
-            })
+            visit(
+                node_builder.new_node(self).into(),
+                visitor,
+                |visitor| match self {
+                    Some(child) => child.accept_with_node_builder(visitor, node_builder),
+                    None => nav_skip(),
+                },
+            )
         }
     }
 }

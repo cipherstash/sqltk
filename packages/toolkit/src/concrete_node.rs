@@ -1,6 +1,6 @@
 #![allow(clippy::redundant_closure_call)]
 
-use crate::{Node, AstNode};
+use crate::{AstNode, Node};
 
 include!(concat!(env!("OUT_DIR"), "/generated_concrete_node_enum.rs"));
 

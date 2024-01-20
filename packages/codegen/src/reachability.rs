@@ -72,7 +72,7 @@ impl Reachability {
     /// node does not have a reachability relationship with a source node.
     fn execute(&mut self) -> HashMap<Ident, bool> {
         for (node, _) in self.nodes.clone().iter() {
-            let source_node_reachable = self.reachability_for_node_type(&node);
+            let source_node_reachable = self.reachability_for_node_type(node);
             self.results.insert(node.clone(), source_node_reachable);
         }
 
@@ -83,20 +83,20 @@ impl Reachability {
         // At the type-level the AST is an infinitely recursive graph (not a
         // tree like at the value level), so we need to prevent looping forever
         // and bail when we see a type we've already examined.
-        if self.results.contains_key(&node) {
-            return self.results.get(&node).copied().expect("WTF");
+        if self.results.contains_key(node) {
+            return self.results.get(node).copied().expect("WTF");
         }
 
         if self.is_expr(node) {
             return false;
         }
 
-        if self.source_types.contains(&node) {
+        if self.source_types.contains(node) {
             // The base case
             true
         } else {
             // Examine the child nodes
-            match self.nodes.get(&node).clone() {
+            match self.nodes.get(node) {
                 Some(SqlParserTypeDef {
                     ty: SqlParserTypeDefKind::Enum(Syn(ItemEnum { variants, .. })),
                     ..
@@ -118,15 +118,12 @@ impl Reachability {
 
                 // Any field types that are not a "main" node (i.e. primitives &
                 // containers) can be freely ignored.
-                None => false
+                None => false,
             }
         }
     }
 
-    fn traverse_child_types(
-        &mut self,
-        child_node_types: Vec<Type>,
-    ) -> bool {
+    fn traverse_child_types(&mut self, child_node_types: Vec<Type>) -> bool {
         // Examine all child nodes but do not check reachabilty through Expr nodes.
         for ty in child_node_types
             .iter()
@@ -138,8 +135,8 @@ impl Reachability {
             .collect::<Vec<_>>()
             .iter()
         {
-            let child_source_node_reachable = self.reachability_for_node_type(&ty);
-            if child_source_node_reachable  {
+            let child_source_node_reachable = self.reachability_for_node_type(ty);
+            if child_source_node_reachable {
                 return true;
             }
         }
@@ -151,7 +148,6 @@ impl Reachability {
         ty == &self.expr_ty
     }
 }
-
 
 #[cfg(test)]
 mod test {
