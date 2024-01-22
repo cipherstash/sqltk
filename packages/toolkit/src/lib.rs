@@ -55,7 +55,7 @@ pub mod private;
 pub use sqltk_derive::*;
 
 use private::visit;
-use std::{ops::ControlFlow};
+use std::ops::ControlFlow;
 
 #[derive(Clone, Copy)]
 /// Used as the "continue" type in the [`ControlFlow`] value returned by all
@@ -212,18 +212,13 @@ pub mod test {
 
     #[test]
     fn visit_useless() {
-        #[derive(VisitorDispatch)]
-        #[derive(Default)]
+        #[derive(VisitorDispatch, Default)]
         pub struct Recorder {
             pub items_enter: Vec<(String, usize)>,
         }
 
-        // TODO: this feels like a massive hack; I would like to be able to
-        // specify the enter(), but _only_ for Option<With>, Option<Expr>,
-        // Vec<TableWithJoins> and Vec<SelectItem>, and no others.
-
-        // types that should _not_ be visited because we know it'll be None/empty with
-        // the `sql` expression below.
+        // types that should _not_ be visited because we know it'll be
+        // None/empty with the `sql` expression below.
         impl<'ast> Visitor<'ast, Option<ast::With>> for Recorder {
             fn enter(&mut self, node: Node<'ast, Option<ast::With>>) -> VisitorControlFlow {
                 self.items_enter.push(("Option<With>".into(), node.id()));
@@ -232,13 +227,14 @@ pub mod test {
         }
         impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>> for Recorder {
             fn enter(&mut self, node: Node<'ast, Vec<ast::TableWithJoins>>) -> VisitorControlFlow {
-                self.items_enter.push(("Vec<TableWithJoins>".into(), node.id()));
+                self.items_enter
+                    .push(("Vec<TableWithJoins>".into(), node.id()));
                 nav_visit()
             }
         }
 
-        // types that _should_ be visited because we know they'll be present after
-        // parsing the `sql` expression below.
+        // types that _should_ be visited because we know they'll be present
+        // after parsing the `sql` expression below.
         impl<'ast> Visitor<'ast, Option<ast::Expr>> for Recorder {
             fn enter(&mut self, node: Node<'ast, Option<ast::Expr>>) -> VisitorControlFlow {
                 self.items_enter.push(("Option<Expr>".into(), node.id()));
@@ -262,11 +258,6 @@ pub mod test {
         let mut visitor = Recorder::default();
 
         ast.accept(&mut visitor);
-
-        // HACK: This is a fragile test because the IDs are included in the string
-        //       to be compared with.
-        // TODO: Work out how to use DisplayType to create our own to_string()
-        //       equivalent that doesn't bake in the IDs.
 
         let mut expected_items = Vec::<(String, usize)>::new();
         expected_items.push(("Option<Expr>".to_string(), 16usize));
