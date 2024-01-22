@@ -215,7 +215,7 @@ pub mod test {
         #[derive(VisitorDispatch)]
         #[derive(Default)]
         pub struct Recorder {
-            pub items_enter: Vec<String>,
+            pub items_enter: Vec<(String, usize)>,
         }
 
         // TODO: this feels like a massive hack; I would like to be able to
@@ -226,13 +226,13 @@ pub mod test {
         // the `sql` expression below.
         impl<'ast> Visitor<'ast, Option<ast::With>> for Recorder {
             fn enter(&mut self, node: Node<'ast, Option<ast::With>>) -> VisitorControlFlow {
-                self.items_enter.push(node.to_string());
+                self.items_enter.push(("Option<With>".into(), node.id()));
                 nav_visit()
             }
         }
         impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>> for Recorder {
             fn enter(&mut self, node: Node<'ast, Vec<ast::TableWithJoins>>) -> VisitorControlFlow {
-                self.items_enter.push(node.to_string());
+                self.items_enter.push(("Vec<TableWithJoins>".into(), node.id()));
                 nav_visit()
             }
         }
@@ -241,13 +241,13 @@ pub mod test {
         // parsing the `sql` expression below.
         impl<'ast> Visitor<'ast, Option<ast::Expr>> for Recorder {
             fn enter(&mut self, node: Node<'ast, Option<ast::Expr>>) -> VisitorControlFlow {
-                self.items_enter.push(node.to_string());
+                self.items_enter.push(("Option<Expr>".into(), node.id()));
                 nav_visit()
             }
         }
         impl<'ast> Visitor<'ast, Vec<ast::SelectItem>> for Recorder {
             fn enter(&mut self, node: Node<'ast, Vec<ast::SelectItem>>) -> VisitorControlFlow {
-                self.items_enter.push(node.to_string());
+                self.items_enter.push(("Vec<SelectItem>".into(), node.id()));
                 nav_visit()
             }
         }
@@ -268,9 +268,9 @@ pub mod test {
         // TODO: Work out how to use DisplayType to create our own to_string()
         //       equivalent that doesn't bake in the IDs.
 
-        let mut expected_items = Vec::<String>::new();
-        expected_items.push("Option<Expr> (ID: 16)".to_string());
-        expected_items.push("Vec<SelectItem> (ID: 8)".to_string());
+        let mut expected_items = Vec::<(String, usize)>::new();
+        expected_items.push(("Option<Expr>".to_string(), 16usize));
+        expected_items.push(("Vec<SelectItem>".to_string(), 8usize));
 
         let mut visitor_items = visitor.items_enter;
         visitor_items.sort();
