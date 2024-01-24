@@ -217,7 +217,7 @@ pub mod test {
             pub items_enter: Vec<(String, usize)>,
         }
 
-        // types that should _not_ be visited because we know it'll be
+        // Types that should _not_ be visited because we know it'll be
         // None/empty with the `sql` expression below.
         impl<'ast> Visitor<'ast, Option<ast::With>> for Recorder {
             fn enter(&mut self, node: Node<'ast, Option<ast::With>>) -> VisitorControlFlow {
@@ -233,7 +233,7 @@ pub mod test {
             }
         }
 
-        // types that _should_ be visited because we know they'll be present
+        // Types that _should_ be visited because we know they'll be present
         // after parsing the `sql` expression below.
         impl<'ast> Visitor<'ast, Option<ast::Expr>> for Recorder {
             fn enter(&mut self, node: Node<'ast, Option<ast::Expr>>) -> VisitorControlFlow {
@@ -250,8 +250,7 @@ pub mod test {
 
         let dialect = GenericDialect {};
 
-        let sql = "SELECT 1 as a \
-                   WHERE a > 0";
+        let sql = "SELECT 1 as a WHERE a > 0";
 
         let ast = Parser::parse_sql(&dialect, sql).unwrap();
 
@@ -260,7 +259,7 @@ pub mod test {
         ast.accept(&mut visitor);
 
         let mut expected_items = Vec::<(String, usize)>::new();
-        expected_items.push(("Option<Expr>".to_string(), 16usize));
+        expected_items.push(("Option<Expr>".to_string(), 17usize));
         expected_items.push(("Vec<SelectItem>".to_string(), 8usize));
 
         let mut visitor_items = visitor.items_enter;
