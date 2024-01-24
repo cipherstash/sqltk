@@ -55,7 +55,7 @@ pub mod private;
 pub use sqltk_derive::*;
 
 use private::visit;
-use std::{ops::ControlFlow};
+use std::ops::ControlFlow;
 
 #[derive(Clone, Copy)]
 /// Used as the "continue" type in the [`ControlFlow`] value returned by all
@@ -152,7 +152,8 @@ pub fn nav_break() -> VisitorControlFlow {
 #[cfg(test)]
 pub mod test {
     use crate::{self as sqltk, ConcreteNode};
-    use sqlparser::ast::{Expr};
+    use sqlparser::ast;
+    use sqlparser::ast::Expr;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
     use sqltk::{nav_visit, AstNode, Node, Visitor, VisitorControlFlow, VisitorDispatch};
@@ -210,8 +211,66 @@ pub mod test {
     }
 
     #[test]
-    #[ignore = "Needs more work"]
-    fn visit_order() {
+    fn visit_useless() {
+        #[derive(VisitorDispatch, Default)]
+        pub struct Recorder {
+            pub items_enter: Vec<(String, usize)>,
+        }
+
+        // types that should _not_ be visited because we know it'll be
+        // None/empty with the `sql` expression below.
+        impl<'ast> Visitor<'ast, Option<ast::With>> for Recorder {
+            fn enter(&mut self, node: Node<'ast, Option<ast::With>>) -> VisitorControlFlow {
+                self.items_enter.push(("Option<With>".into(), node.id()));
+                nav_visit()
+            }
+        }
+        impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>> for Recorder {
+            fn enter(&mut self, node: Node<'ast, Vec<ast::TableWithJoins>>) -> VisitorControlFlow {
+                self.items_enter
+                    .push(("Vec<TableWithJoins>".into(), node.id()));
+                nav_visit()
+            }
+        }
+
+        // types that _should_ be visited because we know they'll be present
+        // after parsing the `sql` expression below.
+        impl<'ast> Visitor<'ast, Option<ast::Expr>> for Recorder {
+            fn enter(&mut self, node: Node<'ast, Option<ast::Expr>>) -> VisitorControlFlow {
+                self.items_enter.push(("Option<Expr>".into(), node.id()));
+                nav_visit()
+            }
+        }
+        impl<'ast> Visitor<'ast, Vec<ast::SelectItem>> for Recorder {
+            fn enter(&mut self, node: Node<'ast, Vec<ast::SelectItem>>) -> VisitorControlFlow {
+                self.items_enter.push(("Vec<SelectItem>".into(), node.id()));
+                nav_visit()
+            }
+        }
+
+        let dialect = GenericDialect {};
+
+        let sql = "SELECT 1 as a \
+                   WHERE a > 0";
+
+        let ast = Parser::parse_sql(&dialect, sql).unwrap();
+
+        let mut visitor = Recorder::default();
+
+        ast.accept(&mut visitor);
+
+        let mut expected_items = Vec::<(String, usize)>::new();
+        expected_items.push(("Option<Expr>".to_string(), 16usize));
+        expected_items.push(("Vec<SelectItem>".to_string(), 8usize));
+
+        let mut visitor_items = visitor.items_enter;
+        visitor_items.sort();
+
+        assert_eq!(visitor_items, expected_items);
+    }
+
+    #[test]
+    fn source_node_reachable_fields_are_visited_first() {
         #[derive(Default)]
         struct Recorder {
             pub order_enter: Vec<String>,
@@ -243,6 +302,19 @@ pub mod test {
 
         ast.accept(&mut visitor);
 
-        assert_eq!(*visitor.order_enter, Vec::<String>::new());
+        assert_eq!(visitor.order_enter[0..12], [
+            "Vec<Statement> (ID: 0)",
+            "Statement (ID: 1)",
+            "Box<Query> (ID: 2)",
+            "Query (ID: 3)",
+            "Box<SetExpr> (ID: 4)",
+            "SetExpr (ID: 5)",
+            "Box<Select> (ID: 6)",
+            "Select (ID: 7)",
+            "Vec<TableWithJoins> (ID: 8)",
+            "TableWithJoins (ID: 9)",
+            "TableFactor (ID: 10)",
+            "ObjectName (ID: 11)",
+        ]);
     }
 }
