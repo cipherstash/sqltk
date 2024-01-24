@@ -6,7 +6,13 @@ use inflector::Inflector;
 
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 
-use std::{cmp::Ordering, collections::HashMap, fs::File, io::Write, path::PathBuf};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    fs::File,
+    io::Write,
+    path::PathBuf,
+};
 use syn::{Ident, TypePath};
 
 mod ast_node_trait_impls;
@@ -95,26 +101,33 @@ impl Codegen {
         quote! { #(#bounds +)* }
     }
 
-    pub fn generate_ast_node_impls(&self, dest_file: &PathBuf) {
-        eprintln!("cargo:message=REACH 1");
+    pub fn generate_ast_node_impls(&self, dest_file: &PathBuf, reachability_debug_file: &PathBuf) {
         let reachability = Reachability::derive(&self.meta);
 
-        let reachability_file = PathBuf::from("/tmp/reachable.txt");
+        let mut file = File::create(&reachability_debug_file)
+            .unwrap_or_else(|_| panic!("Could not open {}", &reachability_debug_file.display()));
 
-        let mut file = File::create(&reachability_file)
-            .unwrap_or_else(|_| panic!("Could not open {}", &reachability_file.display()));
-
-        for (ty, distance) in &reachability {
-            let _ = file.write(format!("{}: {}\n", ty.to_token_stream(), distance.0).as_bytes());
+        for (ty, source_node_reachable) in &reachability {
+            let _ = file.write(format!("{} {}\n", source_node_reachable, ty.to_token_stream()).as_bytes());
         }
-
-        eprintln!("cargo:message=REACH 2");
 
         let mut generated_code = TokenStream::new();
 
         let main_nodes = self.meta.main_nodes();
+        let primitive_nodes = self
+            .meta
+            .primitive_nodes()
+            .iter()
+            .map(|pn| pn.type_path().path.segments.last().unwrap().ident.clone())
+            .collect::<HashSet<_>>();
+
         let ast_node_impls_for_main_nodes = main_nodes.iter().map(|(type_path, type_def)| {
-            AstNodeImpl::new(type_path, type_def, &reachability, &self.meta)
+            AstNodeImpl::new(
+                type_path,
+                type_def,
+                &reachability,
+                &primitive_nodes,
+            )
         });
 
         let ast_node_impls_for_primitive_nodes =
@@ -343,8 +356,6 @@ impl Codegen {
         let mut file = File::create(dest_file)
             .unwrap_or_else(|_| panic!("Could not open {}", &dest_file.display()));
 
-        eprintln!("cargo:message=ENUM {}", &output.to_string());
-
         let formatted = prettyplease::unparse(
             &syn::parse_file(&output.to_string())
                 .expect("BUG! Generated Rust code could not be parsed"),
@@ -458,8 +469,6 @@ impl Codegen {
         let mut file = File::create(dest_file)
             .unwrap_or_else(|_| panic!("Could not open {}", &dest_file.display()));
 
-        eprintln!("cargo:message=ENUM {}", &output.to_string());
-
         let formatted = prettyplease::unparse(
             &syn::parse_file(&output.to_string())
                 .expect("BUG! Generated Rust code could not be parsed"),
@@ -505,7 +514,6 @@ impl Codegen {
                     }
                 }
             });
-
         }
 
         output

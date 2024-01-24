@@ -270,8 +270,7 @@ pub mod test {
     }
 
     #[test]
-    #[ignore = "Needs more work"]
-    fn visit_order() {
+    fn source_node_reachable_fields_are_visited_first() {
         #[derive(Default)]
         struct Recorder {
             pub order_enter: Vec<String>,
@@ -303,6 +302,19 @@ pub mod test {
 
         ast.accept(&mut visitor);
 
-        assert_eq!(*visitor.order_enter, Vec::<String>::new());
+        assert_eq!(visitor.order_enter[0..12], [
+            "Vec<Statement> (ID: 0)",
+            "Statement (ID: 1)",
+            "Box<Query> (ID: 2)",
+            "Query (ID: 3)",
+            "Box<SetExpr> (ID: 4)",
+            "SetExpr (ID: 5)",
+            "Box<Select> (ID: 6)",
+            "Select (ID: 7)",
+            "Vec<TableWithJoins> (ID: 8)",
+            "TableWithJoins (ID: 9)",
+            "TableFactor (ID: 10)",
+            "ObjectName (ID: 11)",
+        ]);
     }
 }

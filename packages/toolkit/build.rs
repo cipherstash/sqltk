@@ -13,7 +13,10 @@ fn main() {
     let ast_node_impls_file =
         PathBuf::from(&std::env::var("OUT_DIR").unwrap()).join("generated_ast_node_impls.rs");
 
-    codegen.generate_ast_node_impls(&ast_node_impls_file);
+    let reachability_debug_file =
+        PathBuf::from(&std::env::var("OUT_DIR").unwrap()).join("reachability-debug.txt");
+
+    codegen.generate_ast_node_impls(&ast_node_impls_file, &reachability_debug_file);
 
     let concrete_node_enum_file =
         PathBuf::from(&std::env::var("OUT_DIR").unwrap()).join("generated_concrete_node_enum.rs");

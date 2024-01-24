@@ -34,141 +34,77 @@
 //! identifiers but those identifiers can only be referenced within their
 //! lexical scope: the surrounding (parent) expressions.
 
-use serde::{Deserialize, Serialize};
-use std::{
-    cmp::min,
-    collections::{HashMap, HashSet},
-    ops::Deref,
-};
-use syn::{ItemEnum, ItemStruct, TypePath};
+use std::collections::HashMap;
+use syn::{Ident, ItemEnum, ItemStruct, Type, TypePath};
 
-use crate::{generics, SqlParserMetaQuery, SqlParserTypeDef, SqlParserTypeDefKind, Syn};
+use crate::{SqlParserMetaQuery, SqlParserTypeDef, SqlParserTypeDefKind, Syn};
 
-/// Captures the reachability of a source node type from an arbitrary node type.
-///
-/// `Distance(0)` is a source node, `Distance(1)` is one step removed
-/// from a source node etc.
-///
-/// Ultimately, source node reachability is a bool true/false question but we're
-/// keeping track of the distance for debugging reasons.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, PartialOrd, Eq, Ord)]
-pub struct Distance(pub(crate) u8);
-
-impl Copy for Distance {}
-
-impl Distance {
-    /// Create a new `Distance` one step removed from this one.
-    fn inc(&self) -> Distance {
-        if self.0 == u8::MAX {
-            *self
-        } else {
-            Self(self.0 + 1)
-        }
-    }
-
-    /// Used to propagate values from child nodes to parent nodes.
-    fn propagate(parent: Distance, child: Distance) -> Distance {
-        min(parent, child.inc())
-    }
+pub struct Reachability {
+    results: HashMap<Ident, bool>,
+    nodes: HashMap<Ident, SqlParserTypeDef>,
+    source_types: Vec<Ident>,
+    expr_ty: Ident,
 }
 
-pub struct Reachability<'a> {
-    query: &'a SqlParserMetaQuery,
-    results: HashMap<TypePath, Distance>,
-    nodes: HashMap<TypePath, SqlParserTypeDef>,
-    source_types: Vec<TypePath>,
-    expr_ty: TypePath,
-}
-
-impl<'a> Reachability<'a> {
+impl Reachability {
     /// Derive source node reachability metrics from our knowledge of
     /// `sqlparser` AST types.
-    pub fn derive(query: &'a SqlParserMetaQuery) -> HashMap<TypePath, Distance> {
+    pub fn derive(query: &SqlParserMetaQuery) -> HashMap<Ident, bool> {
         Self::new(query).execute()
     }
 
-    fn new(query: &'a SqlParserMetaQuery) -> Self {
+    fn new(query: &SqlParserMetaQuery) -> Self {
         Self {
-            query,
             results: HashMap::new(),
-            // NOTE: source_types & expr_ty should be a const but
-            // syn::parse_quote!  cannot be called in a const context.
-            source_types: vec![
-                syn::parse_quote!(sqlparser::ast::ObjectName),
-                syn::parse_quote!(sqlparser::ast::Table),
-            ],
-            expr_ty: syn::parse_quote!(sqlparser::ast::Expr),
-            nodes: HashMap::new(),
+            source_types: vec![syn::parse_quote!(ObjectName), syn::parse_quote!(Table)],
+            expr_ty: syn::parse_quote!(Expr),
+            nodes: query
+                .main_nodes()
+                .iter()
+                .map(|(ty, def)| (ty.path.segments.last().unwrap().ident.clone(), def.clone()))
+                .collect(),
         }
     }
 
     /// Computes source node reachability for every `sqlparser` node type.
     ///
-    /// `None` as a value in the map indicates that the corresponding node does not
-    /// have a reachability relationship with a source node.
-    fn execute(mut self) -> HashMap<TypePath, Distance> {
-        let nodes = self
-            .query
-            .main_nodes()
-            .iter()
-            .map(|(ty, def)| (ty.clone(), def.clone()))
-            .collect();
-
-        self.nodes = nodes;
-
-        let mut seen: HashSet<TypePath> = HashSet::new();
-
-        for (node, _) in self.nodes.iter() {
-            let node_distance = self
-                .resolve_ty(node).map(|ty| self.reachability_for_node_type(ty, &mut seen))
-                .unwrap_or(Distance(255));
-            self.results.insert(node.clone(), node_distance);
+    /// bool(255) as a value in the map indicates that the corresponding
+    /// node does not have a reachability relationship with a source node.
+    fn execute(&mut self) -> HashMap<Ident, bool> {
+        for (node, _) in self.nodes.clone().iter() {
+            let source_node_reachable = self.reachability_for_node_type(&node);
+            self.results.insert(node.clone(), source_node_reachable);
         }
 
-        self.results
+        self.results.clone()
     }
 
-    fn resolve_ty(&self, ty: &TypePath) -> Option<ResolvedTypePath> {
-        // Field types can be generic: we care about the innermost type.
-        // E.G. We want the `Expr` from `Vec<Vec<Expr>>`
-        let ty = generics::innermost_generic_type(ty);
-        self.query
-            .lookup_main_node_by_ident(&ty.path.segments.last().unwrap().ident).map(|ty| ResolvedTypePath(ty.clone()))
-    }
-
-    fn reachability_for_node_type(
-        &self,
-        node: ResolvedTypePath,
-        seen: &mut HashSet<TypePath>,
-    ) -> Distance {
+    fn reachability_for_node_type(&mut self, node: &Ident) -> bool {
         // At the type-level the AST is an infinitely recursive graph (not a
         // tree like at the value level), so we need to prevent looping forever
         // and bail when we see a type we've already examined.
-        if seen.contains(&node.0) {
-            return self
-                .results
-                .get(&node).copied()
-                .unwrap_or(Distance(255));
+        if self.results.contains_key(&node) {
+            return self.results.get(&node).copied().expect("WTF");
         }
 
-        seen.insert(node.0.clone());
-
-        let mut node_distance = Distance(255);
+        if self.is_expr(node) {
+            return false;
+        }
 
         if self.source_types.contains(&node) {
             // The base case
-            node_distance = Distance(0);
+            true
         } else {
             // Examine the child nodes
-            match self.nodes.get(&node) {
+            match self.nodes.get(&node).clone() {
                 Some(SqlParserTypeDef {
                     ty: SqlParserTypeDefKind::Enum(Syn(ItemEnum { variants, .. })),
                     ..
                 }) => {
                     let iter = variants.iter();
                     let iter = iter.flat_map(|v| &v.fields);
-                    let mut iter = iter.map(|f| &f.ty);
-                    node_distance = self.traverse_child_types(&mut iter, node_distance, seen);
+                    let field_types = iter.map(|f| f.ty.clone()).collect::<Vec<_>>();
+                    self.traverse_child_types(field_types)
                 }
 
                 Some(SqlParserTypeDef {
@@ -176,54 +112,53 @@ impl<'a> Reachability<'a> {
                     ..
                 }) => {
                     let iter = fields.iter();
-                    let mut iter = iter.map(|field| &field.ty);
-                    node_distance = self.traverse_child_types(&mut iter, node_distance, seen);
+                    let field_types = iter.map(|f| f.ty.clone()).collect::<Vec<_>>();
+                    self.traverse_child_types(field_types)
                 }
 
                 // Any field types that are not a "main" node (i.e. primitives &
                 // containers) can be freely ignored.
-                None => {
-                    node_distance = Distance(255);
-                }
-            };
+                None => false
+            }
         }
-
-        node_distance
     }
 
-    fn traverse_child_types<'t, I: Iterator<Item = &'t syn::Type>>(
-        &self,
-        child_node_types: &mut I,
-        mut node_distance: Distance,
-        seen: &mut HashSet<TypePath>,
-    ) -> Distance {
+    fn traverse_child_types(
+        &mut self,
+        child_node_types: Vec<Type>,
+    ) -> bool {
         // Examine all child nodes but do not check reachabilty through Expr nodes.
         for ty in child_node_types
-            .map(|ty| syn::parse_quote!(#ty))
+            .iter()
+            .map(|ty| {
+                let type_path: TypePath = syn::parse_quote!(#ty);
+                type_path.path.segments.last().unwrap().ident.clone()
+            })
             .filter(|ty| !self.is_expr(ty))
+            .collect::<Vec<_>>()
+            .iter()
         {
-            let child_reachable = self
-                .resolve_ty(&ty).map(|ty| self.reachability_for_node_type(ty, seen))
-                .unwrap_or(Distance(255));
-            // Propagate the reachability of the child into the current node.
-            node_distance = Distance::propagate(node_distance, child_reachable);
+            let child_source_node_reachable = self.reachability_for_node_type(&ty);
+            if child_source_node_reachable  {
+                return true;
+            }
         }
 
-        node_distance
+        false
     }
 
-    fn is_expr(&self, ty: &TypePath) -> bool {
+    fn is_expr(&self, ty: &Ident) -> bool {
         ty == &self.expr_ty
     }
 }
 
-struct ResolvedTypePath(TypePath);
 
-// TODO: delete me
-impl Deref for ResolvedTypePath {
-    type Target = TypePath;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+#[cfg(test)]
+mod test {
+    #[test]
+    fn sort_order_of_bool() {
+        let mut v = vec![true, false];
+        v.sort();
+        assert_eq!(v, vec![false, true]);
     }
 }

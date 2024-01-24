@@ -1,20 +1,19 @@
-use std::{cmp::Ordering, collections::HashMap};
+use std::collections::{HashMap, HashSet};
 
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
-use syn::{Fields, ItemEnum, Type, TypePath};
+use syn::{Fields, Ident, ItemEnum, Type, TypePath};
 
 use crate::{
+    generics,
     meta::{SqlParserTypeDef, SqlParserTypeDefKind},
-    reachability::Distance,
-    SqlParserMetaQuery,
 };
 
 pub(crate) struct AstNodeImpl<'a> {
     node: &'a TypePath,
     def: &'a SqlParserTypeDef,
-    reachability: &'a HashMap<TypePath, Distance>,
-    meta: &'a SqlParserMetaQuery,
+    reachability: &'a HashMap<Ident, bool>,
+    primitive_nodes: &'a HashSet<Ident>,
 }
 
 impl<'a> ToTokens for AstNodeImpl<'a> {
@@ -61,14 +60,14 @@ impl<'a> AstNodeImpl<'a> {
     pub(crate) fn new(
         node: &'a TypePath,
         def: &'a SqlParserTypeDef,
-        reachability: &'a HashMap<TypePath, Distance>,
-        meta: &'a SqlParserMetaQuery,
+        reachability: &'a HashMap<Ident, bool>,
+        primitive_nodes: &'a HashSet<Ident>,
     ) -> Self {
         Self {
             node,
             def,
             reachability,
-            meta,
+            primitive_nodes,
         }
     }
 
@@ -77,7 +76,8 @@ impl<'a> AstNodeImpl<'a> {
         match fields {
             Fields::Named(named) => {
                 let mut fields = named.named.iter().collect::<Vec<_>>();
-                fields.sort_by(|a, b| self.compare_fields_by_source_node_distance(a, b));
+                fields.sort_by_cached_key(|f| self.sort_key(f));
+                fields.reverse();
                 for field in fields.iter() {
                     let ident = field.ident.clone().unwrap();
                     tokens.append_all(quote! {
@@ -87,7 +87,8 @@ impl<'a> AstNodeImpl<'a> {
             }
             Fields::Unnamed(unnamed) => {
                 let mut fields = unnamed.unnamed.iter().enumerate().collect::<Vec<_>>();
-                fields.sort_by(|a, b| self.compare_fields_by_source_node_distance(a.1, b.1));
+                fields.sort_by_cached_key(|f| self.sort_key(f.1));
+                fields.reverse();
 
                 for (idx, _) in fields.iter() {
                     let field_idx = syn::Index::from(*idx);
@@ -106,7 +107,9 @@ impl<'a> AstNodeImpl<'a> {
         match fields {
             Fields::Named(named) => {
                 let mut fields = named.named.iter().collect::<Vec<_>>();
-                fields.sort_by(|a, b| self.compare_fields_by_source_node_distance(a, b));
+                fields.sort_by_cached_key(|f| self.sort_key(f));
+                fields.reverse();
+
                 for field in fields.iter() {
                     let ident = field.ident.clone().unwrap();
                     tokens.append_all(quote! {
@@ -116,7 +119,9 @@ impl<'a> AstNodeImpl<'a> {
             }
             Fields::Unnamed(unnamed) => {
                 let mut fields = unnamed.unnamed.iter().enumerate().collect::<Vec<_>>();
-                fields.sort_by(|a, b| self.compare_fields_by_source_node_distance(a.1, b.1));
+                fields.sort_by_cached_key(|f| self.sort_key(f.1));
+                fields.reverse();
+
                 for (idx, _) in fields.iter() {
                     let ident = format_ident!("field{}", idx);
                     tokens.append_all(quote! {
@@ -186,23 +191,26 @@ impl<'a> AstNodeImpl<'a> {
         }
     }
 
-    fn normalise_ty(&self, ty: &Type) -> Option<&TypePath> {
+    fn normalise_ty(&self, ty: &Type) -> Ident {
         let ty: TypePath = syn::parse_quote!(#ty);
-        let ident = &ty.path.segments.last().unwrap().ident;
-        self.meta.lookup_main_node_by_ident(ident)
+        let ty = generics::innermost_generic_type(&ty);
+
+        eprintln!(
+            "cargo:message=GEN {}",
+            (&ty).into_token_stream().to_string()
+        );
+        ty.path.segments.last().unwrap().ident.clone()
     }
 
-    fn compare_fields_by_source_node_distance(&self, a: &syn::Field, b: &syn::Field) -> Ordering {
-        let reach_a = self
-            .normalise_ty(&a.ty)
-            .and_then(|ty| self.reachability.get(ty))
-            .unwrap_or(&Distance(255));
-
-        let reach_b = self
-            .normalise_ty(&b.ty)
-            .and_then(|ty| self.reachability.get(ty))
-            .unwrap_or(&Distance(255));
-
-        reach_a.cmp(reach_b)
+    fn sort_key(&self, field: &syn::Field) -> bool {
+        let normalised = self.normalise_ty(&field.ty);
+        if self.primitive_nodes.contains(&normalised) {
+            false
+        } else {
+            *self.reachability.get(&normalised).expect(&format!(
+                "Could not find type {:?} in reachability data",
+                &field.ty
+            ))
+        }
     }
 }
