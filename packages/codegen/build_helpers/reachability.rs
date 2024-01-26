@@ -37,7 +37,7 @@
 use std::collections::HashMap;
 use syn::{Ident, ItemEnum, ItemStruct, Type, TypePath};
 
-use crate::{SqlParserMetaQuery, SqlParserTypeDef, SqlParserTypeDefKind, Syn};
+use sqltk_meta::{SqlParserMetaQuery, SqlParserTypeDef, SqlParserTypeDefKind, Syn};
 
 pub struct Reachability {
     results: HashMap<Ident, bool>,

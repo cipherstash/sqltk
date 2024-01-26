@@ -1,7 +1,4 @@
-use crate::{
-    match_concrete_node, AstNode, BoxOf, ConcreteNode, Node, OptionOf, VecOf, Visitor,
-    VisitorControlFlow,
-};
+use crate::{AstNode, ConcreteNode, Node, Visitor, VisitorControlFlow};
 
 pub struct FallbackVisitor;
 
@@ -12,7 +9,11 @@ pub struct FallbackVisitor;
 /// 100% safe.
 pub static mut FALLBACK_VISITOR: FallbackVisitor = FallbackVisitor;
 
-include!(concat!(env!("OUT_DIR"), "/generated_dispatch_impls.rs"));
+pub trait VisitorDispatch<'ast> {
+    fn dispatch_enter(&mut self, concrete_node: ConcreteNode<'ast>) -> VisitorControlFlow;
+
+    fn dispatch_exit(&mut self, concrete_node: ConcreteNode<'ast>) -> VisitorControlFlow;
+}
 
 pub trait VisitorDispatchNode<'ast, N: AstNode<'ast>>
 where

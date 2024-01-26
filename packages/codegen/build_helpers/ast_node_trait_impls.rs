@@ -4,9 +4,10 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::{Fields, Ident, ItemEnum, Type, TypePath};
 
-use crate::{
+use sqltk_meta::{SqlParserTypeDef, SqlParserTypeDefKind};
+
+use super::{
     generics,
-    meta::{SqlParserTypeDef, SqlParserTypeDefKind},
 };
 
 pub(crate) struct AstNodeImpl<'a> {

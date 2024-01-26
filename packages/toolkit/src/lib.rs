@@ -22,24 +22,17 @@
 //! $ cargo install cargo-expand
 //! $ cargo add sqltk
 //! ```
-//!
-//! If your crate makes use of `sqlparser`'s `bigdecimal` feature then add
-//! `sqltk` with the `bigdecimal` feature:
-//!
-//! ```shell
-//! $ cargo add sqltk --features bigdecimal
-//! ```
 
 mod ast_node_impls;
-mod concrete_node;
 mod custom_display;
 mod dispatch;
 mod node;
+mod generated;
 
 // Re-export sqlparser
 pub use sqlparser;
 
-pub use concrete_node::*;
+pub use generated::concrete_node::*;
 pub use custom_display::*;
 pub use dispatch::*;
 pub use node::*;

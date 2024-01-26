@@ -4,18 +4,12 @@ use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use proc_macro_crate::{crate_name, FoundCrate};
 use quote::{quote, TokenStreamExt};
-use sqltk_codegen::{SqlParserMeta, SqlParserMetaQuery};
-use static_include_bytes::static_include_bytes;
+use sqltk_meta::{SqlParserMeta, SqlParserMetaQuery};
 use syn::{parse_macro_input, DeriveInput, Generics, TypePath};
-
-static_include_bytes!(
-    #[no_mangle]
-    RAW_NODE_META = concat!(env!("OUT_DIR"), "/generated_node_list.json")
-);
 
 fn node_meta() -> SqlParserMetaQuery {
     let meta: SqlParserMeta = serde_json::from_str(
-        String::from_utf8(Vec::from(&RAW_NODE_META[..]))
+        String::from_utf8(Vec::from(&sqltk_codegen::NODE_LIST[..]))
             .unwrap()
             .as_str(),
     )

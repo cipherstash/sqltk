@@ -1,9 +1,13 @@
 [workspace]
-
 resolver = "2"
 members = [
     "packages/*"
 ]
 
-[profile.dev.build-override]
-debug = 2
+[workspace.dependencies]
+sqlparser = { version = "^0.39.0", features = ["bigdecimal"] }
+bigdecimal = { version = "^0.4.2" }
+
+
+[profile.dev]
+incremental = true
