@@ -11,6 +11,15 @@ fn main() {
 
     codegen.generate_node_list_file(&node_list_file );
 
+    let dispatch_table_file =
+        PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("generated_dispatch_table_trait.rs");
+
+    codegen.generate_dispatch_table_trait(&dispatch_table_file);
+
+    let dispatch_table_lookup_impls_file =
+        PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("generated_dispatch_table_lookup_impls.rs");
+
+    codegen.generate_dispatch_table_lookup_impls(&dispatch_table_lookup_impls_file);
 
     let dispatch_impls_file =
         PathBuf::from(&std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("generated_dispatch_impls.rs");

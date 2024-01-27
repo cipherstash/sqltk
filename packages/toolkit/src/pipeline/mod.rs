@@ -63,6 +63,7 @@ mod test {
     use sqltk_derive::VisitorDispatch;
 
     use crate::{
+        dispatch::AssumeNotImplemented,
         nav_visit,
         pipeline::{self, InitializeError, ReadOnly, ReadWrite, RootScope, Scope, Stage},
         AstNode, Node, Visitor, VisitorControlFlow,

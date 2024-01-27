@@ -1,20 +1,16 @@
 use sqltk_meta::{ContainerNode, PrimitiveNode, SqlParserMetaQuery};
+use syn::TypePath;
 
-use super::generics;
-use super::{ast_node_trait_impls::AstNodeImpl, sqlparser_node_extractor};
+use sqltk_codegen_helpers::generics;
 use super::reachability::Reachability;
+use super::{ast_node_trait_impls::AstNodeImpl, sqlparser_node_extractor};
 use proc_macro2::TokenStream;
 
 use inflector::Inflector;
 
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 
-use std::{
-    collections::{HashSet},
-    fs::File,
-    io::Write,
-    path::PathBuf,
-};
+use std::{collections::HashSet, fs::File, io::Write, path::PathBuf};
 
 pub struct Codegen {
     meta: SqlParserMetaQuery,
@@ -31,6 +27,80 @@ impl Codegen {
         Self {
             meta: SqlParserMetaQuery::from(sqlparser_node_extractor::extract(vec![])),
         }
+    }
+
+    pub fn generate_dispatch_table_trait(&self, dest_file: &PathBuf) {
+        let mut generated_code = TokenStream::new();
+
+        let mut entries = TokenStream::new();
+
+        let nodes = self.meta.all_nodes();
+        for node in nodes.iter() {
+            let chunks = generics::decompose_generic_type(&node)
+                .iter()
+                .map(|tp| tp.path.segments.last().unwrap().ident.to_string() )
+                .collect::<Vec<_>>();
+            let joined_chunks = &chunks.join("Of");
+            let type_cased = Inflector::to_pascal_case(joined_chunks);
+            let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
+
+            entries.append_all(quote!(type #ty_ident: WithFallbackSupport<'ast, #node>;))
+        }
+
+        generated_code.append_all(quote! {
+            pub trait DispatchTable<'ast> {
+                #entries
+            }
+        });
+
+        let mut file = File::create(dest_file)
+            .unwrap_or_else(|_| panic!("Could not open {}", &dest_file.display()));
+
+        let formatted = prettyplease::unparse(
+            &syn::parse_file(&generated_code.to_string())
+                .expect("BUG! Generated Rust code could not be parsed"),
+        );
+
+        file.write_all(formatted.as_bytes())
+            .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()));
+    }
+
+    pub fn generate_dispatch_table_lookup_impls(&self, dest_file: &PathBuf) {
+        let mut generated_code = TokenStream::new();
+
+        let mut entries = TokenStream::new();
+
+        let nodes = self.meta.all_nodes();
+        for node in nodes.iter() {
+            let chunks = generics::decompose_generic_type(&node)
+                .iter()
+                .map(|tp| tp.path.segments.last().unwrap().ident.to_string() )
+                .collect::<Vec<_>>();
+            let joined_chunks = &chunks.join("Of");
+            let type_cased = Inflector::to_pascal_case(joined_chunks);
+            let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
+
+            entries.append_all(quote!{
+                impl<'ast> DispatchTableLookup<'ast> for #node {
+                    type Lookup<Table: DispatchTable<'ast>> = Table::#ty_ident;
+                }
+            });
+        }
+
+        generated_code.append_all(quote! {
+            #entries
+        });
+
+        let mut file = File::create(dest_file)
+            .unwrap_or_else(|_| panic!("Could not open {}", &dest_file.display()));
+
+        let formatted = prettyplease::unparse(
+            &syn::parse_file(&generated_code.to_string())
+                .expect("BUG! Generated Rust code could not be parsed"),
+        );
+
+        file.write_all(formatted.as_bytes())
+            .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()));
     }
 
     pub fn generate_dispatch_impls(&self, dest_file: &PathBuf) {
@@ -58,12 +128,12 @@ impl Codegen {
             where
                 Self: #bounds
             {
-                fn dispatch_enter(&mut self, concrete_node: ConcreteNode<'ast>) -> VisitorControlFlow {
-                    match_concrete_node!(concrete_node, |node| { self.dispatch_node_enter(node) })
+                fn enter(&mut self, concrete_node: ConcreteNode<'ast>) -> VisitorControlFlow {
+                    match_concrete_node!(concrete_node, |node| { VisitorDispatchNode::enter(self, node) })
                 }
 
-                fn dispatch_exit(&mut self, concrete_node: ConcreteNode<'ast>) -> VisitorControlFlow {
-                    match_concrete_node!(concrete_node, |node| { self.dispatch_node_exit(node) })
+                fn exit(&mut self, concrete_node: ConcreteNode<'ast>) -> VisitorControlFlow {
+                    match_concrete_node!(concrete_node, |node| { VisitorDispatchNode::exit(self, node) })
                 }
             }
         }

@@ -6,14 +6,14 @@ pub enum ContainerType {
     Option,
 }
 
-pub(crate) fn is_generic_type(path: &TypePath) -> bool {
+pub fn is_generic_type(path: &TypePath) -> bool {
     matches!(
         path.path.segments.last().unwrap().arguments,
         PathArguments::AngleBracketed(_)
     )
 }
 
-pub(crate) fn expect_type_path(ty: &Type) -> &TypePath {
+pub fn expect_type_path(ty: &Type) -> &TypePath {
     if let Type::Path(ref type_path) = ty {
         type_path
     } else {
@@ -21,7 +21,7 @@ pub(crate) fn expect_type_path(ty: &Type) -> &TypePath {
     }
 }
 
-pub(crate) fn container_type(type_path: &TypePath) -> Option<ContainerType> {
+pub fn container_type(type_path: &TypePath) -> Option<ContainerType> {
     match type_path
         .path
         .segments
@@ -41,7 +41,7 @@ pub(crate) fn container_type(type_path: &TypePath) -> Option<ContainerType> {
 /// input: Vec<Vec<Expr>>
 /// output:
 ///     vec![Vec, Vec, Expr] // the Vec is of type Vec<TypePath>
-pub(crate) fn decompose_generic_type(ty: &TypePath) -> Vec<TypePath> {
+pub fn decompose_generic_type(ty: &TypePath) -> Vec<TypePath> {
     let mut output: Vec<TypePath> = Vec::new();
     let mut ty: TypePath = ty.clone();
     while is_generic_type(&ty) {
@@ -53,7 +53,7 @@ pub(crate) fn decompose_generic_type(ty: &TypePath) -> Vec<TypePath> {
     output
 }
 
-pub(crate) fn innermost_generic_type(ty: &TypePath) -> TypePath {
+pub fn innermost_generic_type(ty: &TypePath) -> TypePath {
     let mut ty: TypePath = ty.clone();
     while is_generic_type(&ty) {
         ty = extract_generic_argument(&ty);
@@ -61,7 +61,7 @@ pub(crate) fn innermost_generic_type(ty: &TypePath) -> TypePath {
     ty
 }
 
-pub(crate) fn compose_generic_type(parts: &[TypePath]) -> TypePath {
+pub fn compose_generic_type(parts: &[TypePath]) -> TypePath {
     if parts.len() > 1 {
         let first = &parts[0];
         let rest = compose_generic_type(&parts[1..]);
@@ -71,7 +71,7 @@ pub(crate) fn compose_generic_type(parts: &[TypePath]) -> TypePath {
     }
 }
 
-pub(crate) fn extract_generic_argument(path: &TypePath) -> TypePath {
+pub fn extract_generic_argument(path: &TypePath) -> TypePath {
     match path.path.segments.last().unwrap().arguments {
         PathArguments::AngleBracketed(ref generic) => match generic.args.first().unwrap() {
             syn::GenericArgument::Type(syn::Type::Path(type_path)) => type_path.clone(),

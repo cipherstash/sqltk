@@ -511,15 +511,25 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "sqlparser",
+ "sqltk_codegen_helpers",
  "sqltk_meta",
  "syn 2.0.38",
  "syn-serde",
 ]
 
 [[package]]
+name = "sqltk_codegen_helpers"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 2.0.38",
+]
+
+[[package]]
 name = "sqltk_derive"
 version = "0.1.0"
 dependencies = [
+ "Inflector",
  "built",
  "cargo_metadata",
  "cfg-expr",
@@ -532,6 +542,7 @@ dependencies = [
  "serde_json",
  "sqlparser",
  "sqltk_codegen",
+ "sqltk_codegen_helpers",
  "sqltk_meta",
  "static-include-bytes",
  "syn 2.0.38",

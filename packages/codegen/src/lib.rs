@@ -1,6 +1,14 @@
 use lazy_static_include::*;
 
 lazy_static_include_str!(
+    pub VISITOR_DISPATCH_TABLE => "generated_dispatch_table_trait.rs"
+);
+
+lazy_static_include_str!(
+    pub VISITOR_DISPATCH_TABLE_LOOKUP_IMPLS => "generated_dispatch_table_lookup_impls.rs"
+);
+
+lazy_static_include_str!(
     pub VISITOR_DISPATCH_IMPLS => "generated_dispatch_impls.rs"
 );
 

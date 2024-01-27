@@ -26,15 +26,15 @@
 mod ast_node_impls;
 mod custom_display;
 mod dispatch;
-mod node;
 mod generated;
+mod node;
 
 // Re-export sqlparser
 pub use sqlparser;
 
-pub use generated::concrete_node::*;
 pub use custom_display::*;
 pub use dispatch::*;
+pub use generated::concrete_node::*;
 pub use node::*;
 pub mod pipeline;
 
@@ -145,7 +145,10 @@ pub mod test {
     use sqlparser::ast;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
-    use sqltk::{nav_visit, AstNode, Node, Visitor, VisitorControlFlow, VisitorDispatch};
+    use sqltk::{
+        dispatch::AssumeNotImplemented, nav_visit, AstNode, Node, Visitor, VisitorControlFlow,
+        VisitorDispatch,
+    };
 
     #[derive(VisitorDispatch)]
     pub struct Counter {
@@ -266,13 +269,13 @@ pub mod test {
         }
 
         impl<'ast> VisitorDispatch<'ast> for Recorder {
-            fn dispatch_enter(&mut self, concrete_node: ConcreteNode<'ast>) -> VisitorControlFlow {
-                self.order_enter.push(concrete_node.to_string());
+            fn enter(&mut self, node: ConcreteNode<'ast>) -> VisitorControlFlow {
+                self.order_enter.push(node.to_string());
                 nav_visit()
             }
 
-            fn dispatch_exit(&mut self, concrete_node: ConcreteNode<'ast>) -> VisitorControlFlow {
-                self.order_exit.push(concrete_node.to_string());
+            fn exit(&mut self, node: ConcreteNode<'ast>) -> VisitorControlFlow {
+                self.order_exit.push(node.to_string());
                 nav_visit()
             }
         }
