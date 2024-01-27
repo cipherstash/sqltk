@@ -24,16 +24,8 @@ sqltk_codegen_helpers = { path = "../codegen_helpers" }
 Inflector = "^0.11.4"
 syn = { version = "2.0.37", features = ["full", "extra-traits"] }
 proc-macro2 = { version = "1.0.67", features = ["span-locations"] }
-proc-macro-error = { version = "1" }
 proc-macro-crate = "3.0.0"
 quote = { version = "1" }
-prettyplease = "0.2.15"
-cfg-expr = "0.15.5"
-built = "0.7.0"
-cargo_metadata = "0.18.0"
-topological-sort = "0.2.2"
-darling = "0.20.3"
-static-include-bytes = "2.0.0"
 sqltk_codegen = { path = "../codegen" }
 sqltk_meta = { path = "../meta" }
 serde_json = "1.0.108"
@@ -49,7 +41,4 @@ sqltk_codegen = { path = "../codegen" }
 syn = { version = "2.0.37", features = ["full", "extra-traits", "visit-mut"] }
 proc-macro2 = { version = "1.0.67", features = ["span-locations"] }
 quote = { version = "1" }
-prettyplease = "0.2.15"
-cfg-expr = "0.15.5"
-cargo_metadata = "0.18.0"
 sqlparser = { workspace = true }
