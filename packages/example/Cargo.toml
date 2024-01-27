@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 sqltk = { path = "../toolkit" }
-sqlparser = "0.39.0"

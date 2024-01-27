@@ -1,8 +1,5 @@
-use sqlparser::ast::{Expr, Statement};
-use sqltk::{nav_visit, Node, Visitor, VisitorControlFlow};
+use sqltk::{nav_visit, Node, Visitor, VisitorControlFlow, sqlparser::ast::{Expr, Statement}};
 
-// #[derive(UniversalVisitor)]
-// #[universal_visitor(visits(Expr, Statement))]
 pub struct MyVisitor;
 
 impl<'ast> Visitor<'ast, Expr> for MyVisitor {
