@@ -14,7 +14,10 @@ pub trait WithFallbackSupport<'ast, N: 'ast + AstNode<'ast>> {
     fn exit(maybe_visitor: &mut Self::Subject, node: Node<'ast, N>) -> VisitorControlFlow;
 }
 
-impl<'ast, N: 'ast + AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Handle<V, N> where V: Visitor<'ast, N> {
+impl<'ast, N: 'ast + AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Handle<V, N>
+where
+    V: Visitor<'ast, N>,
+{
     type Subject = V;
 
     fn enter(visitor: &mut Self::Subject, node: Node<'ast, N>) -> VisitorControlFlow {
@@ -26,7 +29,7 @@ impl<'ast, N: 'ast + AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Handle<V
     }
 }
 
-impl<'ast, N: 'ast + AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Fallback<V>  {
+impl<'ast, N: 'ast + AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Fallback<V> {
     type Subject = V;
 
     fn enter(_: &mut Self::Subject, _: Node<'ast, N>) -> VisitorControlFlow {
@@ -52,7 +55,7 @@ impl<Then, Else> Resolve for Cond<false, Then, Else> {
     type Output = Else;
 }
 
-pub type If<const COND: bool, Then, Else> = <Cond<{COND}, Then, Else> as Resolve>::Output;
+pub type If<const COND: bool, Then, Else> = <Cond<{ COND }, Then, Else> as Resolve>::Output;
 
 pub trait AssumeNotImplemented {
     const ANSWER: bool = false;
@@ -64,12 +67,15 @@ pub struct Visits<V, N>(core::marker::PhantomData<(V, N)>);
 
 impl<V, N: AstNode<'static>> Visits<V, N>
 where
-    V: Visitor<'static, N>
+    V: Visitor<'static, N>,
 {
     pub const ANSWER: bool = true;
 }
 
-pub trait DispatchTableLookup<'ast> where Self: Sized + AstNode<'ast> {
+pub trait DispatchTableLookup<'ast>
+where
+    Self: Sized + AstNode<'ast>,
+{
     type Lookup<Table: DispatchTable<'ast>>: WithFallbackSupport<'ast, Self>;
 }
 
@@ -98,5 +104,11 @@ where
     }
 }
 
-include!(concat!(env!("OUT_DIR"), "/generated_dispatch_table_trait.rs"));
-include!(concat!(env!("OUT_DIR"), "/generated_dispatch_table_lookup_impls.rs"));
+include!(concat!(
+    env!("OUT_DIR"),
+    "/generated_dispatch_table_trait.rs"
+));
+include!(concat!(
+    env!("OUT_DIR"),
+    "/generated_dispatch_table_lookup_impls.rs"
+));

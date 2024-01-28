@@ -1,52 +1,30 @@
 # sqltk
 
-This crate is an extension for the [`sqlparser`](https://crates.io/crates/sqlparser) crate to support semantic analysis and transformation of arbitrary SQL.
+`sqltk` is a toolkit for analyzing and transforming SQL statements.
 
-At its core, `sqltk` provides a replacement [Visitor](https://en.wikipedia.org/wiki/Visitor_design_pattern) implementation that addresses a shortcoming of the implementation provided by `sqlparser`.
+It uses the AST & parser from the [`sqlparser`](https://crates.io/crates/sqlparser) crate but replaces `sqlparser`'s `Visit` and `Visitor` traits with its own.
 
-`sqlparser`'s Visitor does not provide callbacks for every node type - which means it is not useful for any workload which requires whole-of-AST analysis.
+ `sqltk` provides a replacement [Visitor](https://en.wikipedia.org/wiki/Visitor_design_pattern) implementation that addresses shortcomings of the implementation provided by `sqlparser`.
 
-The implementation provided by `sqlparser-ast-tookit` is *exhaustive* - as in, every node in the `sqlparser` abstract syntax tree (AST) is traversed and _reported on_ to a Visitor.
+`sqlparser`'s Visitor does not provide callbacks for every AST node type - which means it is not useful for any workload which requires exhaustive AST analysis. In contrast, the implementation provided by `sqltk` is *exhaustive* - as in, every node in the `sqlparser` abstract syntax tree (AST) is traversed and _reported on_ to a Visitor.
 
-## Designed to support semantic analysis of SQL
+Additionally, `sqltk` traverses the AST in an order that is useful for semantic analysis (rather than the "order that AST node fields appear in the Rust source" order used by `sqlparser`). What this means is that any node that can be _referred to_ by another node will be visited _before_ the node that refers to it.
 
-The order that AST nodes are ctraversed has been carefully designed to support ease of semantic analysis. In essence, this means that `FROM` clauses, and `JOIN` clauses for example are visited *before* any expressions that could reference them are visited.
+For example, in a `SELECT` statement the `FROM` clause will be visited before the projection or the `WHERE` clause etc.
 
-This strategy can succinctly stated as "__forward references are visited last__" which means that tables, columns and sub-selects have been resolved prior to any expression that makes use of them.
+This means that all of the information required to perform semantic analysis of the currently visited node will be available - avoiding the need for ad-hoc additional passes/traversals of the AST.
 
 ## Composable Visitor Pipelines
 
 A Visitor implementation should maintain one piece of state to keep code modular, reusable, and easy to test.
 
-But analysing SQL is non-trivial and can require management of a number of pieces of independent state.
+But analysing SQL is non-trivial and can require maintainence of a number of pieces of independent state.
 
 To make this manageable, `sqltk` provides the ability to compose multiple Visitors into a *pipeline*.
 
-State flows down the pipeline uni-directionally - and successive Visitors in the pipeline can opt-in to what state they consume from the previous steps.
+State flows from root to leaf on calls to `Visitor::enter` - and conversely from leaf to root on calls to `Visitor::exit`.
 
-Any state published by a visitor is made available to subsequent steps.
-
-## Included Visitor implementations
-
-`NodeStack`
-
-Keeps track of the path to the current node. Subsequent visitors can request the path of the current node.
-
-`NodeMetadata<T>`
-
-Associates arbitrary metadata with AST nodes, using a `NodePath` to uniquely identify individual nodes.
-
-`Canonicalize`
-
-Maintains the expanded (fully-qualified) identifiers for all identifier nodes. Centralises identifier comparison logic and makes checking if two different identifiers are refering to the same value easy.
-
-`Transform`
-
-`sqltk` provides no mechanism to mutate the AST during traversal. Instead, this crate provides a means to describe edits as values and to collect those edits during traversal.
-
-The `Transform` visitor can build a new AST by traversing the existing AST and copying it to a new one while applying edits.
-
-This does not require an additional traversal of the AST.
+Any state published by a visitor is made available to visitors in the pipeline.
 
 ## Getting started
 
@@ -62,57 +40,8 @@ It does this by running `cargo expand` and consuming the output. Note that `carg
 
 2. Add `sqltk` to your Cargo project
 
-`$ cargo add sqlparser-ast-tookit`
+`$ cargo add sqltk`
 
-3. Define a Visitor
+## About
 
-```rust
-use sqltk::{VisitorDispatch, Visitor};
-use sqlparser::ast::Expr;
-use sqlparser::dialect::GenericDialect;
-use sqlparser::parser::Parser;
-
-#[derive(VisitorDispatch)]
-pub struct ExprCounter {
-  pub count: usize
-}
-
-impl Visitor<Expr> for ExprCounter {
-  fn enter(&mut self, expr: &Expr) -> VisitorControlFlow {
-    self.count +=1;
-    ControlFlow::Continue(Navigation::Visit)
-  }
-
-  fn exit(&mut self, expr: &Expr) -> VisitorControlFlow {
-    ControlFlow::Continue(Navigation::Visit)
-  }
-}
-
-let sql = "SELECT (1 + 2) * 3;";
-let dialect = GenericDialect {};
-let ast = Parser::parse_sql(&dialect, sql).unwrap();
-
-let visitor = ExprCounter { count: 0 };
-
-ast.accept(&visitor);
-
-println!("There were {} Expr nodes in the statement!", visitor.count);
-```
-
-## License
-
-## Bugs & contributions
-
-## FAQ
-
-### Q: are there any plans to include the `sqltk` functionality in `sqlparser` itself?
-
-As authors of `sqltk`, we are not opposed to the idea (assuming of course that the `sqlparser` maintainers would consider it).
-
-However, we ([CipherStash](https://cipherstash.com)) depend heavily on this codebase and it's still in its infancy. We would like to retain the freedom of ownership over this functionality until we consider it stable.
-
-Making breaking changes will be more difficult after it is included upstream.
-
-## Misc.
-
-`sqltk` is maintained by CipherStash and is a core component of [Tandem](https://docs.cipherstash.com/getting-started/step3.html), our encryption-in-use database proxy.
+`sqltk` is maintained by CipherStash and is a core component of [Tandem](https://cipherstash.com/products/tandem), our encryption-in-use database proxy.

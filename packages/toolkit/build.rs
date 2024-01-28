@@ -9,12 +9,13 @@ fn main() -> std::io::Result<()> {
 
     fs::write(
         PathBuf::from(&std::env::var("OUT_DIR").unwrap()).join("generated_dispatch_table_trait.rs"),
-        *sqltk_codegen::VISITOR_DISPATCH_TABLE
+        *sqltk_codegen::VISITOR_DISPATCH_TABLE,
     )?;
 
     fs::write(
-        PathBuf::from(&std::env::var("OUT_DIR").unwrap()).join("generated_dispatch_table_lookup_impls.rs"),
-        *sqltk_codegen::VISITOR_DISPATCH_TABLE_LOOKUP_IMPLS
+        PathBuf::from(&std::env::var("OUT_DIR").unwrap())
+            .join("generated_dispatch_table_lookup_impls.rs"),
+        *sqltk_codegen::VISITOR_DISPATCH_TABLE_LOOKUP_IMPLS,
     )?;
 
     fs::write(

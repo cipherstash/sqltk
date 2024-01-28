@@ -4,9 +4,8 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::{Fields, Ident, ItemEnum, Type, TypePath};
 
-use sqltk_meta::{SqlParserTypeDef, SqlParserTypeDefKind};
 use sqltk_codegen_helpers::generics;
-
+use sqltk_meta::{SqlParserTypeDef, SqlParserTypeDefKind};
 
 pub(crate) struct AstNodeImpl<'a> {
     node: &'a TypePath,

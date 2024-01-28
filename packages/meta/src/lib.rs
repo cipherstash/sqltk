@@ -9,10 +9,10 @@ use std::ops::DerefMut;
 use std::{collections::HashSet, ops::Deref};
 
 use proc_macro2::Span;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use syn::{Ident, TypePath};
-use syn::{parse::Parse, ItemEnum, ItemStruct};
 use quote::{quote, ToTokens};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use syn::{parse::Parse, ItemEnum, ItemStruct};
+use syn::{Ident, TypePath};
 
 /// Serializable/deserializable data structure that captures AST node metadata
 /// extracted from `sqlparser`.

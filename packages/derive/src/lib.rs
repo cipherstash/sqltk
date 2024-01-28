@@ -51,7 +51,7 @@ fn impl_dispatch_table(visitor: &Ident, _generics: &Generics) -> proc_macro2::To
     for node in meta.all_nodes() {
         let chunks = sqltk_codegen_helpers::generics::decompose_generic_type(&node)
             .iter()
-            .map(|tp| tp.path.segments.last().unwrap().ident.to_string() )
+            .map(|tp| tp.path.segments.last().unwrap().ident.to_string())
             .collect::<Vec<_>>();
         let joined_chunks = &chunks.join("Of");
         let type_cased = Inflector::to_pascal_case(joined_chunks);
@@ -63,7 +63,7 @@ fn impl_dispatch_table(visitor: &Ident, _generics: &Generics) -> proc_macro2::To
     }
 
     // let mod_ident: Ident = format_ident!("{}_dispatch_table", &visitor);
-        // use #krate::dispatch::AssumeNotImplemented;
+    // use #krate::dispatch::AssumeNotImplemented;
 
     output.append_all(quote! {
 

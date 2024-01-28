@@ -1,4 +1,8 @@
-use sqltk::{nav_visit, Node, Visitor, VisitorControlFlow, sqlparser::ast::{Expr, Statement}};
+use sqltk::{
+    nav_visit,
+    sqlparser::ast::{Expr, Statement},
+    Node, Visitor, VisitorControlFlow,
+};
 
 pub struct MyVisitor;
 

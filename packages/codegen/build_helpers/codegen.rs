@@ -1,10 +1,10 @@
 use sqltk_meta::{ContainerNode, PrimitiveNode, SqlParserMetaQuery};
 use syn::TypePath;
 
-use sqltk_codegen_helpers::generics;
 use super::reachability::Reachability;
 use super::{ast_node_trait_impls::AstNodeImpl, sqlparser_node_extractor};
 use proc_macro2::TokenStream;
+use sqltk_codegen_helpers::generics;
 
 use inflector::Inflector;
 
@@ -38,7 +38,7 @@ impl Codegen {
         for node in nodes.iter() {
             let chunks = generics::decompose_generic_type(&node)
                 .iter()
-                .map(|tp| tp.path.segments.last().unwrap().ident.to_string() )
+                .map(|tp| tp.path.segments.last().unwrap().ident.to_string())
                 .collect::<Vec<_>>();
             let joined_chunks = &chunks.join("Of");
             let type_cased = Inflector::to_pascal_case(joined_chunks);
@@ -74,13 +74,13 @@ impl Codegen {
         for node in nodes.iter() {
             let chunks = generics::decompose_generic_type(&node)
                 .iter()
-                .map(|tp| tp.path.segments.last().unwrap().ident.to_string() )
+                .map(|tp| tp.path.segments.last().unwrap().ident.to_string())
                 .collect::<Vec<_>>();
             let joined_chunks = &chunks.join("Of");
             let type_cased = Inflector::to_pascal_case(joined_chunks);
             let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
-            entries.append_all(quote!{
+            entries.append_all(quote! {
                 impl<'ast> DispatchTableLookup<'ast> for #node {
                     type Lookup<Table: DispatchTable<'ast>> = Table::#ty_ident;
                 }
