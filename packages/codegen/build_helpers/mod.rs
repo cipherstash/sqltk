@@ -6,5 +6,3 @@ mod sqlparser_node_extractor;
 
 pub use codegen::*;
 pub use parser::*;
-pub use reachability::*;
-pub use sqlparser_node_extractor::*;
