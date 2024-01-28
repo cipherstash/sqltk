@@ -30,23 +30,20 @@
 //! $ cargo add sqltk --features bigdecimal
 //! ```
 
-mod access;
 mod ast_node_impls;
-mod compose;
 mod concrete_node;
 mod custom_display;
 mod dispatch;
 mod node;
-mod pipeline;
 
 // Re-export sqlparser
 pub use sqlparser;
 
-pub use access::*;
 pub use concrete_node::*;
 pub use custom_display::*;
 pub use dispatch::*;
 pub use node::*;
+pub mod pipeline;
 
 /// Exposed to allow macro-generated code and some internals to work.
 #[doc(hidden)]
@@ -153,7 +150,6 @@ pub fn nav_break() -> VisitorControlFlow {
 pub mod test {
     use crate::{self as sqltk, ConcreteNode};
     use sqlparser::ast;
-    use sqlparser::ast::Expr;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
     use sqltk::{nav_visit, AstNode, Node, Visitor, VisitorControlFlow, VisitorDispatch};
@@ -169,8 +165,8 @@ pub mod test {
         }
     }
 
-    impl<'ast> Visitor<'ast, Expr> for Counter {
-        fn enter(&mut self, _: Node<'ast, Expr>) -> VisitorControlFlow {
+    impl<'ast> Visitor<'ast, ast::Expr> for Counter {
+        fn enter(&mut self, _: Node<'ast, ast::Expr>) -> VisitorControlFlow {
             self.count += 1;
             nav_visit()
         }
@@ -301,19 +297,22 @@ pub mod test {
 
         ast.accept(&mut visitor);
 
-        assert_eq!(visitor.order_enter[0..12], [
-            "Vec<Statement> (ID: 0)",
-            "Statement (ID: 1)",
-            "Box<Query> (ID: 2)",
-            "Query (ID: 3)",
-            "Box<SetExpr> (ID: 4)",
-            "SetExpr (ID: 5)",
-            "Box<Select> (ID: 6)",
-            "Select (ID: 7)",
-            "Vec<TableWithJoins> (ID: 8)",
-            "TableWithJoins (ID: 9)",
-            "TableFactor (ID: 10)",
-            "ObjectName (ID: 11)",
-        ]);
+        assert_eq!(
+            visitor.order_enter[0..12],
+            [
+                "Vec<Statement> (ID: 0)",
+                "Statement (ID: 1)",
+                "Box<Query> (ID: 2)",
+                "Query (ID: 3)",
+                "Box<SetExpr> (ID: 4)",
+                "SetExpr (ID: 5)",
+                "Box<Select> (ID: 6)",
+                "Select (ID: 7)",
+                "Vec<TableWithJoins> (ID: 8)",
+                "TableWithJoins (ID: 9)",
+                "TableFactor (ID: 10)",
+                "ObjectName (ID: 11)",
+            ]
+        );
     }
 }

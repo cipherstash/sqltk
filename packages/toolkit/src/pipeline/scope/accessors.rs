@@ -1,5 +1,6 @@
 use std::{
     cell::{Ref, RefCell, RefMut},
+    fmt::{Debug, Formatter},
     rc::Rc,
 };
 
@@ -11,14 +12,14 @@ use std::{
 /// It is not possible to obtain a reference to the underlying
 /// [`Rc<RefCell<T>>`] as this would circumvent the mutability controls.
 ///
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ReadOnly<T> {
     value: Rc<RefCell<T>>,
 }
 
 impl<T> ReadOnly<T> {
     /// Create a new read-only view of the [`Rc<RefCell<T>>`].
-    pub fn new(value: Rc<RefCell<T>>) -> Self {
+    pub(crate) fn new(value: Rc<RefCell<T>>) -> Self {
         Self { value }
     }
 
@@ -28,19 +29,57 @@ impl<T> ReadOnly<T> {
     }
 }
 
+impl<T: PartialEq> PartialEq for ReadOnly<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
+
+impl<T: Eq> Eq for ReadOnly<T> {}
+
+impl<T> Debug for ReadOnly<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ReadOnly")
+            .field("value", &self.value)
+            .finish()
+    }
+}
+
 /// An read-write wrapper around an [`Rc<RefCell<T>>`].
 ///
 /// It is not possible to obtain a reference to the underlying
 /// [`Rc<RefCell<T>>`] as this would circumvent any mutability controls.
 ///
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ReadWrite<T> {
     value: Rc<RefCell<T>>,
 }
 
+impl<T: PartialEq> PartialEq for ReadWrite<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
+
+impl<T: Eq> Eq for ReadWrite<T> {}
+
+impl<T> Debug for ReadWrite<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ReadWrite")
+            .field("value", &self.value)
+            .finish()
+    }
+}
+
 impl<T> ReadWrite<T> {
     /// Create a new read-write view of the [`Rc<RefCell<T>>`].
-    pub fn new(value: Rc<RefCell<T>>) -> Self {
+    pub(crate) fn new(value: Rc<RefCell<T>>) -> Self {
         Self { value }
     }
 

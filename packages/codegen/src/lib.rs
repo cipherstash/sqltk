@@ -104,11 +104,12 @@ impl Codegen {
     pub fn generate_ast_node_impls(&self, dest_file: &PathBuf, reachability_debug_file: &PathBuf) {
         let reachability = Reachability::derive(&self.meta);
 
-        let mut file = File::create(&reachability_debug_file)
+        let mut file = File::create(reachability_debug_file)
             .unwrap_or_else(|_| panic!("Could not open {}", &reachability_debug_file.display()));
 
         for (ty, source_node_reachable) in &reachability {
-            let _ = file.write(format!("{} {}\n", source_node_reachable, ty.to_token_stream()).as_bytes());
+            let _ = file
+                .write(format!("{} {}\n", source_node_reachable, ty.to_token_stream()).as_bytes());
         }
 
         let mut generated_code = TokenStream::new();
@@ -122,12 +123,7 @@ impl Codegen {
             .collect::<HashSet<_>>();
 
         let ast_node_impls_for_main_nodes = main_nodes.iter().map(|(type_path, type_def)| {
-            AstNodeImpl::new(
-                type_path,
-                type_def,
-                &reachability,
-                &primitive_nodes,
-            )
+            AstNodeImpl::new(type_path, type_def, &reachability, &primitive_nodes)
         });
 
         let ast_node_impls_for_primitive_nodes =
