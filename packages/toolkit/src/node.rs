@@ -1,5 +1,5 @@
 use crate::{AstNode, DisplayType};
-use std::fmt::{Display, Formatter};
+use std::{fmt::{Display, Formatter}, ops::Deref};
 
 pub struct NodeBuilder {
     next_id: usize,
@@ -16,7 +16,7 @@ impl NodeBuilder {
         Self { next_id: 0 }
     }
 
-    pub fn new_node<'ast, T: 'ast + AstNode<'ast>>(&mut self, ast_node: &'ast T) -> Node<'ast, T> {
+    pub fn new_node<'ast, T: AstNode<'ast>>(&mut self, ast_node: &'ast T) -> Node<'ast, T> {
         Node::new(self.next_id(), ast_node)
     }
 
@@ -28,12 +28,12 @@ impl NodeBuilder {
 }
 
 #[derive(Debug, Eq, PartialEq, PartialOrd, Hash)]
-pub struct Node<'ast, T: 'ast + AstNode<'ast> + ?Sized> {
+pub struct Node<'ast, T: AstNode<'ast> + ?Sized> {
     id: usize,
     ast_node: &'ast T,
 }
 
-impl<'ast, T: 'ast + AstNode<'ast>> Node<'ast, T> {
+impl<'ast, T: AstNode<'ast>> Node<'ast, T> {
     pub fn new(id: usize, ast_node: &'ast T) -> Self {
         Self { id, ast_node }
     }
@@ -47,7 +47,15 @@ impl<'ast, T: 'ast + AstNode<'ast>> Node<'ast, T> {
     }
 }
 
-impl<'ast, T: 'ast + AstNode<'ast>> Clone for Node<'ast, T> {
+impl<'ast, T: AstNode<'ast>> Deref for Node<'ast, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.ast_node
+    }
+}
+
+impl<'ast, T: AstNode<'ast>> Clone for Node<'ast, T> {
     fn clone(&self) -> Self {
         Self {
             id: self.id,
@@ -56,7 +64,7 @@ impl<'ast, T: 'ast + AstNode<'ast>> Clone for Node<'ast, T> {
     }
 }
 
-impl<'ast, T: 'ast + AstNode<'ast>> Display for Node<'ast, T>
+impl<'ast, T: AstNode<'ast>> Display for Node<'ast, T>
 where
     DisplayType<T>: Display,
 {

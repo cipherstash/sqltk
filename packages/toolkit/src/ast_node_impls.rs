@@ -5,7 +5,7 @@ impl<'ast, T: AstNode<'ast>> AstNode<'ast> for &'ast T {
         &'ast self,
         visitor: &mut V,
         node_builder: &mut NodeBuilder,
-    ) -> VisitorControlFlow
+    ) -> EnterControlFlow
     where
         V: VisitorDispatch<'ast>,
     {
@@ -21,18 +21,18 @@ where
         &'ast self,
         visitor: &mut V,
         node_builder: &mut NodeBuilder,
-    ) -> VisitorControlFlow
+    ) -> EnterControlFlow
     where
         V: VisitorDispatch<'ast>,
     {
         if self.is_empty() {
-            nav_skip()
+            ControlFlow::Continue(Navigation::Skip)
         } else {
             visit(node_builder.new_node(self).into(), visitor, |visitor| {
                 for child in self.iter() {
                     child.accept_with_node_builder(visitor, node_builder)?;
                 }
-                nav_visit()
+                ControlFlow::Continue(Navigation::Visit)
             })
         }
     }
@@ -46,7 +46,7 @@ where
         &'ast self,
         visitor: &mut V,
         node_builder: &mut NodeBuilder,
-    ) -> VisitorControlFlow {
+    ) -> EnterControlFlow {
         visit(node_builder.new_node(self).into(), visitor, |visitor| {
             (**self).accept_with_node_builder(visitor, node_builder)
         })
@@ -61,16 +61,16 @@ where
         &'ast self,
         visitor: &mut V,
         node_builder: &mut NodeBuilder,
-    ) -> VisitorControlFlow {
+    ) -> EnterControlFlow {
         if self.is_none() {
-            nav_skip()
+            ControlFlow::Continue(Navigation::Skip)
         } else {
             visit(
                 node_builder.new_node(self).into(),
                 visitor,
                 |visitor| match self {
                     Some(child) => child.accept_with_node_builder(visitor, node_builder),
-                    None => nav_skip(),
+                    None => ControlFlow::Continue(Navigation::Skip)
                 },
             )
         }

@@ -57,27 +57,29 @@ pub enum Navigation {
     Visit,
 }
 
-/// Mandatory [`ControlFlow`] type used throughout this crate.
-/// Convenient type alias for [`Visitor`] implementors.
-pub type VisitorControlFlow = ControlFlow<(), Navigation>;
+/// [`ControlFlow`] type returned by [`Visitor::Enter`].
+pub type EnterControlFlow = ControlFlow<(), Navigation>;
+
+/// [`ControlFlow`] type returned by [`Visitor::Exit`].
+pub type ExitControlFlow = ControlFlow<(), ()>;
 
 /// Trait for types that visit one specific type of node.
 #[allow(unused_variables)]
-pub trait Visitor<'ast, T: 'ast + AstNode<'ast>> {
+pub trait Visitor<'ast, T: AstNode<'ast>> {
     /// Called when a node is entered.
     ///
     /// The default implementation returns [`ControlFlow::Continue(Navigation::Visit)`].
     ///
-    fn enter(&mut self, node: Node<'ast, T>) -> VisitorControlFlow {
-        nav_visit()
+    fn enter(&mut self, node: Node<'ast, T>) -> EnterControlFlow {
+        ControlFlow::Continue(Navigation::Visit)
     }
 
     /// Called when a node is exited.  The default implementation returns
     /// [`ControlFlow::Continue(Navigation::Visit)`].  Note that the
     /// [`Navigation`] value returned in exit result is ignored.
     ///
-    fn exit(&mut self, node: Node<'ast, T>) -> VisitorControlFlow {
-        nav_visit()
+    fn exit(&mut self, node: Node<'ast, T>) -> ExitControlFlow {
+        ControlFlow::Continue(())
     }
 }
 
@@ -97,7 +99,7 @@ where
     /// AST nodes from `sqlparser` are wrapped in a [`node::Node`]
     /// implementation and assigned a unique numeric ID so that derived metadata
     /// about nodes can be retained.
-    fn accept<V>(&'ast self, visitor: &mut V) -> VisitorControlFlow
+    fn accept<V>(&'ast self, visitor: &mut V) -> EnterControlFlow
     where
         V: VisitorDispatch<'ast>,
     {
@@ -113,41 +115,21 @@ where
         &'ast self,
         visitor: &mut V,
         node_builder: &mut NodeBuilder,
-    ) -> VisitorControlFlow
+    ) -> EnterControlFlow
     where
         V: VisitorDispatch<'ast>;
 }
 
-/// Convenience function to return a value that indicates traversal of the AST
-/// should not proceed to children of the current node.
-///
-pub fn nav_skip() -> VisitorControlFlow {
-    ControlFlow::Continue(Navigation::Skip)
-}
-
-/// Convenience function to return a value that indicates traversal of the AST
-/// should continue with children of the current node.
-///
-pub fn nav_visit() -> VisitorControlFlow {
-    ControlFlow::Continue(Navigation::Visit)
-}
-
-/// Convenience function abort traversal of the AST. This will bubble all of way
-/// up the stack to the top-most [`Node::accept`] invocation.
-///
-pub fn nav_break() -> VisitorControlFlow {
-    ControlFlow::Break(())
-}
-
 #[cfg(test)]
 pub mod test {
-    use crate::{self as sqltk, ConcreteNode};
+    use std::ops::ControlFlow;
+
+    use crate::{self as sqltk, ConcreteNode, ExitControlFlow};
     use sqlparser::ast;
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
     use sqltk::{
-        dispatch::AssumeNotImplemented, nav_visit, AstNode, Node, Visitor, VisitorControlFlow,
-        VisitorDispatch,
+        dispatch::AssumeNotImplemented, AstNode, EnterControlFlow, Navigation, Node, Visitor, VisitorDispatch
     };
 
     #[derive(VisitorDispatch)]
@@ -162,9 +144,9 @@ pub mod test {
     }
 
     impl<'ast> Visitor<'ast, ast::Expr> for Counter {
-        fn enter(&mut self, _: Node<'ast, ast::Expr>) -> VisitorControlFlow {
+        fn enter(&mut self, _: Node<'ast, ast::Expr>) -> EnterControlFlow {
             self.count += 1;
-            nav_visit()
+            ControlFlow::Continue(Navigation::Visit)
         }
     }
 
@@ -212,31 +194,31 @@ pub mod test {
         // Types that should _not_ be visited because we know it'll be
         // None/empty with the `sql` expression below.
         impl<'ast> Visitor<'ast, Option<ast::With>> for Recorder {
-            fn enter(&mut self, node: Node<'ast, Option<ast::With>>) -> VisitorControlFlow {
+            fn enter(&mut self, node: Node<'ast, Option<ast::With>>) -> EnterControlFlow {
                 self.items_enter.push(("Option<With>".into(), node.id()));
-                nav_visit()
+                ControlFlow::Continue(Navigation::Visit)
             }
         }
         impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>> for Recorder {
-            fn enter(&mut self, node: Node<'ast, Vec<ast::TableWithJoins>>) -> VisitorControlFlow {
+            fn enter(&mut self, node: Node<'ast, Vec<ast::TableWithJoins>>) -> EnterControlFlow {
                 self.items_enter
                     .push(("Vec<TableWithJoins>".into(), node.id()));
-                nav_visit()
+                ControlFlow::Continue(Navigation::Visit)
             }
         }
 
         // Types that _should_ be visited because we know they'll be present
         // after parsing the `sql` expression below.
         impl<'ast> Visitor<'ast, Option<ast::Expr>> for Recorder {
-            fn enter(&mut self, node: Node<'ast, Option<ast::Expr>>) -> VisitorControlFlow {
+            fn enter(&mut self, node: Node<'ast, Option<ast::Expr>>) -> EnterControlFlow {
                 self.items_enter.push(("Option<Expr>".into(), node.id()));
-                nav_visit()
+                ControlFlow::Continue(Navigation::Visit)
             }
         }
         impl<'ast> Visitor<'ast, Vec<ast::SelectItem>> for Recorder {
-            fn enter(&mut self, node: Node<'ast, Vec<ast::SelectItem>>) -> VisitorControlFlow {
+            fn enter(&mut self, node: Node<'ast, Vec<ast::SelectItem>>) -> EnterControlFlow {
                 self.items_enter.push(("Vec<SelectItem>".into(), node.id()));
-                nav_visit()
+                ControlFlow::Continue(Navigation::Visit)
             }
         }
 
@@ -269,14 +251,14 @@ pub mod test {
         }
 
         impl<'ast> VisitorDispatch<'ast> for Recorder {
-            fn enter(&mut self, node: ConcreteNode<'ast>) -> VisitorControlFlow {
+            fn enter(&mut self, node: ConcreteNode<'ast>) -> EnterControlFlow {
                 self.order_enter.push(node.to_string());
-                nav_visit()
+                ControlFlow::Continue(Navigation::Visit)
             }
 
-            fn exit(&mut self, node: ConcreteNode<'ast>) -> VisitorControlFlow {
+            fn exit(&mut self, node: ConcreteNode<'ast>) -> ExitControlFlow {
                 self.order_exit.push(node.to_string());
-                nav_visit()
+                ControlFlow::Continue(())
             }
         }
 

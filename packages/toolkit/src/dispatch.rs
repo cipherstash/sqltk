@@ -1,6 +1,6 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ops::ControlFlow};
 
-use crate::{nav_visit, AstNode, ConcreteNode, Node, Visitor, VisitorControlFlow};
+use crate::{AstNode, ConcreteNode, EnterControlFlow, ExitControlFlow, Navigation, Node, Visitor};
 
 pub struct Fallback<T>(PhantomData<T>);
 
@@ -9,9 +9,9 @@ pub struct Handle<V, N>(PhantomData<(V, N)>);
 pub trait WithFallbackSupport<'ast, N: 'ast + AstNode<'ast>> {
     type Subject;
 
-    fn enter(maybe_visitor: &mut Self::Subject, node: Node<'ast, N>) -> VisitorControlFlow;
+    fn enter(maybe_visitor: &mut Self::Subject, node: Node<'ast, N>) -> EnterControlFlow;
 
-    fn exit(maybe_visitor: &mut Self::Subject, node: Node<'ast, N>) -> VisitorControlFlow;
+    fn exit(maybe_visitor: &mut Self::Subject, node: Node<'ast, N>) -> ExitControlFlow;
 }
 
 impl<'ast, N: 'ast + AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Handle<V, N>
@@ -20,11 +20,11 @@ where
 {
     type Subject = V;
 
-    fn enter(visitor: &mut Self::Subject, node: Node<'ast, N>) -> VisitorControlFlow {
+    fn enter(visitor: &mut Self::Subject, node: Node<'ast, N>) -> EnterControlFlow {
         V::enter(visitor, node)
     }
 
-    fn exit(visitor: &mut Self::Subject, node: Node<'ast, N>) -> VisitorControlFlow {
+    fn exit(visitor: &mut Self::Subject, node: Node<'ast, N>) -> ExitControlFlow {
         V::exit(visitor, node)
     }
 }
@@ -32,12 +32,12 @@ where
 impl<'ast, N: 'ast + AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Fallback<V> {
     type Subject = V;
 
-    fn enter(_: &mut Self::Subject, _: Node<'ast, N>) -> VisitorControlFlow {
-        nav_visit()
+    fn enter(_: &mut Self::Subject, _: Node<'ast, N>) -> EnterControlFlow {
+        ControlFlow::Continue(Navigation::Visit)
     }
 
-    fn exit(_: &mut Self::Subject, _: Node<'ast, N>) -> VisitorControlFlow {
-        nav_visit()
+    fn exit(_: &mut Self::Subject, _: Node<'ast, N>) -> ExitControlFlow {
+        ControlFlow::Continue(())
     }
 }
 
@@ -80,13 +80,13 @@ where
 }
 
 pub trait VisitorDispatch<'ast> {
-    fn enter(&mut self, node: ConcreteNode<'ast>) -> VisitorControlFlow;
-    fn exit(&mut self, node: ConcreteNode<'ast>) -> VisitorControlFlow;
+    fn enter(&mut self, node: ConcreteNode<'ast>) -> EnterControlFlow;
+    fn exit(&mut self, node: ConcreteNode<'ast>) -> ExitControlFlow;
 }
 
 pub trait VisitorDispatchNode<'ast, N: AstNode<'ast>> {
-    fn enter(&mut self, node: Node<'ast, N>) -> VisitorControlFlow;
-    fn exit(&mut self, node: Node<'ast, N>) -> VisitorControlFlow;
+    fn enter(&mut self, node: Node<'ast, N>) -> EnterControlFlow;
+    fn exit(&mut self, node: Node<'ast, N>) -> ExitControlFlow;
 }
 
 impl<'ast, V, N> VisitorDispatchNode<'ast, N> for V
@@ -95,11 +95,11 @@ where
     N: DispatchTableLookup<'ast>,
     N::Lookup<V>: WithFallbackSupport<'ast, N, Subject = Self>,
 {
-    fn enter(&mut self, node: Node<'ast, N>) -> VisitorControlFlow {
+    fn enter(&mut self, node: Node<'ast, N>) -> EnterControlFlow {
         <N::Lookup<V> as WithFallbackSupport<N>>::enter(self, node)
     }
 
-    fn exit(&mut self, node: Node<'ast, N>) -> VisitorControlFlow {
+    fn exit(&mut self, node: Node<'ast, N>) -> ExitControlFlow {
         <N::Lookup<V> as WithFallbackSupport<N>>::exit(self, node)
     }
 }

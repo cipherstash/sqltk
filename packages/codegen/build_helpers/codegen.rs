@@ -128,11 +128,11 @@ impl Codegen {
             where
                 Self: #bounds
             {
-                fn enter(&mut self, concrete_node: ConcreteNode<'ast>) -> VisitorControlFlow {
+                fn enter(&mut self, concrete_node: ConcreteNode<'ast>) -> EnterControlFlow {
                     match_concrete_node!(concrete_node, |node| { VisitorDispatchNode::enter(self, node) })
                 }
 
-                fn exit(&mut self, concrete_node: ConcreteNode<'ast>) -> VisitorControlFlow {
+                fn exit(&mut self, concrete_node: ConcreteNode<'ast>) -> ExitControlFlow {
                     match_concrete_node!(concrete_node, |node| { VisitorDispatchNode::exit(self, node) })
                 }
             }
@@ -540,13 +540,13 @@ impl Codegen {
                         &'ast self,
                         visitor: &mut V,
                         node_builder: &mut crate::NodeBuilder,
-                    ) -> crate::VisitorControlFlow {
+                    ) -> crate::EnterControlFlow {
                         crate::visit(
                             node_builder.new_node(self).into(),
                             visitor,
                             #[allow(unused_variables)]
                             |visitor| {
-                                crate::nav_skip()
+                                std::ops::ControlFlow::Continue(crate::Navigation::Skip)
                             }
                         )
                     }

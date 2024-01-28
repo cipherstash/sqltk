@@ -35,7 +35,7 @@ impl<'a> ToTokens for AstNodeImpl<'a> {
                     &'ast self,
                     visitor: &mut V,
                     node_builder: &mut crate::NodeBuilder,
-                ) -> VisitorControlFlow {
+                ) -> crate::EnterControlFlow {
                     crate::visit(node_builder.new_node(self).into(), visitor, #[allow(unused_variables)] |visitor| {
                         #body
                         ControlFlow::Continue(Navigation::Visit)
