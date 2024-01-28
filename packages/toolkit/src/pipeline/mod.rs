@@ -66,7 +66,7 @@ mod test {
     use crate::{
         dispatch::AssumeNotImplemented,
         pipeline::{self, InitializeError, ReadOnly, ReadWrite, RootScope, Scope, Stage},
-        AstNode, Node, Visitor, EnterControlFlow, ExitControlFlow, Navigation
+        AstNode, EnterControlFlow, ExitControlFlow, Navigation, Node, Visitor,
     };
 
     #[test]

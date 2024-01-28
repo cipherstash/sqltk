@@ -129,7 +129,8 @@ pub mod test {
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
     use sqltk::{
-        dispatch::AssumeNotImplemented, AstNode, EnterControlFlow, Navigation, Node, Visitor, VisitorDispatch
+        dispatch::AssumeNotImplemented, AstNode, EnterControlFlow, Navigation, Node, Visitor,
+        VisitorDispatch,
     };
 
     #[derive(VisitorDispatch)]

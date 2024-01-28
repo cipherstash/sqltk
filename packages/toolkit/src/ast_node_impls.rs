@@ -70,7 +70,7 @@ where
                 visitor,
                 |visitor| match self {
                     Some(child) => child.accept_with_node_builder(visitor, node_builder),
-                    None => ControlFlow::Continue(Navigation::Skip)
+                    None => ControlFlow::Continue(Navigation::Skip),
                 },
             )
         }

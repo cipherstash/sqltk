@@ -29,7 +29,5 @@ fn manifest_dir() -> String {
 }
 
 fn output_path(file: &str) -> PathBuf {
-    PathBuf::from(manifest_dir())
-        .join("generated")
-        .join(file)
+    PathBuf::from(manifest_dir()).join("generated").join(file)
 }

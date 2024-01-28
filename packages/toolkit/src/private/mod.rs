@@ -1,6 +1,6 @@
 use std::ops::ControlFlow;
 
-use crate::{ConcreteNode, Navigation, EnterControlFlow, VisitorDispatch};
+use crate::{ConcreteNode, EnterControlFlow, Navigation, VisitorDispatch};
 
 pub fn visit<'ast, V, F>(
     node: ConcreteNode<'ast>,

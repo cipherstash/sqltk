@@ -6,7 +6,7 @@ pub struct Fallback<T>(PhantomData<T>);
 
 pub struct Handle<V, N>(PhantomData<(V, N)>);
 
-pub trait WithFallbackSupport<'ast, N: 'ast + AstNode<'ast>> {
+pub trait WithFallbackSupport<'ast, N: AstNode<'ast>> {
     type Subject;
 
     fn enter(maybe_visitor: &mut Self::Subject, node: Node<'ast, N>) -> EnterControlFlow;
@@ -14,7 +14,7 @@ pub trait WithFallbackSupport<'ast, N: 'ast + AstNode<'ast>> {
     fn exit(maybe_visitor: &mut Self::Subject, node: Node<'ast, N>) -> ExitControlFlow;
 }
 
-impl<'ast, N: 'ast + AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Handle<V, N>
+impl<'ast, N: AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Handle<V, N>
 where
     V: Visitor<'ast, N>,
 {
@@ -29,7 +29,7 @@ where
     }
 }
 
-impl<'ast, N: 'ast + AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Fallback<V> {
+impl<'ast, N: AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Fallback<V> {
     type Subject = V;
 
     fn enter(_: &mut Self::Subject, _: Node<'ast, N>) -> EnterControlFlow {

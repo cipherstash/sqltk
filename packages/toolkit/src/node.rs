@@ -1,5 +1,8 @@
 use crate::{AstNode, DisplayType};
-use std::{fmt::{Display, Formatter}, ops::Deref};
+use std::{
+    fmt::{Display, Formatter},
+    ops::Deref,
+};
 
 pub struct NodeBuilder {
     next_id: usize,
