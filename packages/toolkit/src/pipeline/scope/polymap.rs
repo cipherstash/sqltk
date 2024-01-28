@@ -1,6 +1,4 @@
-#![allow(dead_code)]
-
-// IDEA: if this module turns out to be generally useful, publish it standalone.
+// If this module turns out to be generally useful, publish it standalone.
 
 use std::any::{type_name, TypeId};
 use std::cell::RefCell;
@@ -91,14 +89,14 @@ use std::rc::Rc;
 ///
 #[derive(Default)]
 pub struct PolyMap {
-    config: RefCell<HashMap<InternalKey, InternalValue>>,
+    content: RefCell<HashMap<InternalKey, InternalValue>>,
 }
 
 impl PolyMap {
     /// Creates a new empty `PolyMap`
     pub fn new() -> Self {
         Self {
-            config: RefCell::new(HashMap::new()),
+            content: RefCell::new(HashMap::new()),
         }
     }
 }
@@ -119,7 +117,7 @@ impl PolyMap {
         self.insert_internal::<Key>(Rc::new(RefCell::new(value)))
             .map_or(Some(()), |_| None)
             .ok_or(format!(
-                "PolyMap already contains a config key of type {}",
+                "PolyMap already contains a content key of type {}",
                 type_name::<Key>()
             ))
     }
@@ -146,12 +144,17 @@ impl PolyMap {
             ))),
         };
 
-        self.config.borrow().contains_key(&key)
+        self.content.borrow().contains_key(&key)
     }
 
-    /// Returns the number of entries in this `PolyMap`.
+    /// Returns the number of entries in the `PolyMap`.
     pub fn len(&self) -> usize {
-        self.config.borrow().len()
+        self.content.borrow().len()
+    }
+
+    /// Returns `true` if the PolyMap contains no elements.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     fn get_internal<Key: PolyMapKey>(&self) -> Option<Rc<RefCell<Key::PolyMapValue>>> {
@@ -161,7 +164,7 @@ impl PolyMap {
             clone_to_other: Rc::new(RefCell::new(Box::new(|_: &PolyMap, _: &mut PolyMap| {}))),
         };
 
-        let config_hash = self.config.borrow();
+        let config_hash = self.content.borrow();
         config_hash
             .get(&key)
             .map(|value| unsafe { value.get::<Key::PolyMapValue>() })
@@ -184,7 +187,7 @@ impl PolyMap {
             ))),
         };
 
-        let config_hash = self.config.get_mut();
+        let config_hash = self.content.get_mut();
 
         config_hash
             .insert(key, InternalValue::new(value))
@@ -194,13 +197,13 @@ impl PolyMap {
 
 impl Clone for PolyMap {
     fn clone(&self) -> Self {
-        // The closure limits the scope of the borrow of self.config.
-        // self.config is re-borrowed inside the `clone_to_other` closure so
+        // The closure limits the scope of the borrow of self.content.
+        // self.content is re-borrowed inside the `clone_to_other` closure so
         // limiting the scope of the borrow is vital.
         let clone_keys = || -> Vec<InternalKey> {
             let mut cloned_keys: Vec<InternalKey> = Vec::new();
-            let config = self.config.borrow();
-            for key in config.keys() {
+            let content = self.content.borrow();
+            for key in content.keys() {
                 cloned_keys.push(key.clone());
             }
             cloned_keys
@@ -224,15 +227,15 @@ impl IntoIterator for PolyMap {
     type IntoIter = hash_map::IntoIter<InternalKey, InternalValue>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.config.into_inner().into_iter()
+        self.content.into_inner().into_iter()
     }
 }
 
 impl Extend<(InternalKey, InternalValue)> for PolyMap {
     fn extend<T: IntoIterator<Item = (InternalKey, InternalValue)>>(&mut self, iter: T) {
-        let config = self.config.get_mut();
+        let content = self.content.get_mut();
         for (k, v) in iter {
-            config.insert(k, v);
+            content.insert(k, v);
         }
     }
 }
@@ -275,10 +278,10 @@ impl Hash for InternalKey {
 }
 
 /// A type that can hold an Rc<RefCell<T>> for any T but "hides" type T such
-/// that it is not part of the type signature of Val.
+/// that it is not part of the type signature of `InternalValue`.
 ///
-/// This can be thought of as simulating runtime existential types, and allows
-/// us to build a type-heterogenous HashMap where values can vary in type.
+/// This can be thought of as simulating existential types, and allows us to
+/// build a type-heterogeneous `HashMap` where keys and values can vary in type.
 ///
 /// # Safety
 ///
@@ -332,7 +335,7 @@ impl InternalValue {
     ///
     /// This function is unsafe because calling it with the wrong `V` is
     /// undefined behaviour. However this function is private and is only
-    /// invoked when the type for `V` is know to be correct.
+    /// invoked when the type for `V` is known.
     unsafe fn get<V>(&self) -> Rc<RefCell<V>> {
         let ptr = self.ptr as *const RefCell<V>;
         // The `Rc` returned from `from_raw` will go out of scope at the end of
