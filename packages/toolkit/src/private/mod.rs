@@ -11,7 +11,7 @@ where
     V: VisitorDispatch<'ast>,
     F: FnMut(&mut V) -> VisitorControlFlow,
 {
-    let result = match visitor.dispatch_enter(node.clone()) {
+    let result = match VisitorDispatch::enter(visitor, node.clone()) {
         ControlFlow::Continue(Navigation::Visit) => visit_children(visitor),
         other => other,
     };
@@ -19,6 +19,6 @@ where
     if result.is_break() {
         result
     } else {
-        visitor.dispatch_exit(node)
+        VisitorDispatch::exit(visitor, node)
     }
 }

@@ -1,80 +1,114 @@
-use crate::{
-    match_concrete_node, AstNode, BoxOf, ConcreteNode, Node, OptionOf, VecOf, Visitor,
-    VisitorControlFlow,
-};
+use std::marker::PhantomData;
 
-pub struct FallbackVisitor;
+use crate::{nav_visit, AstNode, ConcreteNode, Node, Visitor, VisitorControlFlow};
 
-/// Global `FallbackVisitor` instance.
-///
-/// The `mut` is necessary in order to conform to the various traits that
-/// accept `&mut self`, but due to `FallbackVisitor` being stateless this is
-/// 100% safe.
-pub static mut FALLBACK_VISITOR: FallbackVisitor = FallbackVisitor;
+pub struct Fallback<T>(PhantomData<T>);
 
-include!(concat!(env!("OUT_DIR"), "/generated_dispatch_impls.rs"));
+pub struct Handle<V, N>(PhantomData<(V, N)>);
 
-pub trait VisitorDispatchNode<'ast, N: AstNode<'ast>>
-where
-    Self: NodeSupport<N>,
-{
-    fn dispatch_node_enter(&mut self, node: Node<'ast, N>) -> VisitorControlFlow;
+pub trait WithFallbackSupport<'ast, N: 'ast + AstNode<'ast>> {
+    type Subject;
 
-    fn dispatch_node_exit(&mut self, node: Node<'ast, N>) -> VisitorControlFlow;
+    fn enter(maybe_visitor: &mut Self::Subject, node: Node<'ast, N>) -> VisitorControlFlow;
+
+    fn exit(maybe_visitor: &mut Self::Subject, node: Node<'ast, N>) -> VisitorControlFlow;
 }
 
-impl<'ast, N: AstNode<'ast>, Target, V> VisitorDispatchNode<'ast, N> for V
+impl<'ast, N: 'ast + AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Handle<V, N>
 where
-    N: 'ast,
-    Target: Visitor<'ast, N>,
-    Self: NodeSupport<N>
-        + MaybeFallback<'ast, N, <Self as NodeSupport<N>>::Supported, Target = Target>,
+    V: Visitor<'ast, N>,
 {
-    fn dispatch_node_enter(&mut self, node: Node<'ast, N>) -> VisitorControlFlow {
-        self.target().enter(node)
+    type Subject = V;
+
+    fn enter(visitor: &mut Self::Subject, node: Node<'ast, N>) -> VisitorControlFlow {
+        V::enter(visitor, node)
     }
 
-    fn dispatch_node_exit(&mut self, node: Node<'ast, N>) -> VisitorControlFlow {
-        self.target().exit(node)
+    fn exit(visitor: &mut Self::Subject, node: Node<'ast, N>) -> VisitorControlFlow {
+        V::exit(visitor, node)
     }
 }
 
-pub trait NodeSupport<Node: ?Sized> {
-    type Supported;
-}
+impl<'ast, N: 'ast + AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Fallback<V> {
+    type Subject = V;
 
-impl<'ast, N: AstNode<'ast>> Visitor<'ast, N> for FallbackVisitor {}
+    fn enter(_: &mut Self::Subject, _: Node<'ast, N>) -> VisitorControlFlow {
+        nav_visit()
+    }
 
-pub trait MaybeFallback<'ast, N: AstNode<'ast>, Supported> {
-    type Target;
-    fn target(&mut self) -> &mut Self::Target;
-}
-
-pub struct Condition<const BOOL: bool>;
-
-impl<'ast, N, V> MaybeFallback<'ast, N, Condition<true>> for V
-where
-    N: AstNode<'ast>,
-    V: NodeSupport<N, Supported = Condition<true>> + Visitor<'ast, N>,
-{
-    type Target = Self;
-
-    fn target(&mut self) -> &mut Self::Target {
-        self
+    fn exit(_: &mut Self::Subject, _: Node<'ast, N>) -> VisitorControlFlow {
+        nav_visit()
     }
 }
 
-impl<'ast, N, V> MaybeFallback<'ast, N, Condition<false>> for V
-where
-    N: AstNode<'ast>,
-    V: NodeSupport<N, Supported = Condition<false>>,
-{
-    type Target = FallbackVisitor;
+pub struct Cond<const COND: bool, Then, Else>(PhantomData<(Then, Else)>);
 
-    fn target(&mut self) -> &mut Self::Target {
-        // SAFETY: `FallbackVisitor` has no state so this is actually safe
-        // A new instance of the visitor cannot be created here because it
-        // is returned by reference.
-        unsafe { &mut FALLBACK_VISITOR }
+pub trait Resolve {
+    type Output;
+}
+
+impl<Then, Else> Resolve for Cond<true, Then, Else> {
+    type Output = Then;
+}
+
+impl<Then, Else> Resolve for Cond<false, Then, Else> {
+    type Output = Else;
+}
+
+pub type If<const COND: bool, Then, Else> = <Cond<{ COND }, Then, Else> as Resolve>::Output;
+
+pub trait AssumeNotImplemented {
+    const ANSWER: bool = false;
+}
+
+impl<V> AssumeNotImplemented for V {}
+
+pub struct Visits<V, N>(core::marker::PhantomData<(V, N)>);
+
+impl<V, N: AstNode<'static>> Visits<V, N>
+where
+    V: Visitor<'static, N>,
+{
+    pub const ANSWER: bool = true;
+}
+
+pub trait DispatchTableLookup<'ast>
+where
+    Self: Sized + AstNode<'ast>,
+{
+    type Lookup<Table: DispatchTable<'ast>>: WithFallbackSupport<'ast, Self>;
+}
+
+pub trait VisitorDispatch<'ast> {
+    fn enter(&mut self, node: ConcreteNode<'ast>) -> VisitorControlFlow;
+    fn exit(&mut self, node: ConcreteNode<'ast>) -> VisitorControlFlow;
+}
+
+pub trait VisitorDispatchNode<'ast, N: AstNode<'ast>> {
+    fn enter(&mut self, node: Node<'ast, N>) -> VisitorControlFlow;
+    fn exit(&mut self, node: Node<'ast, N>) -> VisitorControlFlow;
+}
+
+impl<'ast, V, N> VisitorDispatchNode<'ast, N> for V
+where
+    V: DispatchTable<'ast>,
+    N: DispatchTableLookup<'ast>,
+    N::Lookup<V>: WithFallbackSupport<'ast, N, Subject = Self>,
+{
+    fn enter(&mut self, node: Node<'ast, N>) -> VisitorControlFlow {
+        <N::Lookup<V> as WithFallbackSupport<N>>::enter(self, node)
+    }
+
+    fn exit(&mut self, node: Node<'ast, N>) -> VisitorControlFlow {
+        <N::Lookup<V> as WithFallbackSupport<N>>::exit(self, node)
     }
 }
+
+include!(concat!(
+    env!("OUT_DIR"),
+    "/generated_dispatch_table_trait.rs"
+));
+include!(concat!(
+    env!("OUT_DIR"),
+    "/generated_dispatch_table_lookup_impls.rs"
+));

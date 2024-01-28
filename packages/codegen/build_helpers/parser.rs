@@ -1,20 +1,21 @@
+use std::collections::HashMap;
 use std::ops::Deref;
 use std::{collections::HashSet, hash::Hash};
 
-use crate::{
-    generics::{
-        compose_generic_type, container_type, decompose_generic_type, expect_type_path,
-        is_generic_type, ContainerType,
-    },
-    meta::{SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn},
-};
 use proc_macro2::Span;
+use sqltk_codegen_helpers::generics::{
+    compose_generic_type, container_type, decompose_generic_type, expect_type_path,
+    is_generic_type, ContainerType,
+};
+use sqltk_meta::{
+    ContainerNode, PrimitiveNode, SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn,
+};
 use syn::{
-    Attribute, Field, Item, ItemImpl, ItemMod, ItemUse, Meta, Type, UseGlob, UseGroup, UseName,
-    UsePath, UseRename, UseTree, Visibility,
+    Attribute, Field, Ident, Item, ItemImpl, ItemMod, ItemUse, Meta, Type, TypePath, UseGlob,
+    UseGroup, UseName, UsePath, UseRename, UseTree, Visibility,
 };
 
-use super::*;
+use quote::quote;
 
 /// The fully qualified path of a sqlparser type.  In some cases this will be
 /// different to the fully-qualified public export of the type.
@@ -26,14 +27,14 @@ struct InternalTypePath(TypePath);
 struct PubTypePath(TypePath);
 
 #[derive(Clone, Debug)]
-pub(crate) struct SqlParserAstAnalyser {
+pub struct SqlParserAstAnalyser {
     internal_types: HashMap<InternalTypePath, SqlParserTypeDef>,
     internal_types_by_basename: HashMap<Ident, InternalTypePath>,
     public_types: HashMap<Ident, PubTypePath>,
 }
 
 impl SqlParserAstAnalyser {
-    pub(crate) fn parse_mod(items: &Vec<syn::Item>) -> SqlParserMeta {
+    pub fn parse_mod(items: &Vec<syn::Item>) -> SqlParserMeta {
         let mut parser = Self::new();
         let mut path: Vec<Ident> = vec![Ident::new("sqlparser", Span::call_site())];
         parser.parse_mod_recursively(items, &mut path);

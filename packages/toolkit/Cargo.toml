@@ -20,20 +20,13 @@ include = [
 name = "sqltk"
 path = "src/lib.rs"
 
-[features]
-default = ["bigdecimal"]
-bigdecimal = ["dep:bigdecimal", "sqlparser/bigdecimal", "sqltk_derive/bigdecimal"]
-
 [dependencies]
-sqlparser = { version = "^0.39.0" }
 sqltk_derive = { path = "../derive" }
-bigdecimal = { version = "^0.4.2", optional = true }
-tynm = "0.1.8"
+sqlparser = { workspace = true }
+bigdecimal = { workspace = true }
 
 [build-dependencies]
-sqlparser = { version = "^0.39.0", features = ["bigdecimal"]}
 sqltk_codegen = { path = "../codegen" }
-bigdecimal = { version = "^0.4.2" }
 
 [package.metadata.release]
 # Instruct `cargo release` to not run `cargo publish` locally:

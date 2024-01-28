@@ -76,5 +76,3 @@ where
         }
     }
 }
-
-include!(concat!(env!("OUT_DIR"), "/generated_ast_node_impls.rs"));

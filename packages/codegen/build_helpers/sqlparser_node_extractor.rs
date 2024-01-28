@@ -2,7 +2,7 @@ use cargo_metadata::{CargoOpt, MetadataCommand};
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::meta::SqlParserMeta;
+use sqltk_meta::SqlParserMeta;
 
 use super::*;
 

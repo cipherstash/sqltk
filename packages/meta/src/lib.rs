@@ -1,6 +1,7 @@
 //! This module implements a persistable storage of `sqlparser` AST nodes.
 
-use std::collections::BTreeMap;
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Formatter;
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -8,10 +9,10 @@ use std::ops::DerefMut;
 use std::{collections::HashSet, ops::Deref};
 
 use proc_macro2::Span;
+use quote::{quote, ToTokens};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use syn::{parse::Parse, ItemEnum, ItemStruct};
-
-use super::*;
+use syn::{Ident, TypePath};
 
 /// Serializable/deserializable data structure that captures AST node metadata
 /// extracted from `sqlparser`.
@@ -161,7 +162,7 @@ where
 }
 
 impl SqlParserMeta {
-    pub(crate) fn new(
+    pub fn new(
         main_nodes: HashMap<Syn<TypePath>, SqlParserTypeDef>,
         container_nodes: HashSet<ContainerNode>,
         primitive_nodes: HashSet<PrimitiveNode>,
@@ -226,7 +227,6 @@ pub enum ContainerNode {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Deserialize)]
 pub enum PrimitiveNode {
-    #[cfg(feature = "bigdecimal")]
     BigDecimal,
     Bool,
     Char,
@@ -242,7 +242,6 @@ pub enum PrimitiveNode {
 }
 
 static ALL_PRIMITIVE_NODES: &[PrimitiveNode] = &[
-    #[cfg(feature = "bigdecimal")]
     PrimitiveNode::BigDecimal,
     PrimitiveNode::Bool,
     PrimitiveNode::Char,
@@ -260,7 +259,6 @@ static ALL_PRIMITIVE_NODES: &[PrimitiveNode] = &[
 impl PrimitiveNode {
     pub fn variant_ident(&self) -> Syn<Ident> {
         let name = match self {
-            #[cfg(feature = "bigdecimal")]
             PrimitiveNode::BigDecimal => "BigDecimal",
             PrimitiveNode::Bool => "Bool",
             PrimitiveNode::Char => "Char",
@@ -280,7 +278,6 @@ impl PrimitiveNode {
 
     pub fn type_path(&self) -> Syn<TypePath> {
         let tokens = match self {
-            #[cfg(feature = "bigdecimal")]
             Self::BigDecimal => quote!(bigdecimal::BigDecimal),
             Self::Bool => quote!(bool),
             Self::Char => quote!(char),
@@ -328,7 +325,7 @@ impl ContainerNode {
 pub struct Syn<T: ToTokens + Parse + Eq + Hash + Clone>(pub T);
 
 impl<T: ToTokens + Parse + Eq + Hash + Clone> ToTokens for Syn<T> {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         self.0.to_tokens(tokens)
     }
 }
