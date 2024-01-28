@@ -63,7 +63,7 @@ pub type VisitorControlFlow = ControlFlow<(), Navigation>;
 
 /// Trait for types that visit one specific type of node.
 #[allow(unused_variables)]
-pub trait Visitor<'ast, T: 'ast + AstNode<'ast>> {
+pub trait Visitor<'ast, T: AstNode<'ast>> {
     /// Called when a node is entered.
     ///
     /// The default implementation returns [`ControlFlow::Continue(Navigation::Visit)`].
