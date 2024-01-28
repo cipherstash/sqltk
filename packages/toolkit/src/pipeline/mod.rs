@@ -61,12 +61,12 @@ where
 mod test {
     use sqlparser::{ast::Expr, dialect::GenericDialect, parser::Parser};
     use sqltk_derive::VisitorDispatch;
+    use std::ops::ControlFlow;
 
     use crate::{
         dispatch::AssumeNotImplemented,
-        nav_visit,
         pipeline::{self, InitializeError, ReadOnly, ReadWrite, RootScope, Scope, Stage},
-        AstNode, Node, Visitor, VisitorControlFlow,
+        AstNode, Node, Visitor, EnterControlFlow, ExitControlFlow, Navigation
     };
 
     #[test]
@@ -98,15 +98,15 @@ mod test {
         }
 
         impl<'ast> Visitor<'ast, Expr> for BalancedExprsCheck {
-            fn enter(&mut self, _: Node<'ast, Expr>) -> VisitorControlFlow {
+            fn enter(&mut self, _: Node<'ast, Expr>) -> EnterControlFlow {
                 self.exprs_balanced.get_mut().0 = false;
-                nav_visit()
+                ControlFlow::Continue(Navigation::Visit)
             }
 
-            fn exit(&mut self, _: Node<'ast, Expr>) -> VisitorControlFlow {
+            fn exit(&mut self, _: Node<'ast, Expr>) -> ExitControlFlow {
                 self.exprs_balanced.get_mut().0 =
                     self.expr_enter_count.get().0 == self.expr_exit_count.get().0;
-                nav_visit()
+                ControlFlow::Continue(())
             }
         }
 
@@ -140,14 +140,14 @@ mod test {
         }
 
         impl<'ast> Visitor<'ast, Expr> for ExprCounter {
-            fn enter(&mut self, _: Node<'ast, Expr>) -> VisitorControlFlow {
+            fn enter(&mut self, _: Node<'ast, Expr>) -> EnterControlFlow {
                 self.expr_enter_count.get_mut().0 += 1;
-                nav_visit()
+                ControlFlow::Continue(Navigation::Visit)
             }
 
-            fn exit(&mut self, _: Node<'ast, Expr>) -> VisitorControlFlow {
+            fn exit(&mut self, _: Node<'ast, Expr>) -> ExitControlFlow {
                 self.expr_exit_count.get_mut().0 += 1;
-                nav_visit()
+                ControlFlow::Continue(())
             }
         }
 
