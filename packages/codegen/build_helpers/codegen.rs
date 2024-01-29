@@ -48,6 +48,12 @@ impl Codegen {
         }
 
         generated_code.append_all(quote! {
+            #[doc = "This trait is used at compile time to implement a fallback implementation mechanism for [`Visitor`]."]
+            #[doc = "Specifically, implementations of this trait determine for every `sqlparser` AST node whether it can "]
+            #[doc = "be visited by `Self` (because Self implements `Visitor` for that node) or whether is is not implemented"]
+            #[doc = "and therefore the default fallback handler should be invoked instead."]
+            #[doc = ""]
+            #[doc = "This trait is auto-generated when [`VisitorDispatch`] is derived and should not be implemented manually."]
             pub trait DispatchTable<'ast> {
                 #entries
             }

@@ -58,12 +58,12 @@ fn impl_dispatch_table(visitor: &Ident, _generics: &Generics) -> proc_macro2::To
         let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
         entries.append_all(quote!{
-            type #ty_ident = #krate::dispatch::If<{#krate::dispatch::Visits::<Self, #node>::ANSWER}, #krate::dispatch::Handle<Self, #node>, #krate::dispatch::Fallback<Self>>;
+            type #ty_ident = #krate::dispatch::If<{#krate::dispatch::IsVisitor::<Self, #node>::ANSWER}, #krate::dispatch::Handle<Self, #node>, #krate::dispatch::Fallback<Self>>;
         });
     }
 
     // let mod_ident: Ident = format_ident!("{}_dispatch_table", &visitor);
-    // use #krate::dispatch::AssumeNotImplemented;
+    // use #krate::dispatch::Nope;
 
     output.append_all(quote! {
 

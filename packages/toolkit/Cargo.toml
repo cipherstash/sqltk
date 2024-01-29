@@ -24,7 +24,7 @@ path = "src/lib.rs"
 sqltk_derive = { path = "../derive" }
 sqlparser = { workspace = true }
 bigdecimal = { workspace = true }
-aquamarine = { workspace = true }
+simple-mermaid = { workspace = true }
 
 [build-dependencies]
 sqltk_codegen = { path = "../codegen" }

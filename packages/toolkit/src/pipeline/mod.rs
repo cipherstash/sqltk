@@ -64,7 +64,7 @@ mod test {
     use std::ops::ControlFlow;
 
     use crate::{
-        dispatch::AssumeNotImplemented,
+        dispatch::Nope,
         pipeline::{self, InitializeError, ReadOnly, ReadWrite, RootScope, Scope, Stage},
         AstNode, EnterControlFlow, ExitControlFlow, Navigation, Node, Visitor,
     };

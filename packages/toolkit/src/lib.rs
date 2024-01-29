@@ -25,7 +25,7 @@
 
 mod ast_node_impls;
 mod custom_display;
-mod dispatch;
+pub mod dispatch;
 mod generated;
 mod node;
 
@@ -129,7 +129,7 @@ pub mod test {
     use sqlparser::dialect::GenericDialect;
     use sqlparser::parser::Parser;
     use sqltk::{
-        dispatch::AssumeNotImplemented, AstNode, EnterControlFlow, Navigation, Node, Visitor,
+        dispatch::Nope, AstNode, EnterControlFlow, Navigation, Node, Visitor,
         VisitorDispatch,
     };
 

@@ -7,8 +7,7 @@ members = [
 [workspace.dependencies]
 sqlparser = { version = "0.43.1", features = ["bigdecimal"] }
 bigdecimal = { version = "^0.4.2" }
-aquamarine = "0.5.0"
-
+simple-mermaid = "0.1.1"
 
 [profile.dev]
 incremental = true
