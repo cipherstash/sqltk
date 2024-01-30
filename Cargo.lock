@@ -382,13 +382,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sqltk_example"
-version = "0.1.0"
-dependencies = [
- "sqltk",
-]
-
-[[package]]
 name = "sqltk_meta"
 version = "0.1.0"
 dependencies = [

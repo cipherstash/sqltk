@@ -31,12 +31,12 @@ impl<'a> ToTokens for AstNodeImpl<'a> {
         tokens.append_all(quote! {
             #[automatically_derived]
             impl<'ast> crate::AstNode<'ast> for #path {
-                fn accept_with_node_builder<V: crate::VisitorDispatch<'ast>>(
+                fn accept_and_identify<V: crate::VisitorDispatch<'ast>>(
                     &'ast self,
                     visitor: &mut V,
-                    node_builder: &mut crate::NodeBuilder,
+                    node_id_seq: &mut crate::NodeIdSequence,
                 ) -> crate::EnterControlFlow {
-                    crate::visit(node_builder.new_node(self).into(), visitor, #[allow(unused_variables)] |visitor| {
+                    crate::visit(node_id_seq.next_node(self).into(), visitor, #[allow(unused_variables)] |visitor| {
                         #body
                         ControlFlow::Continue(Navigation::Visit)
                     })
@@ -79,7 +79,7 @@ impl<'a> AstNodeImpl<'a> {
                 for field in fields.iter() {
                     let ident = field.ident.clone().unwrap();
                     tokens.append_all(quote! {
-                        self.#ident.accept_with_node_builder(visitor, node_builder)?;
+                        self.#ident.accept_and_identify(visitor, node_id_seq)?;
                     });
                 }
             }
@@ -91,7 +91,7 @@ impl<'a> AstNodeImpl<'a> {
                 for (idx, _) in fields.iter() {
                     let field_idx = syn::Index::from(*idx);
                     tokens.append_all(quote! {
-                        self.#field_idx.accept_with_node_builder(visitor, node_builder)?;
+                        self.#field_idx.accept_and_identify(visitor, node_id_seq)?;
                     });
                 }
             }
@@ -111,7 +111,7 @@ impl<'a> AstNodeImpl<'a> {
                 for field in fields.iter() {
                     let ident = field.ident.clone().unwrap();
                     tokens.append_all(quote! {
-                        #ident.accept_with_node_builder(visitor, node_builder)?;
+                        #ident.accept_and_identify(visitor, node_id_seq)?;
                     });
                 }
             }
@@ -123,7 +123,7 @@ impl<'a> AstNodeImpl<'a> {
                 for (idx, _) in fields.iter() {
                     let ident = format_ident!("field{}", idx);
                     tokens.append_all(quote! {
-                        #ident.accept_with_node_builder(visitor, node_builder)?;
+                        #ident.accept_and_identify(visitor, node_id_seq)?;
                     });
                 }
             }

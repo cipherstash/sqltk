@@ -4,22 +4,22 @@ use std::{
     ops::Deref,
 };
 
-pub struct NodeBuilder {
+pub struct NodeIdSequence {
     next_id: usize,
 }
 
-impl Default for NodeBuilder {
+impl Default for NodeIdSequence {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl NodeBuilder {
+impl NodeIdSequence {
     pub fn new() -> Self {
         Self { next_id: 0 }
     }
 
-    pub fn new_node<'ast, T: AstNode<'ast>>(&mut self, ast_node: &'ast T) -> Node<'ast, T> {
+    pub fn next_node<'ast, T: AstNode<'ast>>(&mut self, ast_node: &'ast T) -> Node<'ast, T> {
         Node::new(self.next_id(), ast_node)
     }
 

@@ -78,18 +78,18 @@ where
     where
         V: VisitorDispatch<'ast>,
     {
-        self.accept_with_node_builder(visitor, &mut NodeBuilder::new())
+        self.accept_and_identify(visitor, &mut NodeIdSequence::new())
     }
 
-    /// Same as [`AstNode::accept`] but requires an additional `node_builder`
+    /// Same as [`AstNode::accept`] but requires an additional `node_id_seq`
     /// parameter.
     ///
     /// *Not public API. Used by generated code.*
     #[doc(hidden)]
-    fn accept_with_node_builder<V>(
+    fn accept_and_identify<V>(
         &'ast self,
         visitor: &mut V,
-        node_builder: &mut NodeBuilder,
+        node_id_seq: &mut NodeIdSequence,
     ) -> EnterControlFlow
     where
         V: VisitorDispatch<'ast>;

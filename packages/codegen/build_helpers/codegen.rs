@@ -542,13 +542,13 @@ impl Codegen {
             output.append_all(quote! {
                 #[automatically_derived]
                 impl<'ast> crate::AstNode<'ast> for #type_path {
-                    fn accept_with_node_builder<V: crate::VisitorDispatch<'ast>>(
+                    fn accept_and_identify<V: crate::VisitorDispatch<'ast>>(
                         &'ast self,
                         visitor: &mut V,
-                        node_builder: &mut crate::NodeBuilder,
+                        node_id_seq: &mut crate::NodeIdSequence,
                     ) -> crate::EnterControlFlow {
                         crate::visit(
-                            node_builder.new_node(self).into(),
+                            node_id_seq.next_node(self).into(),
                             visitor,
                             #[allow(unused_variables)]
                             |visitor| {
