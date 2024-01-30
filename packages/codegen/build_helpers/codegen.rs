@@ -134,12 +134,12 @@ impl Codegen {
             where
                 Self: #bounds
             {
-                fn enter(&mut self, concrete_node: SqlNode<'ast>) -> EnterControlFlow {
-                    match_sql_node_enum!(concrete_node, |node| { VisitorDispatchNode::enter(self, node) })
+                fn enter(&mut self, sql_node: SqlNode<'ast>) -> EnterControlFlow {
+                    match_sql_node_enum!(sql_node, |node| { VisitorDispatchNode::enter(self, node) })
                 }
 
-                fn exit(&mut self, concrete_node: SqlNode<'ast>) -> ExitControlFlow {
-                    match_sql_node_enum!(concrete_node, |node| { VisitorDispatchNode::exit(self, node) })
+                fn exit(&mut self, sql_node: SqlNode<'ast>) -> ExitControlFlow {
+                    match_sql_node_enum!(sql_node, |node| { VisitorDispatchNode::exit(self, node) })
                 }
             }
         }

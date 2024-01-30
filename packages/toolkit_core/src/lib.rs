@@ -11,7 +11,7 @@ pub use bigdecimal;
 
 pub use custom_display::*;
 pub use dispatch::*;
-pub use generated::concrete_node::*;
+pub use generated::sql_node::*;
 pub use node::*;
 pub mod pipeline;
 
