@@ -47,7 +47,7 @@ use simple_mermaid::mermaid;
 use std::{marker::PhantomData, ops::ControlFlow};
 
 use crate::{
-    match_concrete_node, AstNode, BoxOf, SqlNode, EnterControlFlow, ExitControlFlow,
+    match_sql_node_enum, AstNode, BoxOf, SqlNode, EnterControlFlow, ExitControlFlow,
     Navigation, Node, OptionOf, VecOf, Visitor,
 };
 

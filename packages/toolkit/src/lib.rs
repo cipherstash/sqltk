@@ -309,4 +309,11 @@ pub mod test {
             assert!(false, "Pipeline construction failed")
         };
     }
+
+    #[test]
+    fn basic_edit_pipeline() {
+        // First VisitorDispatch in the pipeline must build a shadow AST of Node<'ast, T: AstNode>
+        // (need a SqlNode::wrapped(&self) method)
+        // The Scope of the analysis Pipeline will contain the shadow AST + analysis results
+    }
 }

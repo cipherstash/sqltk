@@ -135,11 +135,11 @@ impl Codegen {
                 Self: #bounds
             {
                 fn enter(&mut self, concrete_node: SqlNode<'ast>) -> EnterControlFlow {
-                    match_concrete_node!(concrete_node, |node| { VisitorDispatchNode::enter(self, node) })
+                    match_sql_node_enum!(concrete_node, |node| { VisitorDispatchNode::enter(self, node) })
                 }
 
                 fn exit(&mut self, concrete_node: SqlNode<'ast>) -> ExitControlFlow {
-                    match_concrete_node!(concrete_node, |node| { VisitorDispatchNode::exit(self, node) })
+                    match_sql_node_enum!(concrete_node, |node| { VisitorDispatchNode::exit(self, node) })
                 }
             }
         }
@@ -399,7 +399,7 @@ impl Codegen {
             #[automatically_derived]
             impl<'ast> std::fmt::Display for SqlNode<'ast> {
                 fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    match_concrete_node!(self, |node| { write!(f, "{}", node) })
+                    match_sql_node_enum!(self, |node| { write!(f, "{}", node) })
                 }
             }
         });
@@ -480,7 +480,7 @@ impl Codegen {
 
         output.append_all(quote! {
             #[macro_export]
-            macro_rules! _match_concrete_node {
+            macro_rules! _match_sql_node_enum {
                 ($node:ident, $handler:expr) => {
                     // Due to macro hygeine reasons code is generated using a
                     // closure.  Changing this macro to a proc macro would allow
@@ -514,7 +514,7 @@ impl Codegen {
 
             #[doc = "Fixes macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths"]
             #[doc(hidden)]
-            pub use _match_concrete_node as match_concrete_node;
+            pub use _match_sql_node_enum as match_sql_node_enum;
         });
 
         let mut file = File::create(dest_file)
