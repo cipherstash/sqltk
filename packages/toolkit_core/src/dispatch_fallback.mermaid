@@ -6,7 +6,7 @@ sequenceDiagram
     participant B as VisitorDispatchNode (blanket impl)
     participant C as Fallback (impl WithFallbackSupport)
 
-    Note over A: Accepts a ConcreteNode, unwraps the enum<br/>variant and invokes VisitorDispatchNode::enter
+    Note over A: Accepts a SqlNode, unwraps the enum<br/>variant and invokes VisitorDispatchNode::enter
     Note over B: At compile time, resolves a WithFallbackSupport<br/>instance using DispatchTable<br/>and DispatchTableLookup bounds
     Note over C: Fallback implementation that simply returns<br/> ControlFlow::Continue(Visit)
 

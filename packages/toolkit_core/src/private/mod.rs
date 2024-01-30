@@ -1,9 +1,10 @@
 use std::ops::ControlFlow;
 
-use crate::{ConcreteNode, EnterControlFlow, Navigation, VisitorDispatch};
+use crate::{SqlNode, EnterControlFlow, Navigation, VisitorDispatch};
 
+#[inline(always)]
 pub fn visit<'ast, V, F>(
-    node: ConcreteNode<'ast>,
+    node: SqlNode<'ast>,
     visitor: &mut V,
     mut visit_children: F,
 ) -> EnterControlFlow

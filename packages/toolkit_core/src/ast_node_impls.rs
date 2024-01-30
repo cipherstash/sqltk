@@ -15,7 +15,7 @@ impl<'ast, T: AstNode<'ast>> AstNode<'ast> for &'ast T {
 
 impl<'ast, T: AstNode<'ast>> AstNode<'ast> for Vec<T>
 where
-    Node<'ast, Vec<T>>: Into<ConcreteNode<'ast>>,
+    Node<'ast, Vec<T>>: Into<SqlNode<'ast>>,
 {
     fn accept_and_identify<V>(
         &'ast self,
@@ -40,7 +40,7 @@ where
 
 impl<'ast, T: AstNode<'ast>> AstNode<'ast> for Box<T>
 where
-    Node<'ast, Box<T>>: Into<ConcreteNode<'ast>>,
+    Node<'ast, Box<T>>: Into<SqlNode<'ast>>,
 {
     fn accept_and_identify<V: VisitorDispatch<'ast>>(
         &'ast self,
@@ -55,7 +55,7 @@ where
 
 impl<'ast, T: AstNode<'ast>> AstNode<'ast> for Option<T>
 where
-    Node<'ast, Option<T>>: Into<ConcreteNode<'ast>>,
+    Node<'ast, Option<T>>: Into<SqlNode<'ast>>,
 {
     fn accept_and_identify<V: VisitorDispatch<'ast>>(
         &'ast self,

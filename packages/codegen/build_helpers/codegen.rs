@@ -134,11 +134,11 @@ impl Codegen {
             where
                 Self: #bounds
             {
-                fn enter(&mut self, concrete_node: ConcreteNode<'ast>) -> EnterControlFlow {
+                fn enter(&mut self, concrete_node: SqlNode<'ast>) -> EnterControlFlow {
                     match_concrete_node!(concrete_node, |node| { VisitorDispatchNode::enter(self, node) })
                 }
 
-                fn exit(&mut self, concrete_node: ConcreteNode<'ast>) -> ExitControlFlow {
+                fn exit(&mut self, concrete_node: SqlNode<'ast>) -> ExitControlFlow {
                     match_concrete_node!(concrete_node, |node| { VisitorDispatchNode::exit(self, node) })
                 }
             }
@@ -228,7 +228,7 @@ impl Codegen {
         for type_path in main_nodes.iter().map(|(type_path, _)| type_path) {
             let ident = &type_path.path.segments.last().unwrap().ident;
             main_node_from_impls.append_all(quote! {
-                impl<'ast> From<Node<'ast, #type_path>> for ConcreteNode<'ast> {
+                impl<'ast> From<Node<'ast, #type_path>> for SqlNode<'ast> {
                     fn from(value: Node<'ast, #type_path>) -> Self {
                         Self::#ident(value)
                     }
@@ -249,7 +249,7 @@ impl Codegen {
             let ident = pn.variant_ident();
             let type_path = pn.type_path();
             primitive_node_from_impls.append_all(quote! {
-                impl<'ast> From<Node<'ast, #type_path>> for ConcreteNode<'ast> {
+                impl<'ast> From<Node<'ast, #type_path>> for SqlNode<'ast> {
                     fn from(value: Node<'ast, #type_path>) -> Self {
                         Self::#ident(value)
                     }
@@ -350,7 +350,7 @@ impl Codegen {
             }
 
             #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-            pub enum ConcreteNode<'ast> {
+            pub enum SqlNode<'ast> {
                 #(#main_nodes_variants)*
                 #(#primitive_nodes_variants)*
                 Box(BoxOf<'ast>),
@@ -366,7 +366,7 @@ impl Codegen {
             #main_node_from_impls
 
             #[automatically_derived]
-            impl<'ast, T: AstNode<'ast>> From<Node<'ast, Box<T>>> for ConcreteNode<'ast>
+            impl<'ast, T: AstNode<'ast>> From<Node<'ast, Box<T>>> for SqlNode<'ast>
             where
                 BoxOf<'ast>: From<Node<'ast, Box<T>>>,
             {
@@ -376,10 +376,10 @@ impl Codegen {
             }
 
             #[automatically_derived]
-            impl<'ast, T: AstNode<'ast>> From<Node<'ast, Vec<T>>> for ConcreteNode<'ast>
+            impl<'ast, T: AstNode<'ast>> From<Node<'ast, Vec<T>>> for SqlNode<'ast>
             where
                 VecOf<'ast>: From<Node<'ast, Vec<T>>>,
-                ConcreteNode<'ast>: From<Node<'ast, T>>
+                SqlNode<'ast>: From<Node<'ast, T>>
             {
                 fn from(value: Node<'ast, Vec<T>>) -> Self {
                     Self::Vec(VecOf::from(value))
@@ -387,7 +387,7 @@ impl Codegen {
             }
 
             #[automatically_derived]
-            impl<'ast, T: AstNode<'ast>> From<Node<'ast, Option<T>>> for ConcreteNode<'ast>
+            impl<'ast, T: AstNode<'ast>> From<Node<'ast, Option<T>>> for SqlNode<'ast>
             where
                 OptionOf<'ast>: From<Node<'ast, Option<T>>>,
             {
@@ -397,7 +397,7 @@ impl Codegen {
             }
 
             #[automatically_derived]
-            impl<'ast> std::fmt::Display for ConcreteNode<'ast> {
+            impl<'ast> std::fmt::Display for SqlNode<'ast> {
                 fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                     match_concrete_node!(self, |node| { write!(f, "{}", node) })
                 }
@@ -490,23 +490,23 @@ impl Codegen {
 
                     match $node {
                         #(
-                            ConcreteNode::#main_node_variants => { $handler(node) }
+                            SqlNode::#main_node_variants => { $handler(node) }
                         )*
 
                         #(
-                            ConcreteNode::#primitive_node_variants => { $handler(node) }
+                            SqlNode::#primitive_node_variants => { $handler(node) }
                         )*
 
                         #(
-                            ConcreteNode::Box(BoxOf::#box_of_variants) => { $handler(node) }
+                            SqlNode::Box(BoxOf::#box_of_variants) => { $handler(node) }
                         )*
 
                         #(
-                            ConcreteNode::Option(OptionOf::#option_of_variants) => { $handler(node) }
+                            SqlNode::Option(OptionOf::#option_of_variants) => { $handler(node) }
                         )*
 
                         #(
-                            ConcreteNode::Vec(VecOf::#vec_of_variants) => { $handler(node) }
+                            SqlNode::Vec(VecOf::#vec_of_variants) => { $handler(node) }
                         )*
                     }
                 }

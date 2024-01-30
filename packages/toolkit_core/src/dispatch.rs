@@ -47,7 +47,7 @@ use simple_mermaid::mermaid;
 use std::{marker::PhantomData, ops::ControlFlow};
 
 use crate::{
-    match_concrete_node, AstNode, BoxOf, ConcreteNode, EnterControlFlow, ExitControlFlow,
+    match_concrete_node, AstNode, BoxOf, SqlNode, EnterControlFlow, ExitControlFlow,
     Navigation, Node, OptionOf, VecOf, Visitor,
 };
 
@@ -61,8 +61,8 @@ use crate::{
 /// This trait is typically derived by using `#[derive(VisitorDispatch)]` on a
 /// user-defined type but can be implemented directly.
 pub trait VisitorDispatch<'ast> {
-    fn enter(&mut self, node: ConcreteNode<'ast>) -> EnterControlFlow;
-    fn exit(&mut self, node: ConcreteNode<'ast>) -> ExitControlFlow;
+    fn enter(&mut self, node: SqlNode<'ast>) -> EnterControlFlow;
+    fn exit(&mut self, node: SqlNode<'ast>) -> ExitControlFlow;
 }
 
 /// Marker type used by the [`DispatchTable`] trait to indicate that a

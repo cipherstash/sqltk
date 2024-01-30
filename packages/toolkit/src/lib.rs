@@ -37,7 +37,7 @@ pub mod test {
     use sqltk::{
         dispatch::Nope, AstNode, EnterControlFlow, Navigation, Node, Visitor,
         pipeline::{self, InitializeError, ReadOnly, ReadWrite, RootScope, Scope, Stage},
-        VisitorDispatch, ConcreteNode, ExitControlFlow, sqlparser::{self, ast, parser, dialect}
+        VisitorDispatch, SqlNode, ExitControlFlow, sqlparser::{self, ast, parser, dialect}
     };
 
     #[derive(VisitorDispatch)]
@@ -161,12 +161,12 @@ pub mod test {
         }
 
         impl<'ast> VisitorDispatch<'ast> for Recorder {
-            fn enter(&mut self, node: ConcreteNode<'ast>) -> EnterControlFlow {
+            fn enter(&mut self, node: SqlNode<'ast>) -> EnterControlFlow {
                 self.order_enter.push(node.to_string());
                 ControlFlow::Continue(Navigation::Visit)
             }
 
-            fn exit(&mut self, node: ConcreteNode<'ast>) -> ExitControlFlow {
+            fn exit(&mut self, node: SqlNode<'ast>) -> ExitControlFlow {
                 self.order_exit.push(node.to_string());
                 ControlFlow::Continue(())
             }

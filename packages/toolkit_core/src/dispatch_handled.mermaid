@@ -7,7 +7,7 @@ sequenceDiagram
     participant C as Handle (impl WithFallbackSupport)
     participant D as Visitor (user-defined impl)
 
-    Note over A: Accepts a ConcreteNode, unwraps the enum<br/>variant and invokes VisitorDispatchNode::enter
+    Note over A: Accepts a SqlNode, unwraps the enum<br/>variant and invokes VisitorDispatchNode::enter
     Note over B: At compile time, resolves a WithFallbackSupport<br/>instance using DispatchTable<br/>and DispatchTableLookup bounds
     Note over C: User type implements Visitor of N, so forward the enter call
     Note over D: The user-defined Visitor implementation
