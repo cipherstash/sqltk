@@ -1,3 +1,6 @@
+/// Newtype and trait to override [`Display`] implementation of `sqlparser` AST
+/// node types.
+
 use std::{
     fmt::{Display, Formatter, Result},
     marker::PhantomData,
@@ -19,10 +22,6 @@ impl<T> DisplayType<T> {
     pub fn new() -> Self {
         Self(PhantomData)
     }
-}
-
-pub fn display_type_from_value<T>(_value: &T) -> DisplayType<T> {
-    DisplayType::<T>(PhantomData)
 }
 
 impl<'ast, T: AstNode<'ast>> Display for DisplayType<Box<T>>

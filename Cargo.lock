@@ -96,6 +96,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "indoc"
+version = "2.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e186cfbae8084e513daff4240b4797e342f988cecda4fb6c939150f96315fd8"
+
+[[package]]
 name = "itoa"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -317,9 +323,7 @@ name = "sqltk"
 version = "0.1.0"
 dependencies = [
  "bigdecimal",
- "simple-mermaid",
- "sqlparser",
- "sqltk_codegen",
+ "sqltk_core",
  "sqltk_derive",
 ]
 
@@ -350,10 +354,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "sqltk_core"
+version = "0.1.0"
+dependencies = [
+ "bigdecimal",
+ "simple-mermaid",
+ "sqlparser",
+ "sqltk_codegen",
+]
+
+[[package]]
 name = "sqltk_derive"
 version = "0.1.0"
 dependencies = [
  "Inflector",
+ "indoc",
  "proc-macro-crate",
  "proc-macro2",
  "quote",
@@ -361,6 +376,7 @@ dependencies = [
  "sqlparser",
  "sqltk_codegen",
  "sqltk_codegen_helpers",
+ "sqltk_core",
  "sqltk_meta",
  "syn",
 ]

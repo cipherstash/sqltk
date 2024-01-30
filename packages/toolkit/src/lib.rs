@@ -23,114 +23,21 @@
 //! $ cargo add sqltk
 //! ```
 
-mod ast_node_impls;
-mod custom_display;
-pub mod dispatch;
-mod generated;
-mod node;
+#[doc(inline)]
+pub use sqltk_core::*;
 
-// Re-export sqlparser
-pub use sqlparser;
-
-pub use custom_display::*;
-pub use dispatch::*;
-pub use generated::concrete_node::*;
-pub use node::*;
-pub mod pipeline;
-
-/// Exposed to allow macro-generated code and some internals to work.
-#[doc(hidden)]
-pub mod private;
-
+#[doc(inline)]
 pub use sqltk_derive::*;
-
-use private::visit;
-use std::ops::ControlFlow;
-
-#[derive(Clone, Copy)]
-/// Used as the "continue" type in the [`ControlFlow`] value returned by all
-/// visitors.
-pub enum Navigation {
-    /// Skip visiting children of the current AST node
-    Skip,
-    /// Visit the children of the current AST node
-    Visit,
-}
-
-/// [`ControlFlow`] type returned by [`Visitor::Enter`].
-pub type EnterControlFlow = ControlFlow<(), Navigation>;
-
-/// [`ControlFlow`] type returned by [`Visitor::Exit`].
-pub type ExitControlFlow = ControlFlow<(), ()>;
-
-/// Trait for types that visit one specific type of node.
-#[allow(unused_variables)]
-pub trait Visitor<'ast, T: AstNode<'ast>> {
-    /// Called when a node is entered.
-    ///
-    /// The default implementation returns [`ControlFlow::Continue(Navigation::Visit)`].
-    ///
-    fn enter(&mut self, node: Node<'ast, T>) -> EnterControlFlow {
-        ControlFlow::Continue(Navigation::Visit)
-    }
-
-    /// Called when a node is exited.  The default implementation returns
-    /// [`ControlFlow::Continue(Navigation::Visit)`].  Note that the
-    /// [`Navigation`] value returned in exit result is ignored.
-    ///
-    fn exit(&mut self, node: Node<'ast, T>) -> ExitControlFlow {
-        ControlFlow::Continue(())
-    }
-}
-
-/// Trait for types that can be visited by a [`VisitorDispatch`].
-pub trait AstNode<'ast>
-where
-    Self: 'ast,
-{
-    /// Entry point to begin AST traversal with a [`VisitorDispatch`].
-    ///
-    /// Invokes [`VisitorDispatch::enter`] and [`VisitorDispatch::exit`] for
-    /// every AST node encountered during traversal with the exception that if
-    /// the `VisitorDispatch` returns
-    /// [`VisitorControlFlow::Continue(Navigation::Skip)`], remaining children
-    /// of the current node will be skipped.
-    ///
-    /// AST nodes from `sqlparser` are wrapped in a [`node::Node`]
-    /// implementation and assigned a unique numeric ID so that derived metadata
-    /// about nodes can be retained.
-    fn accept<V>(&'ast self, visitor: &mut V) -> EnterControlFlow
-    where
-        V: VisitorDispatch<'ast>,
-    {
-        self.accept_with_node_builder(visitor, &mut NodeBuilder::new())
-    }
-
-    /// Same as [`AstNode::accept`] but requires an additional `node_builder`
-    /// parameter.
-    ///
-    /// *Not public API. Used by generated code.*
-    #[doc(hidden)]
-    fn accept_with_node_builder<V>(
-        &'ast self,
-        visitor: &mut V,
-        node_builder: &mut NodeBuilder,
-    ) -> EnterControlFlow
-    where
-        V: VisitorDispatch<'ast>;
-}
 
 #[cfg(test)]
 pub mod test {
     use std::ops::ControlFlow;
 
-    use crate::{self as sqltk, ConcreteNode, ExitControlFlow};
-    use sqlparser::ast;
-    use sqlparser::dialect::GenericDialect;
-    use sqlparser::parser::Parser;
+    use crate::{self as sqltk};
     use sqltk::{
         dispatch::Nope, AstNode, EnterControlFlow, Navigation, Node, Visitor,
-        VisitorDispatch,
+        pipeline::{self, InitializeError, ReadOnly, ReadWrite, RootScope, Scope, Stage},
+        VisitorDispatch, ConcreteNode, ExitControlFlow, sqlparser::{self, ast, parser, dialect}
     };
 
     #[derive(VisitorDispatch)]
@@ -153,14 +60,14 @@ pub mod test {
 
     #[test]
     fn basic() {
-        let dialect = GenericDialect {};
+        let dialect = dialect::GenericDialect {};
 
         let sql = "SELECT a, b, 123, myfunc(b) \
                    FROM table_1 \
                    WHERE a > b AND b < 100 \
                    ORDER BY a DESC, b";
 
-        let ast = Parser::parse_sql(&dialect, sql).unwrap();
+        let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
         let mut visitor = Counter::new(0);
 
@@ -200,6 +107,7 @@ pub mod test {
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
+
         impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>> for Recorder {
             fn enter(&mut self, node: Node<'ast, Vec<ast::TableWithJoins>>) -> EnterControlFlow {
                 self.items_enter
@@ -216,6 +124,7 @@ pub mod test {
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
+
         impl<'ast> Visitor<'ast, Vec<ast::SelectItem>> for Recorder {
             fn enter(&mut self, node: Node<'ast, Vec<ast::SelectItem>>) -> EnterControlFlow {
                 self.items_enter.push(("Vec<SelectItem>".into(), node.id()));
@@ -223,11 +132,11 @@ pub mod test {
             }
         }
 
-        let dialect = GenericDialect {};
+        let dialect = dialect::GenericDialect {};
 
         let sql = "SELECT 1 as a WHERE a > 0";
 
-        let ast = Parser::parse_sql(&dialect, sql).unwrap();
+        let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
         let mut visitor = Recorder::default();
 
@@ -263,14 +172,14 @@ pub mod test {
             }
         }
 
-        let dialect = GenericDialect {};
+        let dialect = dialect::GenericDialect {};
 
         let sql = "SELECT a, b, 123, myfunc(b) \
                    FROM table_1 \
                    WHERE a > b AND b < 100 \
                    ORDER BY a DESC, b";
 
-        let ast = Parser::parse_sql(&dialect, sql).unwrap();
+        let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
         let mut visitor = Recorder::default();
 
@@ -293,5 +202,111 @@ pub mod test {
                 "ObjectName (ID: 11)",
             ]
         );
+    }
+
+    #[test]
+    fn basic_pipeline() {
+        #[derive(Debug, Eq, PartialEq)]
+        struct ExprsBalanced(bool);
+
+        #[derive(VisitorDispatch)]
+        struct BalancedExprsCheck {
+            expr_enter_count: ReadOnly<ExprEnterCount>,
+            expr_exit_count: ReadOnly<ExprExitCount>,
+            exprs_balanced: ReadWrite<ExprsBalanced>,
+        }
+
+        impl<'ast, 'scope> Stage<'ast, 'scope> for BalancedExprsCheck {
+            fn init_exit(scope: &mut impl Scope<'scope>) -> Result<Self, InitializeError> {
+                scope
+                    .import::<ExprEnterCount>()
+                    .import::<ExprExitCount>()
+                    .export(ExprsBalanced(true))
+                    .resolve()
+                    .map(|(expr_enter_count, expr_exit_count, exprs_balanced)| Self {
+                        expr_enter_count,
+                        expr_exit_count,
+                        exprs_balanced,
+                    })
+                    .map_err(|_| InitializeError)
+            }
+        }
+
+        impl<'ast> Visitor<'ast, ast::Expr> for BalancedExprsCheck {
+            fn enter(&mut self, _: Node<'ast, ast::Expr>) -> EnterControlFlow {
+                self.exprs_balanced.get_mut().0 = false;
+                ControlFlow::Continue(Navigation::Visit)
+            }
+
+            fn exit(&mut self, _: Node<'ast, ast::Expr>) -> ExitControlFlow {
+                self.exprs_balanced.get_mut().0 =
+                    self.expr_enter_count.get().0 == self.expr_exit_count.get().0;
+                ControlFlow::Continue(())
+            }
+        }
+
+        struct ExprEnterCount(usize);
+        struct ExprExitCount(usize);
+
+        #[derive(VisitorDispatch)]
+        struct ExprCounter {
+            expr_enter_count: ReadWrite<ExprEnterCount>,
+            expr_exit_count: ReadWrite<ExprExitCount>,
+        }
+
+        impl<'ast, 'scope> Stage<'ast, 'scope> for ExprCounter {
+            fn init_enter(scope: &mut impl Scope<'scope>) -> Result<(), InitializeError> {
+                scope.export(ExprEnterCount(0)).export(ExprExitCount(0));
+
+                Ok(())
+            }
+
+            fn init_exit(scope: &mut impl Scope<'scope>) -> Result<Self, InitializeError> {
+                scope
+                    .import_owned::<ExprEnterCount>()
+                    .import_owned::<ExprExitCount>()
+                    .resolve()
+                    .map(|(expr_enter_count, expr_exit_count)| Self {
+                        expr_enter_count,
+                        expr_exit_count,
+                    })
+                    .map_err(|_| InitializeError)
+            }
+        }
+
+        impl<'ast> Visitor<'ast, ast::Expr> for ExprCounter {
+            fn enter(&mut self, _: Node<'ast, ast::Expr>) -> EnterControlFlow {
+                self.expr_enter_count.get_mut().0 += 1;
+                ControlFlow::Continue(Navigation::Visit)
+            }
+
+            fn exit(&mut self, _: Node<'ast, ast::Expr>) -> ExitControlFlow {
+                self.expr_exit_count.get_mut().0 += 1;
+                ControlFlow::Continue(())
+            }
+        }
+
+        if let Ok(mut pipeline) =
+            pipeline::build::<(BalancedExprsCheck, ExprCounter)>(RootScope::default())
+        {
+            let dialect = dialect::GenericDialect {};
+
+            let sql = "SELECT a, b, 123, myfunc(b) \
+                       FROM table_1 \
+                       WHERE a > b AND b < 100 \
+                       ORDER BY a DESC, b";
+
+            let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
+
+            ast.accept(&mut pipeline);
+
+            if let Ok(expr_balanced) = pipeline.get::<ExprsBalanced>() {
+                assert_eq!(*expr_balanced.get(), ExprsBalanced(true));
+            } else {
+                assert!(false, "Could not read result from scope")
+            }
+        } else {
+            assert!(false, "Pipeline construction failed")
+        };
     }
 }
