@@ -16,9 +16,9 @@ fn main() {
         &output_path("ast_node_impls.rs"),
         &output_path("reachability-debug.txt"),
     );
-    codegen.generated_concrete_node_enum(&output_path("concrete_node_enum.rs"));
+    codegen.generated_sql_node_enum(&output_path("sql_node_enum.rs"));
     codegen
-        .generate_concrete_node_enum_match_macro(&output_path("concrete_node_enum_match_macro.rs"));
+        .generate_sql_node_enum_match_macro(&output_path("sql_node_enum_match_macro.rs"));
 
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=Cargo.toml");

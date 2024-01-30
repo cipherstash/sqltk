@@ -212,7 +212,7 @@ impl Codegen {
             .expect("Failed to serialise sqlparser metadata to file")
     }
 
-    pub fn generated_concrete_node_enum(&self, dest_file: &PathBuf) {
+    pub fn generated_sql_node_enum(&self, dest_file: &PathBuf) {
         // FIXME: ensure sqlparser is built with correct set of features
 
         let mut output = proc_macro2::TokenStream::new();
@@ -416,7 +416,7 @@ impl Codegen {
             .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()));
     }
 
-    pub fn generate_concrete_node_enum_match_macro(&self, dest_file: &PathBuf) {
+    pub fn generate_sql_node_enum_match_macro(&self, dest_file: &PathBuf) {
         let mut output = proc_macro2::TokenStream::new();
 
         let main_nodes = self.meta.main_nodes();

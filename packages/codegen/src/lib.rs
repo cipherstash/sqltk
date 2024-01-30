@@ -17,11 +17,11 @@ lazy_static_include_str!(
 );
 
 lazy_static_include_str!(
-    pub CONCRETE_NODE_ENUM => "generated/concrete_node_enum.rs"
+    pub SQL_NODE_ENUM => "generated/sql_node_enum.rs"
 );
 
 lazy_static_include_str!(
-    pub CONCRETE_NODE_ENUM_MATCH_MACRO => "generated/concrete_node_enum_match_macro.rs"
+    pub SQL_NODE_ENUM_MATCH_MACRO => "generated/sql_node_enum_match_macro.rs"
 );
 
 lazy_static_include_str!(

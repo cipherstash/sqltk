@@ -29,14 +29,14 @@ fn main() -> std::io::Result<()> {
     )?;
 
     fs::write(
-        PathBuf::from(&std::env::var("OUT_DIR").unwrap()).join("generated_concrete_node_enum.rs"),
-        *sqltk_codegen::CONCRETE_NODE_ENUM,
+        PathBuf::from(&std::env::var("OUT_DIR").unwrap()).join("generated_sql_node_enum.rs"),
+        *sqltk_codegen::SQL_NODE_ENUM,
     )?;
 
     fs::write(
         PathBuf::from(&std::env::var("OUT_DIR").unwrap())
-            .join("generated_concrete_node_enum_match_macro.rs"),
-        *sqltk_codegen::CONCRETE_NODE_ENUM_MATCH_MACRO,
+            .join("generated_sql_node_enum_match_macro.rs"),
+        *sqltk_codegen::SQL_NODE_ENUM_MATCH_MACRO,
     )?;
 
     Ok(())
