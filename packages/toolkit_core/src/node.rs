@@ -4,7 +4,6 @@ use std::{
     ops::Deref,
 };
 
-// TODO: better name: Tagger ?
 pub struct NodeIdSequence {
     next_id: usize,
 }
@@ -31,8 +30,6 @@ impl NodeIdSequence {
     }
 }
 
-// TODO: better name for Node: Tagged ?
-// TODO: Then rename Visitable => Node ?
 #[derive(Debug, Eq, PartialEq, PartialOrd, Hash)]
 pub struct Node<'ast, T: Visitable<'ast> + ?Sized> {
     id: usize,
