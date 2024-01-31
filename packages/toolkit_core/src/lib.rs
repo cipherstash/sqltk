@@ -1,4 +1,4 @@
-mod ast_node_impls;
+mod visitable_impls;
 mod custom_display;
 pub mod dispatch;
 mod generated;

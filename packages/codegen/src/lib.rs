@@ -13,7 +13,7 @@ lazy_static_include_str!(
 );
 
 lazy_static_include_str!(
-    pub AST_NODE_IMPLS => "generated/ast_node_impls.rs"
+    pub AST_NODE_IMPLS => "generated/visitable_impls.rs"
 );
 
 lazy_static_include_str!(

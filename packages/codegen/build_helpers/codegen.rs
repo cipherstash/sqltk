@@ -2,7 +2,7 @@ use sqltk_meta::{ContainerNode, PrimitiveNode, SqlParserMetaQuery};
 use syn::TypePath;
 
 use super::reachability::Reachability;
-use super::{ast_node_trait_impls::VisitableImpl, sqlparser_node_extractor};
+use super::{visitable_trait_impls::VisitableImpl, sqlparser_node_extractor};
 use proc_macro2::TokenStream;
 use sqltk_syn_helpers::generics;
 
@@ -156,7 +156,7 @@ impl Codegen {
         quote! { #(#bounds +)* }
     }
 
-    pub fn generate_ast_node_impls(&self, dest_file: &PathBuf, reachability_debug_file: &PathBuf) {
+    pub fn generate_visitable_impls(&self, dest_file: &PathBuf, reachability_debug_file: &PathBuf) {
         let reachability = Reachability::derive(&self.meta);
 
         let mut file = File::create(reachability_debug_file)
@@ -177,16 +177,16 @@ impl Codegen {
             .map(|pn| pn.type_path().path.segments.last().unwrap().ident.clone())
             .collect::<HashSet<_>>();
 
-        let ast_node_impls_for_main_nodes = main_nodes.iter().map(|(type_path, type_def)| {
+        let visitable_impls_for_main_nodes = main_nodes.iter().map(|(type_path, type_def)| {
             VisitableImpl::new(type_path, type_def, &reachability, &primitive_nodes)
         });
 
-        let ast_node_impls_for_primitive_nodes =
-            self.impl_ast_node_for_primitive_nodes(self.meta.primitive_nodes());
+        let visitable_impls_for_primitive_nodes =
+            self.impl_visitable_for_primitive_nodes(self.meta.primitive_nodes());
 
         generated_code.append_all(quote! {
-            #(#ast_node_impls_for_main_nodes)*
-            #ast_node_impls_for_primitive_nodes
+            #(#visitable_impls_for_main_nodes)*
+            #visitable_impls_for_primitive_nodes
         });
 
         let mut file = File::create(dest_file)
@@ -529,7 +529,7 @@ impl Codegen {
             .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()));
     }
 
-    pub(crate) fn impl_ast_node_for_primitive_nodes(
+    pub(crate) fn impl_visitable_for_primitive_nodes(
         &self,
         primitive_nodes: impl IntoIterator<Item = PrimitiveNode>,
     ) -> TokenStream {

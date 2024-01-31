@@ -1,4 +1,4 @@
-mod ast_node_trait_impls;
+mod visitable_trait_impls;
 mod codegen;
 mod parser;
 mod reachability;

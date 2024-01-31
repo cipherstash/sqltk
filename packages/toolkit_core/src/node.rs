@@ -20,8 +20,8 @@ impl NodeIdSequence {
         Self { next_id: 0 }
     }
 
-    pub fn next_node<'ast, T: Visitable<'ast>>(&mut self, ast_node: &'ast T) -> Node<'ast, T> {
-        Node::new(self.next_id(), ast_node)
+    pub fn next_node<'ast, T: Visitable<'ast>>(&mut self, visitable: &'ast T) -> Node<'ast, T> {
+        Node::new(self.next_id(), visitable)
     }
 
     fn next_id(&mut self) -> usize {
@@ -36,12 +36,12 @@ impl NodeIdSequence {
 #[derive(Debug, Eq, PartialEq, PartialOrd, Hash)]
 pub struct Node<'ast, T: Visitable<'ast> + ?Sized> {
     id: usize,
-    ast_node: &'ast T,
+    visitable: &'ast T,
 }
 
 impl<'ast, T: Visitable<'ast>> Node<'ast, T> {
-    pub fn new(id: usize, ast_node: &'ast T) -> Self {
-        Self { id, ast_node }
+    pub fn new(id: usize, visitable: &'ast T) -> Self {
+        Self { id, visitable }
     }
 
     pub fn id(&self) -> usize {
@@ -49,7 +49,7 @@ impl<'ast, T: Visitable<'ast>> Node<'ast, T> {
     }
 
     pub fn inner(&self) -> &'ast T {
-        self.ast_node
+        self.visitable
     }
 }
 
@@ -57,7 +57,7 @@ impl<'ast, T: Visitable<'ast>> Deref for Node<'ast, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.ast_node
+        &self.visitable
     }
 }
 
@@ -65,7 +65,7 @@ impl<'ast, T: Visitable<'ast>> Clone for Node<'ast, T> {
     fn clone(&self) -> Self {
         Self {
             id: self.id,
-            ast_node: self.ast_node,
+            visitable: self.visitable,
         }
     }
 }
