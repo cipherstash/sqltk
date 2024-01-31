@@ -5,7 +5,7 @@
 //! transformation workflows from small, isolated and unit testable pieces.
 //!
 //! All `Pipeline` implementations are also [`VisitorDispatch`] implementations
-//! so that they can be passed to [`crate::AstNode::accept`].
+//! so that they can be passed to [`crate::Visitable::accept`].
 //!
 //! ## Building a pipeline
 //!

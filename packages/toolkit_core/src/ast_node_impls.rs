@@ -1,6 +1,6 @@
 use crate::*;
 
-impl<'ast, T: AstNode<'ast>> AstNode<'ast> for &'ast T {
+impl<'ast, T: Visitable<'ast>> Visitable<'ast> for &'ast T {
     fn accept_and_identify<V>(
         &'ast self,
         visitor: &mut V,
@@ -13,7 +13,7 @@ impl<'ast, T: AstNode<'ast>> AstNode<'ast> for &'ast T {
     }
 }
 
-impl<'ast, T: AstNode<'ast>> AstNode<'ast> for Vec<T>
+impl<'ast, T: Visitable<'ast>> Visitable<'ast> for Vec<T>
 where
     Node<'ast, Vec<T>>: Into<SqlNode<'ast>>,
 {
@@ -38,7 +38,7 @@ where
     }
 }
 
-impl<'ast, T: AstNode<'ast>> AstNode<'ast> for Box<T>
+impl<'ast, T: Visitable<'ast>> Visitable<'ast> for Box<T>
 where
     Node<'ast, Box<T>>: Into<SqlNode<'ast>>,
 {
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<'ast, T: AstNode<'ast>> AstNode<'ast> for Option<T>
+impl<'ast, T: Visitable<'ast>> Visitable<'ast> for Option<T>
 where
     Node<'ast, Option<T>>: Into<SqlNode<'ast>>,
 {

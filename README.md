@@ -12,7 +12,7 @@ For example, in a `SELECT` statement the `FROM` clause will be visited before th
 
 ## Getting started
 
-This crate analyses the source of `sqlparser` in order to generate `Node` implementations.
+This crate analyses the source of `sqlparser` in order to generate `Visitable` implementations.
 
 It does this by running `cargo expand` and consuming the output. Note that `cargo-expand` is not a library Rust crate and cannot be installed automatically by Cargo.
 
@@ -72,7 +72,7 @@ Analyses `sqlparser` source code and generates:
 
 - A serialized blob of metadata about `sqlparser` AST nodes
 - Analyzes the `sqlparser` AST in order to determine an AST traversal order for single-pass semantic analysis workloads.
-- Generates the `AstNode` trait implementation for all AST node types
+- Generates the `Visitable` trait implementation for all AST node types
 
 Depends on `sqltk_meta` for serialization/derialization of data.
 Depends on `sqltk_syn_helpers` for manipulating `syn` types.

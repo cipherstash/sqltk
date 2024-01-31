@@ -17,8 +17,8 @@
 //!
 //! ## VisitorDispatch
 //!
-//! The [`AstNode`] trait is implemented for all AST node types defined by the
-//! `sqlparser` crate. The [`accept`](`AstNode::accept`) method requires an
+//! The [`Visitable`] trait is implemented for all AST node types defined by the
+//! `sqlparser` crate. The [`accept`](`Visitable::accept`) method requires an
 //! implementation of [`VisitorDispatch`] as an argument.
 //!
 //! `VisitorDispatch` implementations must be able to handle any `sqlparser` AST
@@ -47,7 +47,7 @@ use simple_mermaid::mermaid;
 use std::{marker::PhantomData, ops::ControlFlow};
 
 use crate::{
-    match_sql_node_enum, AstNode, BoxOf, SqlNode, EnterControlFlow, ExitControlFlow,
+    match_sql_node_enum, Visitable, BoxOf, SqlNode, EnterControlFlow, ExitControlFlow,
     Navigation, Node, OptionOf, VecOf, Visitor,
 };
 
@@ -56,7 +56,7 @@ use crate::{
 /// implementation.
 ///
 /// An implementation of this trait is required as an argument to
-/// [`AstNode::accept`].
+/// [`Visitable::accept`].
 ///
 /// This trait is typically derived by using `#[derive(VisitorDispatch)]` on a
 /// user-defined type but can be implemented directly.
@@ -86,7 +86,7 @@ pub struct Handle<V, N>(PhantomData<(V, N)>);
 /// This trait should never be implemented directly; there are blanket
 /// implementations for [`Fallback`] and [`Handle`] which are applicable when
 /// [`VisitorDispatch`] is derived for a user-defined type.
-pub trait WithFallbackSupport<'ast, N: AstNode<'ast>> {
+pub trait WithFallbackSupport<'ast, N: Visitable<'ast>> {
     /// The user-defined type (with #[derive(VisitorDispatch)])
     type Subject;
 
@@ -106,7 +106,7 @@ pub trait WithFallbackSupport<'ast, N: AstNode<'ast>> {
 ///
 /// [`WithFallbackSupport::enter`] and [`WithFallbackSupport::exit`] forward
 /// to the user-defined `Visitor` implementation methods.
-impl<'ast, N: AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Handle<V, N>
+impl<'ast, N: Visitable<'ast>, V> WithFallbackSupport<'ast, N> for Handle<V, N>
 where
     V: Visitor<'ast, N>,
 {
@@ -127,7 +127,7 @@ where
 ///
 /// [`WithFallbackSupport::enter`] returns `ControlFlow::Continue(Navigation::Visit)`.
 /// [`WithFallbackSupport::exit`] returns `ControlFlow::Continue(())`.
-impl<'ast, N: AstNode<'ast>, V> WithFallbackSupport<'ast, N> for Fallback<V> {
+impl<'ast, N: Visitable<'ast>, V> WithFallbackSupport<'ast, N> for Fallback<V> {
     type Subject = V;
 
     fn enter(_: &mut Self::Subject, _: Node<'ast, N>) -> EnterControlFlow {
@@ -180,7 +180,7 @@ pub struct IsVisitor<V, N>(PhantomData<(V, N)>);
 /// implementation of [`Nope`].
 ///
 /// Credit where credit is due: this technique was lifted from the `impls` crate.
-impl<V, N: AstNode<'static>> IsVisitor<V, N>
+impl<V, N: Visitable<'static>> IsVisitor<V, N>
 where
     V: Visitor<'static, N>,
 {
@@ -194,7 +194,7 @@ where
 /// Self>` or whether it needs a fallback.
 pub trait DispatchTableLookup<'ast>
 where
-    Self: Sized + AstNode<'ast>,
+    Self: Sized + Visitable<'ast>,
 {
     type Lookup<Table: DispatchTable<'ast>>: WithFallbackSupport<'ast, Self>;
 }
@@ -203,7 +203,7 @@ where
 ///
 /// Users should not implement this trait directly; a blanket implementation
 /// applies for all types that derive [`VisitorDispatch`].
-pub trait VisitorDispatchNode<'ast, N: AstNode<'ast>> {
+pub trait VisitorDispatchNode<'ast, N: Visitable<'ast>> {
     fn enter(&mut self, node: Node<'ast, N>) -> EnterControlFlow;
     fn exit(&mut self, node: Node<'ast, N>) -> ExitControlFlow;
 }

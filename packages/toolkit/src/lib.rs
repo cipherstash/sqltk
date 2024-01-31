@@ -35,7 +35,7 @@ pub mod test {
 
     use crate::{self as sqltk};
     use sqltk::{
-        dispatch::Nope, AstNode, EnterControlFlow, Navigation, Node, Visitor,
+        dispatch::Nope, Visitable, EnterControlFlow, Navigation, Node, Visitor,
         pipeline::{self, InitializeError, ReadOnly, ReadWrite, RootScope, Scope, Stage},
         VisitorDispatch, SqlNode, ExitControlFlow, sqlparser::{self, ast, parser, dialect}
     };
@@ -312,7 +312,7 @@ pub mod test {
 
     #[test]
     fn basic_edit_pipeline() {
-        // First VisitorDispatch in the pipeline must build a shadow AST of Node<'ast, T: AstNode>
+        // First VisitorDispatch in the pipeline must build a shadow AST of Node<'ast, T: Visitable>
         // (need a SqlNode::wrapped(&self) method)
         // The Scope of the analysis Pipeline will contain the shadow AST + analysis results
     }

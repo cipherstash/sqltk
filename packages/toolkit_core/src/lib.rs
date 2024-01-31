@@ -40,7 +40,7 @@ pub type ExitControlFlow = ControlFlow<(), ()>;
 
 /// Trait for types that visit a specific type of node.
 #[allow(unused_variables)]
-pub trait Visitor<'ast, T: AstNode<'ast>> {
+pub trait Visitor<'ast, T: Visitable<'ast>> {
     /// Called when a node is entered.
     ///
     /// The default implementation returns [`ControlFlow::Continue(Navigation::Visit)`].
@@ -59,7 +59,7 @@ pub trait Visitor<'ast, T: AstNode<'ast>> {
 }
 
 /// Trait for types that can be visited by a [`VisitorDispatch`].
-pub trait AstNode<'ast>
+pub trait Visitable<'ast>
 where
     Self: 'ast,
 {
@@ -81,7 +81,7 @@ where
         self.accept_and_identify(visitor, &mut NodeIdSequence::new())
     }
 
-    /// Same as [`AstNode::accept`] but requires an additional `node_id_seq`
+    /// Same as [`Visitable::accept`] but requires an additional `node_id_seq`
     /// parameter.
     ///
     /// *Not public API. Used by generated code.*

@@ -6,7 +6,7 @@ use std::{
     marker::PhantomData,
 };
 
-use crate::AstNode;
+use crate::Visitable;
 
 /// Newtype wrapper so that a custom [`std::fmt::Display`] can be implemented
 /// for `sqlparser` AST types.
@@ -24,7 +24,7 @@ impl<T> DisplayType<T> {
     }
 }
 
-impl<'ast, T: AstNode<'ast>> Display for DisplayType<Box<T>>
+impl<'ast, T: Visitable<'ast>> Display for DisplayType<Box<T>>
 where
     DisplayType<T>: Display,
 {
@@ -33,7 +33,7 @@ where
     }
 }
 
-impl<'ast, T: AstNode<'ast>> Display for DisplayType<Vec<T>>
+impl<'ast, T: Visitable<'ast>> Display for DisplayType<Vec<T>>
 where
     DisplayType<T>: Display,
 {
@@ -42,7 +42,7 @@ where
     }
 }
 
-impl<'ast, T: AstNode<'ast>> Display for DisplayType<Option<T>>
+impl<'ast, T: Visitable<'ast>> Display for DisplayType<Option<T>>
 where
     DisplayType<T>: Display,
 {

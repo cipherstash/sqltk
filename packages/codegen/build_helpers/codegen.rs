@@ -2,7 +2,7 @@ use sqltk_meta::{ContainerNode, PrimitiveNode, SqlParserMetaQuery};
 use syn::TypePath;
 
 use super::reachability::Reachability;
-use super::{ast_node_trait_impls::AstNodeImpl, sqlparser_node_extractor};
+use super::{ast_node_trait_impls::VisitableImpl, sqlparser_node_extractor};
 use proc_macro2::TokenStream;
 use sqltk_syn_helpers::generics;
 
@@ -178,7 +178,7 @@ impl Codegen {
             .collect::<HashSet<_>>();
 
         let ast_node_impls_for_main_nodes = main_nodes.iter().map(|(type_path, type_def)| {
-            AstNodeImpl::new(type_path, type_def, &reachability, &primitive_nodes)
+            VisitableImpl::new(type_path, type_def, &reachability, &primitive_nodes)
         });
 
         let ast_node_impls_for_primitive_nodes =
@@ -366,7 +366,7 @@ impl Codegen {
             #main_node_from_impls
 
             #[automatically_derived]
-            impl<'ast, T: AstNode<'ast>> From<Node<'ast, Box<T>>> for SqlNode<'ast>
+            impl<'ast, T: Visitable<'ast>> From<Node<'ast, Box<T>>> for SqlNode<'ast>
             where
                 BoxOf<'ast>: From<Node<'ast, Box<T>>>,
             {
@@ -376,7 +376,7 @@ impl Codegen {
             }
 
             #[automatically_derived]
-            impl<'ast, T: AstNode<'ast>> From<Node<'ast, Vec<T>>> for SqlNode<'ast>
+            impl<'ast, T: Visitable<'ast>> From<Node<'ast, Vec<T>>> for SqlNode<'ast>
             where
                 VecOf<'ast>: From<Node<'ast, Vec<T>>>,
                 SqlNode<'ast>: From<Node<'ast, T>>
@@ -387,7 +387,7 @@ impl Codegen {
             }
 
             #[automatically_derived]
-            impl<'ast, T: AstNode<'ast>> From<Node<'ast, Option<T>>> for SqlNode<'ast>
+            impl<'ast, T: Visitable<'ast>> From<Node<'ast, Option<T>>> for SqlNode<'ast>
             where
                 OptionOf<'ast>: From<Node<'ast, Option<T>>>,
             {
@@ -541,7 +541,7 @@ impl Codegen {
 
             output.append_all(quote! {
                 #[automatically_derived]
-                impl<'ast> crate::AstNode<'ast> for #type_path {
+                impl<'ast> crate::Visitable<'ast> for #type_path {
                     fn accept_and_identify<V: crate::VisitorDispatch<'ast>>(
                         &'ast self,
                         visitor: &mut V,

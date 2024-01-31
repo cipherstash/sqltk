@@ -7,14 +7,14 @@ use syn::{Fields, Ident, ItemEnum, Type, TypePath};
 use sqltk_syn_helpers::generics;
 use sqltk_meta::{SqlParserTypeDef, SqlParserTypeDefKind};
 
-pub(crate) struct AstNodeImpl<'a> {
+pub(crate) struct VisitableImpl<'a> {
     node: &'a TypePath,
     def: &'a SqlParserTypeDef,
     reachability: &'a HashMap<Ident, bool>,
     primitive_nodes: &'a HashSet<Ident>,
 }
 
-impl<'a> ToTokens for AstNodeImpl<'a> {
+impl<'a> ToTokens for VisitableImpl<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let (ref path, ref body) = match &self.def.ty {
             SqlParserTypeDefKind::Enum(item_enum) => (
@@ -30,7 +30,7 @@ impl<'a> ToTokens for AstNodeImpl<'a> {
 
         tokens.append_all(quote! {
             #[automatically_derived]
-            impl<'ast> crate::AstNode<'ast> for #path {
+            impl<'ast> crate::Visitable<'ast> for #path {
                 fn accept_and_identify<V: crate::VisitorDispatch<'ast>>(
                     &'ast self,
                     visitor: &mut V,
@@ -54,7 +54,7 @@ impl<'a> ToTokens for AstNodeImpl<'a> {
     }
 }
 
-impl<'a> AstNodeImpl<'a> {
+impl<'a> VisitableImpl<'a> {
     pub(crate) fn new(
         node: &'a TypePath,
         def: &'a SqlParserTypeDef,
