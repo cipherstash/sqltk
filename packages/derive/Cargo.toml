@@ -21,7 +21,7 @@ proc-macro = true
 
 [dependencies]
 sqltk_core = { path = "../toolkit_core" }
-sqltk_codegen_helpers = { path = "../codegen_helpers" }
+sqltk_syn_helpers = { path = "../syn_helpers" }
 Inflector = "^0.11.4"
 syn = { version = "2.0.37", features = ["full", "extra-traits"] }
 proc-macro2 = { version = "1.0.67", features = ["span-locations"] }

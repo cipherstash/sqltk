@@ -4,7 +4,7 @@ use syn::TypePath;
 use super::reachability::Reachability;
 use super::{ast_node_trait_impls::AstNodeImpl, sqlparser_node_extractor};
 use proc_macro2::TokenStream;
-use sqltk_codegen_helpers::generics;
+use sqltk_syn_helpers::generics;
 
 use inflector::Inflector;
 

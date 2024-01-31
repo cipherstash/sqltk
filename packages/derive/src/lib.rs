@@ -4,12 +4,14 @@ use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use proc_macro_crate::{crate_name, FoundCrate};
 use quote::{quote, quote_spanned, TokenStreamExt};
+use sqltk_codegen::NODE_LIST;
+use sqltk_syn_helpers::generics::decompose_generic_type;
 use sqltk_meta::{SqlParserMeta, SqlParserMetaQuery};
 use syn::{parse_macro_input, spanned::Spanned, DeriveInput, TypePath};
 
 fn node_meta() -> SqlParserMetaQuery {
     let meta: SqlParserMeta = serde_json::from_str(
-        String::from_utf8(Vec::from(&sqltk_codegen::NODE_LIST[..]))
+        String::from_utf8(Vec::from(&NODE_LIST[..]))
             .unwrap()
             .as_str(),
     )
@@ -114,7 +116,7 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
     let mut entries = proc_macro2::TokenStream::new();
 
     for node in meta.all_nodes() {
-        let chunks = sqltk_codegen_helpers::generics::decompose_generic_type(&node)
+        let chunks = decompose_generic_type(&node)
             .iter()
             .map(|tp| tp.path.segments.last().unwrap().ident.to_string())
             .collect::<Vec<_>>();

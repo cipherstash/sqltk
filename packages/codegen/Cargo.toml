@@ -28,7 +28,7 @@ lazy-static-include = "3.2.1"
 publish = false
 
 [build-dependencies]
-sqltk_codegen_helpers = { path = "../codegen_helpers" }
+sqltk_syn_helpers = { path = "../syn_helpers" }
 sqltk_meta = { path = "../meta" }
 syn = { version = "2.0.37", features = ["full", "extra-traits", "printing"] }
 proc-macro2 = { version = "1.0.67", features = ["span-locations"] }

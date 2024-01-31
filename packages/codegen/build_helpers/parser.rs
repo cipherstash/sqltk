@@ -3,7 +3,7 @@ use std::ops::Deref;
 use std::{collections::HashSet, hash::Hash};
 
 use proc_macro2::Span;
-use sqltk_codegen_helpers::generics::{
+use sqltk_syn_helpers::generics::{
     compose_generic_type, container_type, decompose_generic_type, expect_type_path,
     is_generic_type, ContainerType,
 };

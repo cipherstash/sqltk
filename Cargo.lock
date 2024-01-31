@@ -340,16 +340,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "sqltk_codegen_helpers",
  "sqltk_meta",
- "syn",
-]
-
-[[package]]
-name = "sqltk_codegen_helpers"
-version = "0.1.0"
-dependencies = [
- "quote",
+ "sqltk_syn_helpers",
  "syn",
 ]
 
@@ -375,9 +367,9 @@ dependencies = [
  "serde_json",
  "sqlparser",
  "sqltk_codegen",
- "sqltk_codegen_helpers",
  "sqltk_core",
  "sqltk_meta",
+ "sqltk_syn_helpers",
  "syn",
 ]
 
@@ -389,6 +381,14 @@ dependencies = [
  "quote",
  "serde",
  "serde_derive",
+ "syn",
+]
+
+[[package]]
+name = "sqltk_syn_helpers"
+version = "0.1.0"
+dependencies = [
+ "quote",
  "syn",
 ]
 

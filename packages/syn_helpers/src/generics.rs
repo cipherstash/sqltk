@@ -50,7 +50,7 @@ pub fn container_type(type_path: &TypePath) -> Option<ContainerType> {
 ///
 /// # Example
 /// ```
-/// # use sqltk_codegen_helpers::generics::*;
+/// # use sqltk_syn_helpers::generics::*;
 /// use syn::{TypePath, parse_quote};
 ///
 /// let fragments: Vec<TypePath> =
@@ -87,7 +87,7 @@ pub fn decompose_generic_type(ty: &TypePath) -> Vec<TypePath> {
 ///
 /// # Example
 /// ```
-/// # use sqltk_codegen_helpers::generics::*;
+/// # use sqltk_syn_helpers::generics::*;
 /// use syn::{TypePath, parse_quote};
 ///
 /// let innermost: TypePath =
@@ -119,7 +119,7 @@ pub fn innermost_generic_type(ty: &TypePath) -> TypePath {
 ///
 /// # Example
 /// ```
-/// # use sqltk_codegen_helpers::generics::*;
+/// # use sqltk_syn_helpers::generics::*;
 /// use syn::{TypePath, parse_quote};
 ///
 /// let composed: TypePath =
