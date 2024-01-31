@@ -31,9 +31,9 @@ impl<'a> ToTokens for VisitableImpl<'a> {
         tokens.append_all(quote! {
             #[automatically_derived]
             impl<'ast> crate::Visitable<'ast> for #path {
-                fn accept_and_identify<V: crate::VisitorDispatch<'ast>>(
+                fn accept_and_identify(
                     &'ast self,
-                    visitor: &mut V,
+                    visitor: &mut dyn crate::VisitorDispatch<'ast>,
                     node_id_seq: &mut crate::NodeIdSequence,
                 ) -> crate::EnterControlFlow {
                     crate::visit(node_id_seq.next_node(self).into(), visitor, #[allow(unused_variables)] |visitor| {

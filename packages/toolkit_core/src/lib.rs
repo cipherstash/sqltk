@@ -74,11 +74,8 @@ where
     /// AST nodes from `sqlparser` are wrapped in a [`node::Node`]
     /// implementation and assigned a unique numeric ID so that derived metadata
     /// about nodes can be retained.
-    fn accept<V>(&'ast self, visitor: &mut V) -> EnterControlFlow
-    where
-        V: VisitorDispatch<'ast>,
-    {
-        self.accept_and_identify(visitor, &mut NodeIdSequence::new())
+    fn accept(&'ast self, dispatch: &mut dyn VisitorDispatch<'ast>) -> EnterControlFlow {
+        self.accept_and_identify(dispatch, &mut NodeIdSequence::new())
     }
 
     /// Same as [`Visitable::accept`] but requires an additional `node_id_seq`
@@ -86,11 +83,9 @@ where
     ///
     /// *Not public API. Used by generated code.*
     #[doc(hidden)]
-    fn accept_and_identify<V>(
+    fn accept_and_identify(
         &'ast self,
-        visitor: &mut V,
+        visitor: &mut dyn VisitorDispatch<'ast>,
         node_id_seq: &mut NodeIdSequence,
-    ) -> EnterControlFlow
-    where
-        V: VisitorDispatch<'ast>;
+    ) -> EnterControlFlow;
 }

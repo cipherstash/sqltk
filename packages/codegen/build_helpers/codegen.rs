@@ -542,9 +542,9 @@ impl Codegen {
             output.append_all(quote! {
                 #[automatically_derived]
                 impl<'ast> crate::Visitable<'ast> for #type_path {
-                    fn accept_and_identify<V: crate::VisitorDispatch<'ast>>(
+                    fn accept_and_identify(
                         &'ast self,
-                        visitor: &mut V,
+                        visitor: &mut dyn crate::VisitorDispatch<'ast>,
                         node_id_seq: &mut crate::NodeIdSequence,
                     ) -> crate::EnterControlFlow {
                         crate::visit(

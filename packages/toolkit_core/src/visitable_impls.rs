@@ -1,14 +1,11 @@
 use crate::*;
 
 impl<'ast, T: Visitable<'ast>> Visitable<'ast> for &'ast T {
-    fn accept_and_identify<V>(
+    fn accept_and_identify(
         &'ast self,
-        visitor: &mut V,
+        visitor: &mut dyn VisitorDispatch<'ast>,
         node_id_seq: &mut NodeIdSequence,
-    ) -> EnterControlFlow
-    where
-        V: VisitorDispatch<'ast>,
-    {
+    ) -> EnterControlFlow {
         (*self).accept_and_identify(visitor, node_id_seq)
     }
 }
@@ -17,14 +14,11 @@ impl<'ast, T: Visitable<'ast>> Visitable<'ast> for Vec<T>
 where
     Node<'ast, Vec<T>>: Into<SqlNode<'ast>>,
 {
-    fn accept_and_identify<V>(
+    fn accept_and_identify(
         &'ast self,
-        visitor: &mut V,
+        visitor: &mut dyn VisitorDispatch<'ast>,
         node_id_seq: &mut NodeIdSequence,
-    ) -> EnterControlFlow
-    where
-        V: VisitorDispatch<'ast>,
-    {
+    ) -> EnterControlFlow {
         if self.is_empty() {
             ControlFlow::Continue(Navigation::Skip)
         } else {
@@ -42,9 +36,9 @@ impl<'ast, T: Visitable<'ast>> Visitable<'ast> for Box<T>
 where
     Node<'ast, Box<T>>: Into<SqlNode<'ast>>,
 {
-    fn accept_and_identify<V: VisitorDispatch<'ast>>(
+    fn accept_and_identify(
         &'ast self,
-        visitor: &mut V,
+        visitor: &mut dyn VisitorDispatch<'ast>,
         node_id_seq: &mut NodeIdSequence,
     ) -> EnterControlFlow {
         visit(node_id_seq.next_node(self).into(), visitor, |visitor| {
@@ -57,9 +51,9 @@ impl<'ast, T: Visitable<'ast>> Visitable<'ast> for Option<T>
 where
     Node<'ast, Option<T>>: Into<SqlNode<'ast>>,
 {
-    fn accept_and_identify<V: VisitorDispatch<'ast>>(
+    fn accept_and_identify(
         &'ast self,
-        visitor: &mut V,
+        visitor: &mut dyn VisitorDispatch<'ast>,
         node_id_seq: &mut NodeIdSequence,
     ) -> EnterControlFlow {
         if self.is_none() {
