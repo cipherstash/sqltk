@@ -31,7 +31,7 @@ pub use sqltk_derive::*;
 
 #[cfg(test)]
 pub mod test {
-    use std::ops::ControlFlow;
+    use std::{any::TypeId, collections::HashSet, ops::ControlFlow};
 
     use crate::{self as sqltk};
     use sqltk::{
@@ -308,6 +308,73 @@ pub mod test {
         } else {
             assert!(false, "Pipeline construction failed")
         };
+    }
+
+    // This test is a sanity check (not thorough at all - it only tests a small
+    // fragment of grammar) that sqlparser does not reuse nodes in the AST,
+    // as-in two parents point to the same child. Notionally, in memory that
+    // would be OK because it would not be observable by anything traversing the
+    // AST: they would seem like seperate nodes.
+    //
+    // The only time this would be obvservable would be when casting a reference
+    // to a usize and checking if the addresses of two nodes with different
+    // parents and the addresses of the "different" nodes happen to be the same.
+    //
+    // The reason for this test: I'm thinking of ditching the Node abstraction.
+    // It exists in order to assign a unique ID to a sqlparser AST type so that
+    // metadata can be attached.  The problem is that the IDs are assigned at
+    // AST traversal time.
+    //
+    // The implication is that if multiple passes are required and traversal
+    // order changes, the IDs will no longer line up. More realistically, if
+    // some nodes are removed in an edit pass, IDs will definitely no longer
+    // line up and this does not require a change in traversal order.
+    //
+    // What I'm considering building is a AstMetadata type that stores metadata
+    // using a (node address, TypeId) tuple as a key. TypeId is needed in
+    // addition to the address: there are a number of situations where values of
+    // two different types share an address, e.g. the address of a struct and
+    // the address of its first field will share the same memory address.
+    //
+    // Relying on memory addresses being fixed is generally regarded as a Bad
+    // Thing in Rust, because in Rust values will move when they change
+    // ownership and therefore any stored addresses will become invalid.
+    //
+    // But if we can prevent an AST from being moved it is perfectly safe. We
+    // can prevent an AST from being moved by ensuring that the AstMetaData type
+    // takes and retains a reference to the root node of the AST. The borrow
+    // checker will prevent the AST from being moved until the AstMetaData type
+    // is dropped.
+    #[test]
+    fn sqlparser_does_not_reuse_ast_nodes() {
+        let dialect = dialect::GenericDialect {};
+
+        let sql = "SELECT a, b, 123, myfunc(b) \
+                    FROM table_1 \
+                    WHERE a > b AND b < 100 \
+                    ORDER BY a DESC, b";
+
+        let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
+
+        #[derive(VisitorDispatch, Default)]
+        struct AddrChecker {
+            count: usize,
+            node_addrs: HashSet<(TypeId, usize)>,
+        }
+
+        impl<'ast, T: Visitable<'ast> + 'static> Visitor<'ast, T> for AddrChecker {
+            fn enter(&mut self, node: Node<'ast, T>) -> EnterControlFlow {
+                self.count += 1;
+                self.node_addrs.insert((TypeId::of::<T>(), node.inner() as *const T as usize));
+                ControlFlow::Continue(Navigation::Visit)
+            }
+        }
+
+        let mut addr_checker = AddrChecker::default();
+
+        ast.accept(&mut addr_checker);
+
+        assert_eq!(addr_checker.count, addr_checker.node_addrs.len());
     }
 
     #[test]
