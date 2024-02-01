@@ -3,14 +3,13 @@ use std::ops::ControlFlow;
 use crate::{SqlNode, EnterControlFlow, Navigation, VisitorDispatch};
 
 #[inline(always)]
-pub fn visit<'ast, V, F>(
+pub fn visit<'ast, F>(
     node: SqlNode<'ast>,
-    visitor: &mut V,
+    visitor: &mut dyn VisitorDispatch<'ast>,
     mut visit_children: F,
 ) -> EnterControlFlow
 where
-    V: VisitorDispatch<'ast>,
-    F: FnMut(&mut V) -> EnterControlFlow,
+    F: FnMut(&mut dyn VisitorDispatch<'ast>) -> EnterControlFlow,
 {
     let child_nodes_control_flow = match VisitorDispatch::enter(visitor, node.clone()) {
         ControlFlow::Continue(Navigation::Visit) => visit_children(visitor),

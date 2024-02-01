@@ -31,11 +31,11 @@ pub use sqltk_derive::*;
 
 #[cfg(test)]
 pub mod test {
-    use std::ops::ControlFlow;
+    use std::{any::TypeId, collections::HashSet, ops::ControlFlow};
 
     use crate::{self as sqltk};
     use sqltk::{
-        dispatch::Nope, Visitable, EnterControlFlow, Navigation, Node, Visitor,
+        dispatch::Nope, Visitable, EnterControlFlow, Navigation, Visitor,
         pipeline::{self, InitializeError, ReadOnly, ReadWrite, RootScope, Scope, Stage},
         VisitorDispatch, SqlNode, ExitControlFlow, sqlparser::{self, ast, parser, dialect}
     };
@@ -52,7 +52,7 @@ pub mod test {
     }
 
     impl<'ast> Visitor<'ast, ast::Expr> for Counter {
-        fn enter(&mut self, _: Node<'ast, ast::Expr>) -> EnterControlFlow {
+        fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
             self.count += 1;
             ControlFlow::Continue(Navigation::Visit)
         }
@@ -96,22 +96,22 @@ pub mod test {
     fn visit_useless() {
         #[derive(VisitorDispatch, Default)]
         pub struct Recorder {
-            pub items_enter: Vec<(String, usize)>,
+            pub items_enter: Vec<String>,
         }
 
         // Types that should _not_ be visited because we know it'll be
         // None/empty with the `sql` expression below.
         impl<'ast> Visitor<'ast, Option<ast::With>> for Recorder {
-            fn enter(&mut self, node: Node<'ast, Option<ast::With>>) -> EnterControlFlow {
-                self.items_enter.push(("Option<With>".into(), node.id()));
+            fn enter(&mut self, _: &'ast Option<ast::With>) -> EnterControlFlow {
+                self.items_enter.push("Option<With>".into());
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
 
         impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>> for Recorder {
-            fn enter(&mut self, node: Node<'ast, Vec<ast::TableWithJoins>>) -> EnterControlFlow {
+            fn enter(&mut self, _: &'ast Vec<ast::TableWithJoins>) -> EnterControlFlow {
                 self.items_enter
-                    .push(("Vec<TableWithJoins>".into(), node.id()));
+                    .push("Vec<TableWithJoins>".into());
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
@@ -119,15 +119,15 @@ pub mod test {
         // Types that _should_ be visited because we know they'll be present
         // after parsing the `sql` expression below.
         impl<'ast> Visitor<'ast, Option<ast::Expr>> for Recorder {
-            fn enter(&mut self, node: Node<'ast, Option<ast::Expr>>) -> EnterControlFlow {
-                self.items_enter.push(("Option<Expr>".into(), node.id()));
+            fn enter(&mut self, _: &'ast Option<ast::Expr>) -> EnterControlFlow {
+                self.items_enter.push("Option<Expr>".into());
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
 
         impl<'ast> Visitor<'ast, Vec<ast::SelectItem>> for Recorder {
-            fn enter(&mut self, node: Node<'ast, Vec<ast::SelectItem>>) -> EnterControlFlow {
-                self.items_enter.push(("Vec<SelectItem>".into(), node.id()));
+            fn enter(&mut self, _: &'ast Vec<ast::SelectItem>) -> EnterControlFlow {
+                self.items_enter.push("Vec<SelectItem>".into());
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
@@ -142,9 +142,9 @@ pub mod test {
 
         ast.accept(&mut visitor);
 
-        let mut expected_items = Vec::<(String, usize)>::new();
-        expected_items.push(("Option<Expr>".to_string(), 17usize));
-        expected_items.push(("Vec<SelectItem>".to_string(), 8usize));
+        let mut expected_items = Vec::<String>::new();
+        expected_items.push("Option<Expr>".to_string());
+        expected_items.push("Vec<SelectItem>".to_string());
 
         let mut visitor_items = visitor.items_enter;
         visitor_items.sort();
@@ -188,18 +188,18 @@ pub mod test {
         assert_eq!(
             visitor.order_enter[0..12],
             [
-                "Vec<Statement> (ID: 0)",
-                "Statement (ID: 1)",
-                "Box<Query> (ID: 2)",
-                "Query (ID: 3)",
-                "Box<SetExpr> (ID: 4)",
-                "SetExpr (ID: 5)",
-                "Box<Select> (ID: 6)",
-                "Select (ID: 7)",
-                "Vec<TableWithJoins> (ID: 8)",
-                "TableWithJoins (ID: 9)",
-                "TableFactor (ID: 10)",
-                "ObjectName (ID: 11)",
+                "Vec<Statement>",
+                "Statement",
+                "Box<Query>",
+                "Query",
+                "Box<SetExpr>",
+                "SetExpr",
+                "Box<Select>",
+                "Select",
+                "Vec<TableWithJoins>",
+                "TableWithJoins",
+                "TableFactor",
+                "ObjectName",
             ]
         );
     }
@@ -233,12 +233,12 @@ pub mod test {
         }
 
         impl<'ast> Visitor<'ast, ast::Expr> for BalancedExprsCheck {
-            fn enter(&mut self, _: Node<'ast, ast::Expr>) -> EnterControlFlow {
+            fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
                 self.exprs_balanced.get_mut().0 = false;
                 ControlFlow::Continue(Navigation::Visit)
             }
 
-            fn exit(&mut self, _: Node<'ast, ast::Expr>) -> ExitControlFlow {
+            fn exit(&mut self, _: &'ast ast::Expr) -> ExitControlFlow {
                 self.exprs_balanced.get_mut().0 =
                     self.expr_enter_count.get().0 == self.expr_exit_count.get().0;
                 ControlFlow::Continue(())
@@ -275,12 +275,12 @@ pub mod test {
         }
 
         impl<'ast> Visitor<'ast, ast::Expr> for ExprCounter {
-            fn enter(&mut self, _: Node<'ast, ast::Expr>) -> EnterControlFlow {
+            fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
                 self.expr_enter_count.get_mut().0 += 1;
                 ControlFlow::Continue(Navigation::Visit)
             }
 
-            fn exit(&mut self, _: Node<'ast, ast::Expr>) -> ExitControlFlow {
+            fn exit(&mut self, _: &'ast ast::Expr) -> ExitControlFlow {
                 self.expr_exit_count.get_mut().0 += 1;
                 ControlFlow::Continue(())
             }
@@ -308,6 +308,73 @@ pub mod test {
         } else {
             assert!(false, "Pipeline construction failed")
         };
+    }
+
+    // This test is a sanity check (not thorough at all - it only tests a small
+    // fragment of grammar) that sqlparser does not reuse nodes in the AST,
+    // as-in two parents point to the same child. Notionally, in memory that
+    // would be OK because it would not be observable by anything traversing the
+    // AST: they would seem like seperate nodes.
+    //
+    // The only time this would be obvservable would be when casting a reference
+    // to a usize and checking if the addresses of two nodes with different
+    // parents and the addresses of the "different" nodes happen to be the same.
+    //
+    // The reason for this test: I'm thinking of ditching the Node abstraction.
+    // It exists in order to assign a unique ID to a sqlparser AST type so that
+    // metadata can be attached.  The problem is that the IDs are assigned at
+    // AST traversal time.
+    //
+    // The implication is that if multiple passes are required and traversal
+    // order changes, the IDs will no longer line up. More realistically, if
+    // some nodes are removed in an edit pass, IDs will definitely no longer
+    // line up and this does not require a change in traversal order.
+    //
+    // What I'm considering building is a AstMetadata type that stores metadata
+    // using a (node address, TypeId) tuple as a key. TypeId is needed in
+    // addition to the address: there are a number of situations where values of
+    // two different types share an address, e.g. the address of a struct and
+    // the address of its first field will share the same memory address.
+    //
+    // Relying on memory addresses being fixed is generally regarded as a Bad
+    // Thing in Rust, because in Rust values will move when they change
+    // ownership and therefore any stored addresses will become invalid.
+    //
+    // But if we can prevent an AST from being moved it is perfectly safe. We
+    // can prevent an AST from being moved by ensuring that the AstMetaData type
+    // takes and retains a reference to the root node of the AST. The borrow
+    // checker will prevent the AST from being moved until the AstMetaData type
+    // is dropped.
+    #[test]
+    fn sqlparser_does_not_reuse_ast_nodes() {
+        let dialect = dialect::GenericDialect {};
+
+        let sql = "SELECT a, b, 123, myfunc(b) \
+                    FROM table_1 \
+                    WHERE a > b AND b < 100 \
+                    ORDER BY a DESC, b";
+
+        let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
+
+        #[derive(VisitorDispatch, Default)]
+        struct AddrChecker {
+            count: usize,
+            node_addrs: HashSet<(TypeId, usize)>,
+        }
+
+        impl<'ast, T: Visitable<'ast> + 'static> Visitor<'ast, T> for AddrChecker {
+            fn enter(&mut self, node: &'ast T) -> EnterControlFlow {
+                self.count += 1;
+                self.node_addrs.insert((TypeId::of::<T>(), node as *const T as usize));
+                ControlFlow::Continue(Navigation::Visit)
+            }
+        }
+
+        let mut addr_checker = AddrChecker::default();
+
+        ast.accept(&mut addr_checker);
+
+        assert_eq!(addr_checker.count, addr_checker.node_addrs.len());
     }
 
     #[test]

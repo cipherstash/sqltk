@@ -1,36 +1,30 @@
 use crate::*;
 
 impl<'ast, T: Visitable<'ast>> Visitable<'ast> for &'ast T {
-    fn accept_and_identify<V>(
+    fn accept(
         &'ast self,
-        visitor: &mut V,
-        node_id_seq: &mut NodeIdSequence,
-    ) -> EnterControlFlow
-    where
-        V: VisitorDispatch<'ast>,
-    {
-        (*self).accept_and_identify(visitor, node_id_seq)
+        visitor: &mut dyn VisitorDispatch<'ast>,
+    ) -> EnterControlFlow {
+        (*self).accept(visitor)
     }
 }
 
-impl<'ast, T: Visitable<'ast>> Visitable<'ast> for Vec<T>
+impl<'ast, T> Visitable<'ast> for Vec<T>
 where
-    Node<'ast, Vec<T>>: Into<SqlNode<'ast>>,
+    T: Visitable<'ast>,
+    &'ast Self: Into<SqlNode<'ast>>,
+    VecOf<'ast>: From<&'ast Vec<T>>,
 {
-    fn accept_and_identify<V>(
+    fn accept(
         &'ast self,
-        visitor: &mut V,
-        node_id_seq: &mut NodeIdSequence,
-    ) -> EnterControlFlow
-    where
-        V: VisitorDispatch<'ast>,
-    {
+        visitor: &mut dyn VisitorDispatch<'ast>,
+    ) -> EnterControlFlow {
         if self.is_empty() {
             ControlFlow::Continue(Navigation::Skip)
         } else {
-            visit(node_id_seq.next_node(self).into(), visitor, |visitor| {
+            visit(SqlNode::from(self), visitor, |visitor| {
                 for child in self.iter() {
-                    child.accept_and_identify(visitor, node_id_seq)?;
+                    child.accept(visitor)?;
                 }
                 ControlFlow::Continue(Navigation::Visit)
             })
@@ -38,38 +32,40 @@ where
     }
 }
 
-impl<'ast, T: Visitable<'ast>> Visitable<'ast> for Box<T>
+impl<'ast, T> Visitable<'ast> for Box<T>
 where
-    Node<'ast, Box<T>>: Into<SqlNode<'ast>>,
+    T: Visitable<'ast>,
+    &'ast Self: Into<SqlNode<'ast>>,
+    BoxOf<'ast>: From<&'ast Box<T>>,
 {
-    fn accept_and_identify<V: VisitorDispatch<'ast>>(
+    fn accept(
         &'ast self,
-        visitor: &mut V,
-        node_id_seq: &mut NodeIdSequence,
+        visitor: &mut dyn VisitorDispatch<'ast>,
     ) -> EnterControlFlow {
-        visit(node_id_seq.next_node(self).into(), visitor, |visitor| {
-            (**self).accept_and_identify(visitor, node_id_seq)
+        visit(SqlNode::from(self), visitor, |visitor| {
+            (**self).accept(visitor)
         })
     }
 }
 
-impl<'ast, T: Visitable<'ast>> Visitable<'ast> for Option<T>
+impl<'ast, T> Visitable<'ast> for Option<T>
 where
-    Node<'ast, Option<T>>: Into<SqlNode<'ast>>,
+    T: Visitable<'ast>,
+    &'ast Self: Into<SqlNode<'ast>>,
+    OptionOf<'ast>: From<&'ast Option<T>>,
 {
-    fn accept_and_identify<V: VisitorDispatch<'ast>>(
+    fn accept(
         &'ast self,
-        visitor: &mut V,
-        node_id_seq: &mut NodeIdSequence,
+        visitor: &mut dyn VisitorDispatch<'ast>,
     ) -> EnterControlFlow {
         if self.is_none() {
             ControlFlow::Continue(Navigation::Skip)
         } else {
             visit(
-                node_id_seq.next_node(self).into(),
+                SqlNode::from(self),
                 visitor,
                 |visitor| match self {
-                    Some(child) => child.accept_and_identify(visitor, node_id_seq),
+                    Some(child) => child.accept(visitor),
                     None => ControlFlow::Continue(Navigation::Skip),
                 },
             )

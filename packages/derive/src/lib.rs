@@ -49,14 +49,14 @@ static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &'static str = indoc! {"
     }
 
     impl<'ast, T: NodeLogger> Visitor<'ast, Expr> for MyGenericVisitor<T> {
-        fn enter(&mut self, node: Node<'ast, Expr>) -> EnterControlFlow {
+        fn enter(&mut self, node: &'ast Expr) -> EnterControlFlow {
             self.logger.log(node);
             ControlFlow::Continue(Navigation::Visit)
         }
     }
 
     impl<'ast, T> Visitor<'ast, Statement> for MyGenericVisitor<T> {
-        fn enter(&mut self, node: Node<'ast, Expr>) -> EnterControlFlow {
+        fn enter(&mut self, node: &'ast Expr) -> EnterControlFlow {
             self.logger.log(node);
             ControlFlow::Continue(Navigation::Visit)
         }
@@ -67,11 +67,11 @@ static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &'static str = indoc! {"
 
     // Implement Visitor<'ast, N> on Wrapper for all Visitor<'ast, N> implemented by the generic type.
     impl<'ast, N> Visitor<'ast, N> for Wrapper where MyGenericVisitor<OtelLogger>: Visitor<'ast, N> {
-        fn enter(&mut self, node: Node<'ast, N>) -> EnterControlFlow {
+        fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
             self.0.enter(node)
         }
 
-        fn exit(&mut self, node: Node<'ast, N>) -> ExitControlFlow {
+        fn exit(&mut self, node: &'ast N) -> ExitControlFlow {
             self.0.exit(node)
         }
     }
@@ -92,7 +92,7 @@ static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &'static str = indoc! {"
 /// }
 ///
 /// impl<'ast> Visitor<'ast, ast::Expr> for ExprCounter {
-///   fn enter(&mut self, node: Node<'ast, ast::Expr>) -> EnterControlFlow {
+///   fn enter(&mut self, node: &'ast ast::Expr) -> EnterControlFlow {
 ///     self.counter += 1;
 ///     ControlFlow::Continue(Navigation::Visit)
 ///   }

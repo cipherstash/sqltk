@@ -26,28 +26,17 @@ impl<'a> ToTokens for VisitableImpl<'a> {
             }
         };
 
-        let short_name = &self.node.path.segments.last().unwrap().ident.to_string();
-
         tokens.append_all(quote! {
             #[automatically_derived]
             impl<'ast> crate::Visitable<'ast> for #path {
-                fn accept_and_identify<V: crate::VisitorDispatch<'ast>>(
+                fn accept(
                     &'ast self,
-                    visitor: &mut V,
-                    node_id_seq: &mut crate::NodeIdSequence,
+                    visitor: &mut dyn crate::VisitorDispatch<'ast>,
                 ) -> crate::EnterControlFlow {
-                    crate::visit(node_id_seq.next_node(self).into(), visitor, #[allow(unused_variables)] |visitor| {
+                    crate::visit(crate::SqlNode::from(self), visitor, #[allow(unused_variables)] |visitor| {
                         #body
                         ControlFlow::Continue(Navigation::Visit)
                     })
-                }
-            }
-
-            // TODO: include enum variant names too
-            #[automatically_derived]
-            impl<'ast> std::fmt::Display for crate::DisplayType<#path> {
-                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    write!(f, "{}", #short_name)
                 }
             }
         })
@@ -79,7 +68,7 @@ impl<'a> VisitableImpl<'a> {
                 for field in fields.iter() {
                     let ident = field.ident.clone().unwrap();
                     tokens.append_all(quote! {
-                        self.#ident.accept_and_identify(visitor, node_id_seq)?;
+                        self.#ident.accept(visitor)?;
                     });
                 }
             }
@@ -91,7 +80,7 @@ impl<'a> VisitableImpl<'a> {
                 for (idx, _) in fields.iter() {
                     let field_idx = syn::Index::from(*idx);
                     tokens.append_all(quote! {
-                        self.#field_idx.accept_and_identify(visitor, node_id_seq)?;
+                        self.#field_idx.accept(visitor)?;
                     });
                 }
             }
@@ -111,7 +100,7 @@ impl<'a> VisitableImpl<'a> {
                 for field in fields.iter() {
                     let ident = field.ident.clone().unwrap();
                     tokens.append_all(quote! {
-                        #ident.accept_and_identify(visitor, node_id_seq)?;
+                        #ident.accept(visitor)?;
                     });
                 }
             }
@@ -123,7 +112,7 @@ impl<'a> VisitableImpl<'a> {
                 for (idx, _) in fields.iter() {
                     let ident = format_ident!("field{}", idx);
                     tokens.append_all(quote! {
-                        #ident.accept_and_identify(visitor, node_id_seq)?;
+                        #ident.accept(visitor)?;
                     });
                 }
             }
