@@ -213,23 +213,21 @@ impl Codegen {
     }
 
     pub fn generated_sql_node_enum(&self, dest_file: &PathBuf) {
-        // FIXME: ensure sqlparser is built with correct set of features
-
         let mut output = proc_macro2::TokenStream::new();
 
         let main_nodes = self.meta.main_nodes();
         let main_nodes_variants = main_nodes.iter().map(|(type_path, _)| {
             let ident = &type_path.path.segments.last().unwrap().ident;
             quote! {
-                #ident(Node<'ast, #type_path>),
+                #ident(&'ast #type_path),
             }
         });
         let mut main_node_from_impls = proc_macro2::TokenStream::new();
         for type_path in main_nodes.iter().map(|(type_path, _)| type_path) {
             let ident = &type_path.path.segments.last().unwrap().ident;
             main_node_from_impls.append_all(quote! {
-                impl<'ast> From<Node<'ast, #type_path>> for SqlNode<'ast> {
-                    fn from(value: Node<'ast, #type_path>) -> Self {
+                impl<'ast> From<&'ast #type_path> for SqlNode<'ast> {
+                    fn from(value: &'ast #type_path) -> Self {
                         Self::#ident(value)
                     }
                 }
@@ -241,7 +239,7 @@ impl Codegen {
             let ident = primitive_node.variant_ident();
             let type_path = primitive_node.type_path();
             quote! {
-                #ident(Node<'ast, #type_path>),
+                #ident(&'ast #type_path),
             }
         });
         let mut primitive_node_from_impls = proc_macro2::TokenStream::new();
@@ -249,8 +247,8 @@ impl Codegen {
             let ident = pn.variant_ident();
             let type_path = pn.type_path();
             primitive_node_from_impls.append_all(quote! {
-                impl<'ast> From<Node<'ast, #type_path>> for SqlNode<'ast> {
-                    fn from(value: Node<'ast, #type_path>) -> Self {
+                impl<'ast> From<&'ast #type_path> for SqlNode<'ast> {
+                    fn from(value: &'ast #type_path) -> Self {
                         Self::#ident(value)
                     }
                 }
@@ -300,11 +298,11 @@ impl Codegen {
             );
 
             let variant = quote! {
-                #variant_ident(Node<'ast, #type_path>),
+                #variant_ident(&'ast #type_path),
             };
             let from_impl = quote! {
-                impl<'ast> From<Node<'ast, #type_path>> for #container_enum_ident<'ast> {
-                    fn from(value: Node<'ast, #type_path>) -> Self {
+                impl<'ast> From<&'ast #type_path> for #container_enum_ident<'ast> {
+                    fn from(value: &'ast #type_path) -> Self {
                         Self::#variant_ident(value)
                     }
                 }
@@ -366,32 +364,31 @@ impl Codegen {
             #main_node_from_impls
 
             #[automatically_derived]
-            impl<'ast, T: Visitable<'ast>> From<Node<'ast, Box<T>>> for SqlNode<'ast>
+            impl<'ast, T> From<&'ast Box<T>> for SqlNode<'ast>
             where
-                BoxOf<'ast>: From<Node<'ast, Box<T>>>,
+                BoxOf<'ast>: From<&'ast Box<T>>,
             {
-                fn from(value: Node<'ast, Box<T>>) -> Self {
+                fn from(value: &'ast Box<T>) -> Self {
                     Self::Box(BoxOf::from(value))
                 }
             }
 
             #[automatically_derived]
-            impl<'ast, T: Visitable<'ast>> From<Node<'ast, Vec<T>>> for SqlNode<'ast>
+            impl<'ast, T> From<&'ast Vec<T>> for SqlNode<'ast>
             where
-                VecOf<'ast>: From<Node<'ast, Vec<T>>>,
-                SqlNode<'ast>: From<Node<'ast, T>>
+                VecOf<'ast>: From<&'ast Vec<T>>,
             {
-                fn from(value: Node<'ast, Vec<T>>) -> Self {
+                fn from(value: &'ast Vec<T>) -> Self {
                     Self::Vec(VecOf::from(value))
                 }
             }
 
             #[automatically_derived]
-            impl<'ast, T: Visitable<'ast>> From<Node<'ast, Option<T>>> for SqlNode<'ast>
+            impl<'ast, T> From<&'ast Option<T>> for SqlNode<'ast>
             where
-                OptionOf<'ast>: From<Node<'ast, Option<T>>>,
+                OptionOf<'ast>: From<&'ast Option<T>>,
             {
-                fn from(value: Node<'ast, Option<T>>) -> Self {
+                fn from(value: &'ast Option<T>) -> Self {
                     Self::Option(OptionOf::from(value))
                 }
             }
@@ -399,7 +396,7 @@ impl Codegen {
             #[automatically_derived]
             impl<'ast> std::fmt::Display for SqlNode<'ast> {
                 fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    match_sql_node_enum!(self, |node| { write!(f, "{}", node) })
+                    match_sql_node_enum!(self, |node| { write!(f, "{}", crate::display_type_name_of_value(node)) })
                 }
             }
         });
@@ -537,31 +534,22 @@ impl Codegen {
 
         for node in primitive_nodes {
             let type_path = node.type_path();
-            let ident_str = &type_path.0.path.segments.last().unwrap().ident.to_string();
 
             output.append_all(quote! {
                 #[automatically_derived]
                 impl<'ast> crate::Visitable<'ast> for #type_path {
-                    fn accept_and_identify(
+                    fn accept(
                         &'ast self,
                         visitor: &mut dyn crate::VisitorDispatch<'ast>,
-                        node_id_seq: &mut crate::NodeIdSequence,
                     ) -> crate::EnterControlFlow {
                         crate::visit(
-                            node_id_seq.next_node(self).into(),
+                            crate::SqlNode::from(self),
                             visitor,
                             #[allow(unused_variables)]
                             |visitor| {
                                 std::ops::ControlFlow::Continue(crate::Navigation::Skip)
                             }
                         )
-                    }
-                }
-
-                #[automatically_derived]
-                impl<'ast> std::fmt::Display for crate::DisplayType<#type_path> {
-                    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                        write!(f, "{}", #ident_str)
                     }
                 }
             });

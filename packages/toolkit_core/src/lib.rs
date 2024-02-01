@@ -1,18 +1,16 @@
 mod visitable_impls;
-mod custom_display;
+mod display_type_name;
 pub mod dispatch;
 mod generated;
-mod node;
 
 // Re-export sqlparser
 pub use sqlparser;
 // Re-export bigdecimal
 pub use bigdecimal;
 
-pub use custom_display::*;
+pub use display_type_name::*;
 pub use dispatch::*;
 pub use generated::sql_node::*;
-pub use node::*;
 pub mod pipeline;
 
 /// Exposed to allow macro-generated code and some internals to work.
@@ -40,12 +38,15 @@ pub type ExitControlFlow = ControlFlow<(), ()>;
 
 /// Trait for types that visit a specific type of node.
 #[allow(unused_variables)]
-pub trait Visitor<'ast, T: Visitable<'ast>> {
+pub trait Visitor<'ast, N>
+where
+    N: Visitable<'ast>
+{
     /// Called when a node is entered.
     ///
     /// The default implementation returns [`ControlFlow::Continue(Navigation::Visit)`].
     ///
-    fn enter(&mut self, node: Node<'ast, T>) -> EnterControlFlow {
+    fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
         ControlFlow::Continue(Navigation::Visit)
     }
 
@@ -53,7 +54,7 @@ pub trait Visitor<'ast, T: Visitable<'ast>> {
     /// [`ControlFlow::Continue(Navigation::Visit)`].  Note that the
     /// [`Navigation`] value returned in exit result is ignored.
     ///
-    fn exit(&mut self, node: Node<'ast, T>) -> ExitControlFlow {
+    fn exit(&mut self, node: &'ast N) -> ExitControlFlow {
         ControlFlow::Continue(())
     }
 }
@@ -74,18 +75,5 @@ where
     /// AST nodes from `sqlparser` are wrapped in a [`node::Node`]
     /// implementation and assigned a unique numeric ID so that derived metadata
     /// about nodes can be retained.
-    fn accept(&'ast self, dispatch: &mut dyn VisitorDispatch<'ast>) -> EnterControlFlow {
-        self.accept_and_identify(dispatch, &mut NodeIdSequence::new())
-    }
-
-    /// Same as [`Visitable::accept`] but requires an additional `node_id_seq`
-    /// parameter.
-    ///
-    /// *Not public API. Used by generated code.*
-    #[doc(hidden)]
-    fn accept_and_identify(
-        &'ast self,
-        visitor: &mut dyn VisitorDispatch<'ast>,
-        node_id_seq: &mut NodeIdSequence,
-    ) -> EnterControlFlow;
+    fn accept(&'ast self, dispatch: &mut dyn VisitorDispatch<'ast>) -> EnterControlFlow;
 }

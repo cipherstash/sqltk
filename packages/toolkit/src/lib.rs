@@ -35,7 +35,7 @@ pub mod test {
 
     use crate::{self as sqltk};
     use sqltk::{
-        dispatch::Nope, Visitable, EnterControlFlow, Navigation, Node, Visitor,
+        dispatch::Nope, Visitable, EnterControlFlow, Navigation, Visitor,
         pipeline::{self, InitializeError, ReadOnly, ReadWrite, RootScope, Scope, Stage},
         VisitorDispatch, SqlNode, ExitControlFlow, sqlparser::{self, ast, parser, dialect}
     };
@@ -52,7 +52,7 @@ pub mod test {
     }
 
     impl<'ast> Visitor<'ast, ast::Expr> for Counter {
-        fn enter(&mut self, _: Node<'ast, ast::Expr>) -> EnterControlFlow {
+        fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
             self.count += 1;
             ControlFlow::Continue(Navigation::Visit)
         }
@@ -96,22 +96,22 @@ pub mod test {
     fn visit_useless() {
         #[derive(VisitorDispatch, Default)]
         pub struct Recorder {
-            pub items_enter: Vec<(String, usize)>,
+            pub items_enter: Vec<String>,
         }
 
         // Types that should _not_ be visited because we know it'll be
         // None/empty with the `sql` expression below.
         impl<'ast> Visitor<'ast, Option<ast::With>> for Recorder {
-            fn enter(&mut self, node: Node<'ast, Option<ast::With>>) -> EnterControlFlow {
-                self.items_enter.push(("Option<With>".into(), node.id()));
+            fn enter(&mut self, _: &'ast Option<ast::With>) -> EnterControlFlow {
+                self.items_enter.push("Option<With>".into());
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
 
         impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>> for Recorder {
-            fn enter(&mut self, node: Node<'ast, Vec<ast::TableWithJoins>>) -> EnterControlFlow {
+            fn enter(&mut self, _: &'ast Vec<ast::TableWithJoins>) -> EnterControlFlow {
                 self.items_enter
-                    .push(("Vec<TableWithJoins>".into(), node.id()));
+                    .push("Vec<TableWithJoins>".into());
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
@@ -119,15 +119,15 @@ pub mod test {
         // Types that _should_ be visited because we know they'll be present
         // after parsing the `sql` expression below.
         impl<'ast> Visitor<'ast, Option<ast::Expr>> for Recorder {
-            fn enter(&mut self, node: Node<'ast, Option<ast::Expr>>) -> EnterControlFlow {
-                self.items_enter.push(("Option<Expr>".into(), node.id()));
+            fn enter(&mut self, _: &'ast Option<ast::Expr>) -> EnterControlFlow {
+                self.items_enter.push("Option<Expr>".into());
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
 
         impl<'ast> Visitor<'ast, Vec<ast::SelectItem>> for Recorder {
-            fn enter(&mut self, node: Node<'ast, Vec<ast::SelectItem>>) -> EnterControlFlow {
-                self.items_enter.push(("Vec<SelectItem>".into(), node.id()));
+            fn enter(&mut self, _: &'ast Vec<ast::SelectItem>) -> EnterControlFlow {
+                self.items_enter.push("Vec<SelectItem>".into());
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
@@ -142,9 +142,9 @@ pub mod test {
 
         ast.accept(&mut visitor);
 
-        let mut expected_items = Vec::<(String, usize)>::new();
-        expected_items.push(("Option<Expr>".to_string(), 17usize));
-        expected_items.push(("Vec<SelectItem>".to_string(), 8usize));
+        let mut expected_items = Vec::<String>::new();
+        expected_items.push("Option<Expr>".to_string());
+        expected_items.push("Vec<SelectItem>".to_string());
 
         let mut visitor_items = visitor.items_enter;
         visitor_items.sort();
@@ -188,18 +188,18 @@ pub mod test {
         assert_eq!(
             visitor.order_enter[0..12],
             [
-                "Vec<Statement> (ID: 0)",
-                "Statement (ID: 1)",
-                "Box<Query> (ID: 2)",
-                "Query (ID: 3)",
-                "Box<SetExpr> (ID: 4)",
-                "SetExpr (ID: 5)",
-                "Box<Select> (ID: 6)",
-                "Select (ID: 7)",
-                "Vec<TableWithJoins> (ID: 8)",
-                "TableWithJoins (ID: 9)",
-                "TableFactor (ID: 10)",
-                "ObjectName (ID: 11)",
+                "Vec<Statement>",
+                "Statement",
+                "Box<Query>",
+                "Query",
+                "Box<SetExpr>",
+                "SetExpr",
+                "Box<Select>",
+                "Select",
+                "Vec<TableWithJoins>",
+                "TableWithJoins",
+                "TableFactor",
+                "ObjectName",
             ]
         );
     }
@@ -233,12 +233,12 @@ pub mod test {
         }
 
         impl<'ast> Visitor<'ast, ast::Expr> for BalancedExprsCheck {
-            fn enter(&mut self, _: Node<'ast, ast::Expr>) -> EnterControlFlow {
+            fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
                 self.exprs_balanced.get_mut().0 = false;
                 ControlFlow::Continue(Navigation::Visit)
             }
 
-            fn exit(&mut self, _: Node<'ast, ast::Expr>) -> ExitControlFlow {
+            fn exit(&mut self, _: &'ast ast::Expr) -> ExitControlFlow {
                 self.exprs_balanced.get_mut().0 =
                     self.expr_enter_count.get().0 == self.expr_exit_count.get().0;
                 ControlFlow::Continue(())
@@ -275,12 +275,12 @@ pub mod test {
         }
 
         impl<'ast> Visitor<'ast, ast::Expr> for ExprCounter {
-            fn enter(&mut self, _: Node<'ast, ast::Expr>) -> EnterControlFlow {
+            fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
                 self.expr_enter_count.get_mut().0 += 1;
                 ControlFlow::Continue(Navigation::Visit)
             }
 
-            fn exit(&mut self, _: Node<'ast, ast::Expr>) -> ExitControlFlow {
+            fn exit(&mut self, _: &'ast ast::Expr) -> ExitControlFlow {
                 self.expr_exit_count.get_mut().0 += 1;
                 ControlFlow::Continue(())
             }
@@ -363,9 +363,9 @@ pub mod test {
         }
 
         impl<'ast, T: Visitable<'ast> + 'static> Visitor<'ast, T> for AddrChecker {
-            fn enter(&mut self, node: Node<'ast, T>) -> EnterControlFlow {
+            fn enter(&mut self, node: &'ast T) -> EnterControlFlow {
                 self.count += 1;
-                self.node_addrs.insert((TypeId::of::<T>(), node.inner() as *const T as usize));
+                self.node_addrs.insert((TypeId::of::<T>(), node as *const T as usize));
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
