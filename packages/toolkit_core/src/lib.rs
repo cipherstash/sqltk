@@ -1,6 +1,5 @@
 mod visitable_impls;
 mod display_type_name;
-pub mod dispatch;
 mod generated;
 
 // Re-export sqlparser
@@ -11,6 +10,9 @@ pub use bigdecimal;
 pub use display_type_name::*;
 pub use dispatch::*;
 pub use generated::sql_node::*;
+
+pub mod annotation;
+pub mod dispatch;
 pub mod pipeline;
 
 /// Exposed to allow macro-generated code and some internals to work.
