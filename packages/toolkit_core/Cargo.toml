@@ -25,6 +25,7 @@ sqlparser = { workspace = true }
 bigdecimal = { workspace = true }
 simple-mermaid = { workspace = true }
 tynm = "0.1.8"
+thiserror = "1.0.56"
 
 [build-dependencies]
 sqltk_codegen = { path = "../codegen" }

@@ -4,6 +4,7 @@ mod polymap;
 mod scope_items;
 
 use std::{cell::RefCell, fmt::Debug, rc::Rc};
+use thiserror::Error;
 
 pub use accessors::*;
 pub use into_accessor::IntoAccessor;
@@ -118,7 +119,9 @@ impl<'scope, Items: ScopeItems> Scope<'scope, Items> for RootScope {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
+#[error("Item {0} was not found in the Scope")]
 pub struct UnknownItemError(pub String);
 
 pub struct ImportedItem<T: 'static>(T);

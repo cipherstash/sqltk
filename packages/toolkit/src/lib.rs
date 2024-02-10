@@ -36,9 +36,11 @@ pub mod test {
     use crate::{self as sqltk};
     use sqltk::{
         dispatch::Nope, Visitable, EnterControlFlow, Navigation, Visitor,
-        pipeline::{self, InitializeError, ReadOnly, ReadWrite, RootScope, Scope, Stage},
+        pipeline::{StageInitError, ReadOnly, ReadWrite, RootScope, Scope, Stage},
         VisitorDispatch, SqlNode, ExitControlFlow, sqlparser::{self, ast, parser, dialect}
     };
+
+    use sqltk_derive::pipeline;
 
     #[derive(VisitorDispatch)]
     pub struct Counter {
@@ -217,18 +219,18 @@ pub mod test {
         }
 
         impl<'ast, 'scope> Stage<'ast, 'scope> for BalancedExprsCheck {
-            fn init_exit(scope: &mut impl Scope<'scope>) -> Result<Self, InitializeError> {
+            fn init_exit(scope: &mut impl Scope<'scope>) -> Result<Self, StageInitError> {
                 scope
                     .import::<ExprEnterCount>()
                     .import::<ExprExitCount>()
                     .export(ExprsBalanced(true))
                     .resolve()
+                    .map_err(StageInitError::from)
                     .map(|(expr_enter_count, expr_exit_count, exprs_balanced)| Self {
                         expr_enter_count,
                         expr_exit_count,
                         exprs_balanced,
                     })
-                    .map_err(|_| InitializeError)
             }
         }
 
@@ -255,22 +257,22 @@ pub mod test {
         }
 
         impl<'ast, 'scope> Stage<'ast, 'scope> for ExprCounter {
-            fn init_enter(scope: &mut impl Scope<'scope>) -> Result<(), InitializeError> {
+            fn init_enter(scope: &mut impl Scope<'scope>) -> Result<(), StageInitError> {
                 scope.export(ExprEnterCount(0)).export(ExprExitCount(0));
 
                 Ok(())
             }
 
-            fn init_exit(scope: &mut impl Scope<'scope>) -> Result<Self, InitializeError> {
+            fn init_exit(scope: &mut impl Scope<'scope>) -> Result<Self, StageInitError> {
                 scope
                     .import_owned::<ExprEnterCount>()
                     .import_owned::<ExprExitCount>()
                     .resolve()
+                    .map_err(StageInitError::from)
                     .map(|(expr_enter_count, expr_exit_count)| Self {
                         expr_enter_count,
                         expr_exit_count,
                     })
-                    .map_err(|_| InitializeError)
             }
         }
 
@@ -286,8 +288,9 @@ pub mod test {
             }
         }
 
-        if let Ok(mut pipeline) =
-            pipeline::build::<(BalancedExprsCheck, ExprCounter)>(RootScope::default())
+        pipeline!(MyPipeline, BalancedExprsCheck => ExprCounter);
+
+        if let Ok(pipeline) = MyPipeline::new(RootScope::default())
         {
             let dialect = dialect::GenericDialect {};
 
@@ -298,12 +301,15 @@ pub mod test {
 
             let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
-            ast.accept(&mut pipeline);
-
-            if let Ok(expr_balanced) = pipeline.get::<ExprsBalanced>() {
-                assert_eq!(*expr_balanced.get(), ExprsBalanced(true));
-            } else {
-                assert!(false, "Could not read result from scope")
+            match pipeline.execute(&ast) {
+                Ok(scope) => {
+                    if let Ok(expr_balanced) = scope.get::<ExprsBalanced>() {
+                        assert_eq!(*expr_balanced.get(), ExprsBalanced(true));
+                    } else {
+                        assert!(false, "Could not read result from scope")
+                    }
+                },
+                Err(_) => assert!(false)
             }
         } else {
             assert!(false, "Pipeline construction failed")

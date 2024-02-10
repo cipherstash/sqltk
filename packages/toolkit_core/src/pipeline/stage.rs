@@ -1,15 +1,21 @@
-use crate::{pipeline::Scope, VisitorDispatch};
+use crate::{pipeline::Scope, UnknownItemError, VisitorDispatch};
 
-pub struct InitializeError;
+use thiserror::Error;
 
-#[allow(unused_variables)]
+#[derive(Error, Debug)]
+pub enum StageInitError {
+    #[error("Stage initialization failed due to: {0}")]
+    UnknownItem(#[from] UnknownItemError)
+}
+
 pub trait Stage<'ast, 'scope>
 where
     Self: VisitorDispatch<'ast> + Sized,
 {
-    fn init_enter(scope: &mut impl Scope<'scope>) -> Result<(), InitializeError> {
+    #[allow(unused_variables)]
+    fn init_enter(scope: &mut impl Scope<'scope>) -> Result<(), StageInitError> {
         Ok(())
     }
 
-    fn init_exit(scope: &mut impl Scope<'scope>) -> Result<Self, InitializeError>;
+    fn init_exit(scope: &mut impl Scope<'scope>) -> Result<Self, StageInitError>;
 }

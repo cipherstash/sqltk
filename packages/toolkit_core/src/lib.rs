@@ -14,6 +14,7 @@ pub use generated::sql_node::*;
 pub mod annotation;
 pub mod dispatch;
 pub mod pipeline;
+pub use pipeline::*;
 
 /// Exposed to allow macro-generated code and some internals to work.
 #[doc(hidden)]
