@@ -44,7 +44,7 @@ impl Codegen {
             let type_cased = Inflector::to_pascal_case(joined_chunks);
             let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
-            entries.append_all(quote!(type #ty_ident: WithFallbackSupport<'ast, #node>;))
+            entries.append_all(quote!(type #ty_ident<'ast>: WithFallbackSupport<'ast, #node>;))
         }
 
         generated_code.append_all(quote! {
@@ -54,7 +54,7 @@ impl Codegen {
             #[doc = "and therefore the default fallback handler should be invoked instead."]
             #[doc = ""]
             #[doc = "This trait is auto-generated when [`VisitorDispatch`] is derived and should not be implemented manually."]
-            pub trait DispatchTable<'ast> {
+            pub trait DispatchTable {
                 #entries
             }
         });
@@ -88,7 +88,7 @@ impl Codegen {
 
             entries.append_all(quote! {
                 impl<'ast> DispatchTableLookup<'ast> for #node {
-                    type Lookup<Table: DispatchTable<'ast>> = Table::#ty_ident;
+                    type Lookup<Table: DispatchTable> = Table::#ty_ident<'ast>;
                 }
             });
         }

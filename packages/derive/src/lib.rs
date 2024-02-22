@@ -12,7 +12,7 @@ use syn::{
     parse_macro_input,
     punctuated::Punctuated,
     spanned::Spanned,
-    DeriveInput, Token, TypePath,
+    DeriveInput, GenericParam, Token, TypePath,
 };
 
 fn node_meta() -> SqlParserMetaQuery {
@@ -38,30 +38,36 @@ fn resolve_crate() -> proc_macro2::TokenStream {
 }
 
 static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &'static str = indoc! {"
-    VisitorDispatch cannot be derived for generic types.
+    VisitorDispatch can only be derived for types with exactly zero or one
+    generic lifetime parameter. More than one lifetime parameter, or any number
+    of generic type parameters or generic const parameters are not permitted.
+
+    The sole lifetime parameter, if present, represents the lifetime of AST
+    nodes and is required if your type needs to keep references to AST nodes as
+    part of its internal state but is otherwise not required.
 
     To workaround this limitation, define a newtype wrapper that
     instantiates all of the generic types and derive VisitorDispatch
-    on the newtype.
+    on the wrapper.
 
     Additionally, define a blanket Visitor implementation on the
-    newtype for all Visitor implementations implemented by the
-    generic type and forward the calls to the generic type.
+    wrapper for all Visitor implementations implemented by the
+    generic type and forward the methods to the generic type.
 
     See the following example:
 
-    struct MyGenericVisitor<T: NodeLogger> {
+    struct MyGenericVisitor<'ast, T: NodeLogger<'ast>> {
         logger: T
     }
 
-    impl<'ast, T: NodeLogger> Visitor<'ast, Expr> for MyGenericVisitor<T> {
+    impl<'ast, T: NodeLogger> Visitor<'ast, Expr> for MyGenericVisitor<'ast, T> {
         fn enter(&mut self, node: &'ast Expr) -> EnterControlFlow {
             self.logger.log(node);
             ControlFlow::Continue(Navigation::Visit)
         }
     }
 
-    impl<'ast, T> Visitor<'ast, Statement> for MyGenericVisitor<T> {
+    impl<'ast, T> Visitor<'ast, Statement> for MyGenericVisitor<'ast, T> {
         fn enter(&mut self, node: &'ast Expr) -> EnterControlFlow {
             self.logger.log(node);
             ControlFlow::Continue(Navigation::Visit)
@@ -69,10 +75,10 @@ static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &'static str = indoc! {"
     }
 
     #[derive(VisitorDispatch)]
-    struct Wrapper(MyGenericVisitor<OtelLogger>);
+    struct Wrapper<'ast>(MyGenericVisitor<'ast, OtelLogger>);
 
-    // Implement Visitor<'ast, N> on Wrapper for all Visitor<'ast, N> implemented by the generic type.
-    impl<'ast, N> Visitor<'ast, N> for Wrapper where MyGenericVisitor<OtelLogger>: Visitor<'ast, N> {
+    // Implement Visitor<'ast, N> on Wrapper<'ast> for all Visitor<'ast, N> implemented by the generic type.
+    impl<'ast, N> Visitor<'ast, N> for Wrapper<'ast> where MyGenericVisitor<'ast, OtelLogger>: Visitor<'ast, N> {
         fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
             self.0.enter(node)
         }
@@ -91,13 +97,15 @@ static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &'static str = indoc! {"
 /// use sqltk::*;
 /// use sqltk::sqlparser::*;
 /// use std::ops::ControlFlow;
+/// use std::marker::PhantomData;
 ///
 /// #[derive(VisitorDispatch)]
-/// struct ExprCounter {
-///     counter: usize
+/// struct ExprCounter<'ast> {
+///     counter: usize,
+///     _ast: PhantomData<&'ast ()>,
 /// }
 ///
-/// impl<'ast> Visitor<'ast, ast::Expr> for ExprCounter {
+/// impl<'ast> Visitor<'ast, ast::Expr> for ExprCounter<'ast> {
 ///   fn enter(&mut self, node: &'ast ast::Expr) -> EnterControlFlow {
 ///     self.counter += 1;
 ///     ControlFlow::Continue(Navigation::Visit)
@@ -113,13 +121,44 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
     let krate = resolve_crate();
     let meta = node_meta();
 
-    if generics.params.len() > 0 {
+    let mut count_lifetime_params = 0usize;
+    let mut count_type_params = 0usize;
+    let mut count_const_params = 0usize;
+
+    for gp in generics.params.iter() {
+        match gp {
+            GenericParam::Lifetime(_) => count_lifetime_params += 1,
+            GenericParam::Type(_) => count_type_params += 1,
+            GenericParam::Const(_) => count_const_params += 1,
+        }
+    }
+
+    if (count_type_params, count_const_params) != (0, 0) {
         let err_msg = VISITOR_DISPATCH_DERIVE_GENERIC_ERROR;
         return quote_spanned!( input.span() => compile_error!(#err_msg);).into();
     }
 
+    if count_lifetime_params > 1  {
+        let err_msg = VISITOR_DISPATCH_DERIVE_GENERIC_ERROR;
+        return quote_spanned!( input.span() => compile_error!(#err_msg);).into();
+    }
+
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     let mut output = proc_macro2::TokenStream::new();
     let mut entries = proc_macro2::TokenStream::new();
+
+    let visitor_static = if count_lifetime_params == 1 {
+        quote!(#visitor<'static>)
+    } else {
+        quote!(#visitor)
+    };
+
+    let visitor_nonstatic = if count_lifetime_params == 1 {
+        quote!(#visitor<'a>)
+    } else {
+        quote!(#visitor)
+    };
 
     for node in meta.all_nodes() {
         let chunks = decompose_generic_type(&node)
@@ -130,18 +169,19 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
         let type_cased = Inflector::to_pascal_case(joined_chunks);
         let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
+
         entries.append_all(quote! {
-            type #ty_ident = #krate::dispatch::If<
-                {#krate::dispatch::IsVisitor::<Self, #node>::ANSWER},
-                #krate::dispatch::Handle<Self, #node>,
-                #krate::dispatch::Fallback<Self>
+            type #ty_ident<'a> = #krate::dispatch::If<
+                {#krate::dispatch::IsVisitor::<#visitor_static, #node>::ANSWER},
+                #krate::dispatch::Handle<#visitor_nonstatic, #node>,
+                #krate::dispatch::Fallback<#visitor_nonstatic>
             >;
         });
     }
 
     // TODO: bring Nope and AssumeNotImplemented into scope
     output.append_all(quote! {
-        impl<'ast> #krate::DispatchTable<'ast> for #visitor {
+        impl #impl_generics #krate::DispatchTable for #visitor #ty_generics #where_clause {
             #entries
         }
     });
@@ -189,29 +229,33 @@ pub fn pipeline(input: TokenStream) -> TokenStream {
         where_clause.append_all(quote!(#stage: VisitorDispatch<'ast>,));
 
         // dispatch_enter.append_all(quote!(self.0.#field.enter(node.clone())?;));
-        dispatch_enter.append_all(quote!(#krate::VisitorDispatch::enter(&mut self.0.#field, node.clone())?;));
+        dispatch_enter
+            .append_all(quote!(#krate::VisitorDispatch::enter(&mut self.0.#field, node.clone())?;));
     }
 
     stages.reverse();
 
     for (idx, stage) in &stages {
         let field = format_ident!("stage{}", idx);
-        stages_init_exit
-            .append_all(quote!(#field: #stage::init_exit(&mut scope)?,));
+        stages_init_exit.append_all(quote!(#field: #stage::init_exit(&mut scope)?,));
         // dispatch_exit.append_all(quote!(self.0.#field.exit(node.clone())?;));
-        dispatch_exit.append_all(quote!(#krate::VisitorDispatch::exit(&mut self.0.#field, node.clone())?;));
+        dispatch_exit
+            .append_all(quote!(#krate::VisitorDispatch::exit(&mut self.0.#field, node.clone())?;));
     }
 
     quote! {
         use #krate::Pipeline;
 
-        struct #pipeline_ty {
+        struct #pipeline_ty<'ast> {
             scope: RootScope,
             #stage_fields
+            // If none of the stage types make use of the 'ast lifetime we'd get
+            // a compilation error so we need the phantom reference.
+            _ast: PhantomData<&'ast ()>,
         }
 
         #[automatically_derived]
-        impl<'ast> #krate::Pipeline<'ast> for #pipeline_ty where #where_clause {
+        impl<'ast> #krate::Pipeline<'ast> for #pipeline_ty<'ast> where #where_clause {
             fn new(scope: #krate::RootScope) -> Result<Self, #krate::PipelineInitError> {
                 let mut scope = scope;
                 #stages_init_enter
@@ -219,14 +263,15 @@ pub fn pipeline(input: TokenStream) -> TokenStream {
                     Self {
                         #stages_init_exit
                         scope,
+                        _ast: Default::default(),
                     }
                 )
             }
 
             fn execute<N: Visitable<'ast>>(self, node: &'ast N) -> Result<RootScope, RootScope> {
-                struct Dispatcher(#pipeline_ty);
+                struct Dispatcher<'a>(#pipeline_ty<'a>);
 
-                impl<'ast> #krate::VisitorDispatch<'ast> for Dispatcher {
+                impl<'ast> #krate::VisitorDispatch<'ast> for Dispatcher<'ast> {
                     fn enter(&mut self, node: #krate::SqlNode<'ast>) -> #krate::EnterControlFlow {
                         #dispatch_enter
                         std::ops::ControlFlow::Continue(#krate::Navigation::Visit)
@@ -246,7 +291,8 @@ pub fn pipeline(input: TokenStream) -> TokenStream {
                 }
             }
         }
-    }.into()
+    }
+    .into()
 }
 
 struct PipelineInput {

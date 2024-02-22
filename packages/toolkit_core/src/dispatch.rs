@@ -206,7 +206,7 @@ where
     Self: Sized,
     Self: Visitable<'ast>,
 {
-    type Lookup<Table: DispatchTable<'ast>>: WithFallbackSupport<'ast, Self>;
+    type Lookup<Table: DispatchTable>: WithFallbackSupport<'ast, Self>;
 }
 
 /// A trait dispatching a specific AST node type.
@@ -226,7 +226,7 @@ where
 /// `DispatchTable` implementation.
 impl<'ast, V, N> VisitorDispatchNode<'ast, N> for V
 where
-    V: DispatchTable<'ast>,
+    V: DispatchTable,
     &'ast N: Visitable<'ast>,
     N: DispatchTableLookup<'ast>,
     N::Lookup<V>: WithFallbackSupport<'ast, N, Subject = Self>,

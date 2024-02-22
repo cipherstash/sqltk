@@ -31,7 +31,7 @@ pub use sqltk_derive::*;
 
 #[cfg(test)]
 pub mod test {
-    use std::{any::TypeId, collections::HashSet, ops::ControlFlow};
+    use std::{any::TypeId, collections::HashSet, marker::PhantomData, ops::ControlFlow};
 
     use crate::{self as sqltk};
     use sqltk::{
@@ -47,7 +47,7 @@ pub mod test {
         pub count: usize,
     }
 
-    impl Counter {
+    impl<'ast> Counter {
         pub fn new(count: usize) -> Self {
             Self { count }
         }
