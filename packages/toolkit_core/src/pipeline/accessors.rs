@@ -48,6 +48,12 @@ where
     }
 }
 
+impl<'a, T> From<&'a Rc<RefCell<T>>> for ReadOnly<T> {
+    fn from(value: &'a Rc<RefCell<T>>) -> Self {
+        Self::new(value.clone())
+    }
+}
+
 /// An read-write wrapper around an [`Rc<RefCell<T>>`].
 ///
 /// It is not possible to obtain a reference to the underlying
@@ -74,6 +80,12 @@ where
         f.debug_struct("ReadWrite")
             .field("value", &self.value)
             .finish()
+    }
+}
+
+impl<'a, T> From<&'a Rc<RefCell<T>>> for ReadWrite<T> {
+    fn from(value: &'a Rc<RefCell<T>>) -> Self {
+        Self::new(value.clone())
     }
 }
 

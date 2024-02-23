@@ -31,16 +31,19 @@ pub use sqltk_derive::*;
 
 #[cfg(test)]
 pub mod test {
-    use std::{any::TypeId, collections::HashSet, marker::PhantomData, ops::ControlFlow};
+    use std::{any::TypeId, cell::RefCell, collections::HashSet, ops::ControlFlow, rc::Rc};
+
+    use derive_more::Constructor;
 
     use crate::{self as sqltk};
     use sqltk::{
-        dispatch::Nope, Visitable, EnterControlFlow, Navigation, Visitor,
-        pipeline::{StageInitError, ReadOnly, ReadWrite, RootScope, Scope, Stage},
-        VisitorDispatch, SqlNode, ExitControlFlow, sqlparser::{self, ast, parser, dialect}
+        dispatch::Nope,
+        sqlparser::{self, ast, dialect, parser},
+        EnterControlFlow, ExitControlFlow, Navigation, SqlNode, Visitable, Visitor,
+        VisitorDispatch,
     };
 
-    use sqltk_derive::pipeline;
+    use sqltk_core::{Pipeline, PipelineBuilder, ReadOnly, ReadWrite};
 
     #[derive(VisitorDispatch)]
     pub struct Counter {
@@ -112,8 +115,7 @@ pub mod test {
 
         impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>> for Recorder {
             fn enter(&mut self, _: &'ast Vec<ast::TableWithJoins>) -> EnterControlFlow {
-                self.items_enter
-                    .push("Vec<TableWithJoins>".into());
+                self.items_enter.push("Vec<TableWithJoins>".into());
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
@@ -211,28 +213,41 @@ pub mod test {
         #[derive(Debug, Eq, PartialEq)]
         struct ExprsBalanced(bool);
 
-        #[derive(VisitorDispatch)]
+        #[derive(Debug, Eq, PartialEq)]
+        struct ExprEnterCount(usize);
+
+        #[derive(Debug, Eq, PartialEq)]
+        struct ExprExitCount(usize);
+
+        #[derive(VisitorDispatch, Constructor)]
         struct BalancedExprsCheck {
             expr_enter_count: ReadOnly<ExprEnterCount>,
             expr_exit_count: ReadOnly<ExprExitCount>,
             exprs_balanced: ReadWrite<ExprsBalanced>,
         }
 
-        impl<'ast, 'scope> Stage<'ast, 'scope> for BalancedExprsCheck {
-            fn init_exit(scope: &mut impl Scope<'scope>) -> Result<Self, StageInitError> {
-                scope
-                    .import::<ExprEnterCount>()
-                    .import::<ExprExitCount>()
-                    .export(ExprsBalanced(true))
-                    .resolve()
-                    .map_err(StageInitError::from)
-                    .map(|(expr_enter_count, expr_exit_count, exprs_balanced)| Self {
-                        expr_enter_count,
-                        expr_exit_count,
-                        exprs_balanced,
-                    })
-            }
+        #[derive(VisitorDispatch, Constructor)]
+        struct ExprCounter {
+            expr_enter_count: ReadWrite<ExprEnterCount>,
+            expr_exit_count: ReadWrite<ExprExitCount>,
         }
+
+        let expr_enter_count = &Rc::new(RefCell::new(ExprEnterCount(0)));
+        let expr_exit_count = &Rc::new(RefCell::new(ExprExitCount(0)));
+        let exprs_balanced = &Rc::new(RefCell::new(ExprsBalanced(true)));
+
+        let pipeline = PipelineBuilder::new()
+            .add_stage(BalancedExprsCheck::new(
+                expr_enter_count.into(),
+                expr_exit_count.into(),
+                exprs_balanced.into(),
+            ))
+            .add_stage(ExprCounter::new(
+                expr_enter_count.into(),
+                expr_exit_count.into(),
+            ))
+            .output::<ReadOnly<ExprsBalanced>>(exprs_balanced.into())
+            .build();
 
         impl<'ast> Visitor<'ast, ast::Expr> for BalancedExprsCheck {
             fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
@@ -244,35 +259,6 @@ pub mod test {
                 self.exprs_balanced.get_mut().0 =
                     self.expr_enter_count.get().0 == self.expr_exit_count.get().0;
                 ControlFlow::Continue(())
-            }
-        }
-
-        struct ExprEnterCount(usize);
-        struct ExprExitCount(usize);
-
-        #[derive(VisitorDispatch)]
-        struct ExprCounter {
-            expr_enter_count: ReadWrite<ExprEnterCount>,
-            expr_exit_count: ReadWrite<ExprExitCount>,
-        }
-
-        impl<'ast, 'scope> Stage<'ast, 'scope> for ExprCounter {
-            fn init_enter(scope: &mut impl Scope<'scope>) -> Result<(), StageInitError> {
-                scope.export(ExprEnterCount(0)).export(ExprExitCount(0));
-
-                Ok(())
-            }
-
-            fn init_exit(scope: &mut impl Scope<'scope>) -> Result<Self, StageInitError> {
-                scope
-                    .import_owned::<ExprEnterCount>()
-                    .import_owned::<ExprExitCount>()
-                    .resolve()
-                    .map_err(StageInitError::from)
-                    .map(|(expr_enter_count, expr_exit_count)| Self {
-                        expr_enter_count,
-                        expr_exit_count,
-                    })
             }
         }
 
@@ -288,32 +274,21 @@ pub mod test {
             }
         }
 
-        pipeline!(MyPipeline, BalancedExprsCheck => ExprCounter);
+        let dialect = dialect::GenericDialect {};
 
-        if let Ok(pipeline) = MyPipeline::new(RootScope::default())
-        {
-            let dialect = dialect::GenericDialect {};
+        let sql = "SELECT a, b, 123, myfunc(b) \
+                    FROM table_1 \
+                    WHERE a > b AND b < 100 \
+                    ORDER BY a DESC, b";
 
-            let sql = "SELECT a, b, 123, myfunc(b) \
-                       FROM table_1 \
-                       WHERE a > b AND b < 100 \
-                       ORDER BY a DESC, b";
+        let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
-            let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
-
-            match pipeline.execute(&ast) {
-                Ok(scope) => {
-                    if let Ok(expr_balanced) = scope.get::<ExprsBalanced>() {
-                        assert_eq!(*expr_balanced.get(), ExprsBalanced(true));
-                    } else {
-                        assert!(false, "Could not read result from scope")
-                    }
-                },
-                Err(_) => assert!(false)
+        match pipeline.execute(&ast) {
+            Ok(exprs_balanced) => {
+                assert_eq!(*exprs_balanced.get(), ExprsBalanced(true));
             }
-        } else {
-            assert!(false, "Pipeline construction failed")
-        };
+            Err(_) => assert!(false),
+        }
     }
 
     // This test is a sanity check (not thorough at all - it only tests a small
@@ -371,7 +346,8 @@ pub mod test {
         impl<'ast, T: Visitable<'ast> + 'static> Visitor<'ast, T> for AddrChecker {
             fn enter(&mut self, node: &'ast T) -> EnterControlFlow {
                 self.count += 1;
-                self.node_addrs.insert((TypeId::of::<T>(), node as *const T as usize));
+                self.node_addrs
+                    .insert((TypeId::of::<T>(), node as *const T as usize));
                 ControlFlow::Continue(Navigation::Visit)
             }
         }

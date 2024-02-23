@@ -9,3 +9,4 @@ edition = "2021"
 sqltk_core = { path = "../toolkit_core" }
 sqltk_derive = { path = "../derive" }
 bigdecimal = { workspace = true }
+derive_more = "0.99.17"

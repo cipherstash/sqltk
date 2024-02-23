@@ -3,16 +3,16 @@ use inflector::Inflector;
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use proc_macro_crate::{crate_name, FoundCrate};
-use quote::{format_ident, quote, quote_spanned, TokenStreamExt};
+use quote::{quote, quote_spanned, TokenStreamExt};
 use sqltk_codegen::NODE_LIST;
 use sqltk_meta::{SqlParserMeta, SqlParserMetaQuery};
-use sqltk_syn_helpers::generics::decompose_generic_type;
+use sqltk_syn_helpers::generics::{
+    decompose_generic_type
+};
 use syn::{
-    parse::{Parse, ParseStream},
     parse_macro_input,
-    punctuated::Punctuated,
     spanned::Spanned,
-    DeriveInput, GenericParam, Token, TypePath,
+    DeriveInput, GenericParam, TypePath,
 };
 
 fn node_meta() -> SqlParserMetaQuery {
@@ -138,7 +138,7 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
         return quote_spanned!( input.span() => compile_error!(#err_msg);).into();
     }
 
-    if count_lifetime_params > 1  {
+    if count_lifetime_params > 1 {
         let err_msg = VISITOR_DISPATCH_DERIVE_GENERIC_ERROR;
         return quote_spanned!( input.span() => compile_error!(#err_msg);).into();
     }
@@ -169,7 +169,6 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
         let type_cased = Inflector::to_pascal_case(joined_chunks);
         let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
-
         entries.append_all(quote! {
             type #ty_ident<'a> = #krate::dispatch::If<
                 {#krate::dispatch::IsVisitor::<#visitor_static, #node>::ANSWER},
@@ -187,159 +186,4 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
     });
 
     output.into()
-}
-
-/// Creates a type that implements [`sqltk_core::Pipeline`].
-///
-/// Example that creates a type called `MyPipeline` that implements
-/// [`sqltk_core::pipeline::Pipeline`].
-///
-/// ```rust,ignore
-/// pipeline!(MyPipeline, BalancedExprsCheck => ExprCounter);
-///
-/// let pipeline = MyPipeline::new(RootScope::new());
-///
-/// let ast = ...;
-///
-/// match pipeline.execute(&ast) {
-///     Some(scope) => /* do something with the scope */,
-///     Err(err) => /* something went wrong */
-/// }
-/// ```
-#[proc_macro]
-pub fn pipeline(input: TokenStream) -> TokenStream {
-    let input: PipelineInput = parse_macro_input!(input);
-
-    let krate = resolve_crate();
-    let pipeline_ty = &input.ident;
-
-    let mut stage_fields = proc_macro2::TokenStream::new();
-    let mut stages_init_enter = proc_macro2::TokenStream::new();
-    let mut stages_init_exit = proc_macro2::TokenStream::new();
-    let mut where_clause = proc_macro2::TokenStream::new();
-    let mut dispatch_enter = proc_macro2::TokenStream::new();
-    let mut dispatch_exit = proc_macro2::TokenStream::new();
-
-    let mut stages: Vec<(usize, &TypePath)> = input.stages.stages.iter().enumerate().collect();
-
-    for (idx, stage) in &stages {
-        let field = format_ident!("stage{}", idx);
-        stage_fields.append_all(quote!(#field: #stage,));
-        stages_init_enter.append_all(quote!(#stage::init_enter(&mut scope)?;));
-        where_clause.append_all(quote!(#stage: VisitorDispatch<'ast>,));
-
-        // dispatch_enter.append_all(quote!(self.0.#field.enter(node.clone())?;));
-        dispatch_enter
-            .append_all(quote!(#krate::VisitorDispatch::enter(&mut self.0.#field, node.clone())?;));
-    }
-
-    stages.reverse();
-
-    for (idx, stage) in &stages {
-        let field = format_ident!("stage{}", idx);
-        stages_init_exit.append_all(quote!(#field: #stage::init_exit(&mut scope)?,));
-        // dispatch_exit.append_all(quote!(self.0.#field.exit(node.clone())?;));
-        dispatch_exit
-            .append_all(quote!(#krate::VisitorDispatch::exit(&mut self.0.#field, node.clone())?;));
-    }
-
-    quote! {
-        use #krate::Pipeline;
-
-        struct #pipeline_ty<'ast> {
-            scope: RootScope,
-            #stage_fields
-            // If none of the stage types make use of the 'ast lifetime we'd get
-            // a compilation error so we need the phantom reference.
-            _ast: PhantomData<&'ast ()>,
-        }
-
-        #[automatically_derived]
-        impl<'ast> #krate::Pipeline<'ast> for #pipeline_ty<'ast> where #where_clause {
-            fn new(scope: #krate::RootScope) -> Result<Self, #krate::PipelineInitError> {
-                let mut scope = scope;
-                #stages_init_enter
-                Ok(
-                    Self {
-                        #stages_init_exit
-                        scope,
-                        _ast: Default::default(),
-                    }
-                )
-            }
-
-            fn execute<N: Visitable<'ast>>(self, node: &'ast N) -> Result<RootScope, RootScope> {
-                struct Dispatcher<'a>(#pipeline_ty<'a>);
-
-                impl<'ast> #krate::VisitorDispatch<'ast> for Dispatcher<'ast> {
-                    fn enter(&mut self, node: #krate::SqlNode<'ast>) -> #krate::EnterControlFlow {
-                        #dispatch_enter
-                        std::ops::ControlFlow::Continue(#krate::Navigation::Visit)
-                    }
-
-                    fn exit(&mut self, node: #krate::SqlNode<'ast>) -> #krate::ExitControlFlow {
-                        #dispatch_exit
-                        std::ops::ControlFlow::Continue(())
-                    }
-                }
-
-                let mut dispatcher = Dispatcher(self);
-
-                match node.accept(&mut dispatcher) {
-                    ControlFlow::Continue(_) => Ok(dispatcher.0.scope),
-                    ControlFlow::Break(_) => Err(dispatcher.0.scope),
-                }
-            }
-        }
-    }
-    .into()
-}
-
-struct PipelineInput {
-    ident: Ident,
-    _comma: Token![,],
-    stages: Stages,
-}
-
-impl Parse for PipelineInput {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(PipelineInput {
-            ident: input.parse()?,
-            _comma: input.parse()?,
-            stages: input.parse()?,
-        })
-    }
-}
-
-struct Stages {
-    stages: Punctuated<TypePath, Token![=>]>,
-}
-
-impl Parse for Stages {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let mut stages = Punctuated::new();
-        while !input.is_empty() {
-            let ty: TypePath = input.parse()?;
-            stages.push(ty);
-
-            if input.peek(Token![=>]) {
-                input.parse::<Token![=>]>()?;
-            } else {
-                break;
-            }
-        }
-
-        Ok(Stages { stages })
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::Stages;
-
-    #[test]
-    fn test_parse_stages() {
-        let stages: Stages = syn::parse_quote!( Foo => Bar);
-        eprintln!("Stages: {:#?}", &stages.stages);
-    }
 }
