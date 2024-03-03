@@ -2,7 +2,7 @@ use sqltk_meta::{ContainerNode, PrimitiveNode, SqlParserMetaQuery};
 use syn::TypePath;
 
 use super::reachability::Reachability;
-use super::{visitable_trait_impls::VisitableImpl, sqlparser_node_extractor};
+use super::{sqlparser_node_extractor, visitable_trait_impls::VisitableImpl};
 use proc_macro2::TokenStream;
 use sqltk_syn_helpers::generics;
 
@@ -36,7 +36,7 @@ impl Codegen {
 
         let nodes = self.meta.all_nodes();
         for node in nodes.iter() {
-            let chunks = generics::decompose_generic_type(&node)
+            let chunks = generics::decompose_generic_type(node)
                 .iter()
                 .map(|tp| tp.path.segments.last().unwrap().ident.to_string())
                 .collect::<Vec<_>>();
@@ -44,7 +44,7 @@ impl Codegen {
             let type_cased = Inflector::to_pascal_case(joined_chunks);
             let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
-            entries.append_all(quote!(type #ty_ident<'ast>: WithFallbackSupport<'ast, #node>;))
+            entries.append_all(quote!(type #ty_ident: WithFallbackSupport<#node>;))
         }
 
         generated_code.append_all(quote! {
@@ -78,7 +78,7 @@ impl Codegen {
 
         let nodes = self.meta.all_nodes();
         for node in nodes.iter() {
-            let chunks = generics::decompose_generic_type(&node)
+            let chunks = generics::decompose_generic_type(node)
                 .iter()
                 .map(|tp| tp.path.segments.last().unwrap().ident.to_string())
                 .collect::<Vec<_>>();
@@ -87,8 +87,8 @@ impl Codegen {
             let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
             entries.append_all(quote! {
-                impl<'ast> DispatchTableLookup<'ast> for #node {
-                    type Lookup<Table: DispatchTable> = Table::#ty_ident<'ast>;
+                impl DispatchTableLookup for #node {
+                    type Lookup<Table: DispatchTable> = Table::#ty_ident;
                 }
             });
         }
@@ -130,15 +130,15 @@ impl Codegen {
         let bounds: proc_macro2::TokenStream = self.define_visitor_dispatch_trait_bounds();
 
         quote! {
-            impl<'ast, V> VisitorDispatch<'ast> for V
+            impl<V> VisitorDispatch for V
             where
                 Self: #bounds
             {
-                fn enter(&mut self, sql_node: SqlNode<'ast>) -> EnterControlFlow {
+                fn enter<'subj, 'ast>(&'subj mut self, sql_node: SqlNode<'ast>) -> EnterControlFlow where 'ast: 'subj {
                     match_sql_node_enum!(sql_node, |node| { VisitorDispatchNode::enter(self, node) })
                 }
 
-                fn exit(&mut self, sql_node: SqlNode<'ast>) -> ExitControlFlow {
+                fn exit<'subj, 'ast>(&'subj mut self, sql_node: SqlNode<'ast>) -> ExitControlFlow where 'ast: 'subj {
                     match_sql_node_enum!(sql_node, |node| { VisitorDispatchNode::exit(self, node) })
                 }
             }
@@ -149,7 +149,7 @@ impl Codegen {
         let all_nodes = self.meta.all_nodes();
         let bounds = all_nodes.iter().map(|node| {
             quote! {
-                VisitorDispatchNode<'ast, #node>
+                VisitorDispatchNode<#node>
             }
         });
 
@@ -366,7 +366,7 @@ impl Codegen {
             #[automatically_derived]
             impl<'ast, T> From<&'ast Box<T>> for SqlNode<'ast>
             where
-                BoxOf<'ast>: From<&'ast Box<T>>,
+                for<'any> BoxOf<'any>: From<&'any Box<T>>,
             {
                 fn from(value: &'ast Box<T>) -> Self {
                     Self::Box(BoxOf::from(value))
@@ -376,7 +376,7 @@ impl Codegen {
             #[automatically_derived]
             impl<'ast, T> From<&'ast Vec<T>> for SqlNode<'ast>
             where
-                VecOf<'ast>: From<&'ast Vec<T>>,
+                for<'any> VecOf<'any>: From<&'any Vec<T>>,
             {
                 fn from(value: &'ast Vec<T>) -> Self {
                     Self::Vec(VecOf::from(value))
@@ -386,7 +386,7 @@ impl Codegen {
             #[automatically_derived]
             impl<'ast, T> From<&'ast Option<T>> for SqlNode<'ast>
             where
-                OptionOf<'ast>: From<&'ast Option<T>>,
+                for<'any> OptionOf<'any>: From<&'any Option<T>>,
             {
                 fn from(value: &'ast Option<T>) -> Self {
                     Self::Option(OptionOf::from(value))
@@ -537,11 +537,14 @@ impl Codegen {
 
             output.append_all(quote! {
                 #[automatically_derived]
-                impl<'ast> crate::Visitable<'ast> for #type_path {
-                    fn accept(
+                impl crate::Visitable for #type_path {
+                    fn accept<'ast, 'dispatch>(
                         &'ast self,
-                        visitor: &mut dyn crate::VisitorDispatch<'ast>,
-                    ) -> crate::EnterControlFlow {
+                        visitor: &'dispatch mut dyn crate::VisitorDispatch,
+                    ) -> crate::EnterControlFlow
+                    where
+                        'ast: 'dispatch
+                    {
                         crate::visit(
                             crate::SqlNode::from(self),
                             visitor,

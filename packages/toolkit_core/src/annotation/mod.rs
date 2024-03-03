@@ -75,6 +75,12 @@ use std::{
 /// ```
 pub struct AnnotationStore<'key, V>(HashMap<AnnotationKey<'key>, V>);
 
+impl<'key, K> Default for AnnotationStore<'key, K> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'key, K> AnnotationStore<'key, K> {
     /// Creates an empty `AnnotationStore`
     pub fn new() -> Self {
