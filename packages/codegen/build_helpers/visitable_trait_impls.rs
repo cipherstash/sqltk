@@ -4,8 +4,8 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::{Fields, Ident, ItemEnum, Type, TypePath};
 
-use sqltk_meta::{SqlParserTypeDef, SqlParserTypeDefKind};
 use sqltk_syn_helpers::generics;
+use sqltk_meta::{SqlParserTypeDef, SqlParserTypeDefKind};
 
 pub(crate) struct VisitableImpl<'a> {
     node: &'a TypePath,
@@ -28,14 +28,11 @@ impl<'a> ToTokens for VisitableImpl<'a> {
 
         tokens.append_all(quote! {
             #[automatically_derived]
-            impl crate::Visitable for #path {
-                fn accept<'ast, 'dispatch>(
+            impl<'ast> crate::Visitable<'ast> for #path {
+                fn accept(
                     &'ast self,
-                    visitor: &'dispatch mut dyn crate::VisitorDispatch,
-                ) -> crate::EnterControlFlow
-                where
-                    'ast: 'dispatch
-                {
+                    visitor: &mut dyn crate::VisitorDispatch<'ast>,
+                ) -> crate::EnterControlFlow {
                     crate::visit(crate::SqlNode::from(self), visitor, #[allow(unused_variables)] |visitor| {
                         #body
                         ControlFlow::Continue(Navigation::Visit)

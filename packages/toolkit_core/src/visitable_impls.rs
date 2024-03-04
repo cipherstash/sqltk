@@ -1,30 +1,24 @@
 use crate::*;
 
-// impl<'ast, T: Visitable> Visitable for &'ast T {
-//     fn accept<'ast, 'dispatch>(
-//         &'ast self,
-//         visitor: &'dispatch mut dyn VisitorDispatch,
-//     ) -> EnterControlFlow
-//     where
-//         'ast: 'dispatch
-//     {
-//         (*self).accept(visitor)
-//     }
-// }
-
-impl<'a, T: 'a> Visitable for Vec<T>
-where
-    T: Visitable,
-    // &'a Self: Into<SqlNode<'a>>,
-    for<'x> VecOf<'x>: From<&'x Vec<T>>,
-{
-    fn accept<'ast, 'dispatch>(
+impl<'ast, T: Visitable<'ast>> Visitable<'ast> for &'ast T {
+    fn accept(
         &'ast self,
-        visitor: &'dispatch mut dyn VisitorDispatch,
-    ) -> EnterControlFlow
-    where
-        'ast: 'dispatch,
-    {
+        visitor: &mut dyn VisitorDispatch<'ast>,
+    ) -> EnterControlFlow {
+        (*self).accept(visitor)
+    }
+}
+
+impl<'ast, T> Visitable<'ast> for Vec<T>
+where
+    T: Visitable<'ast>,
+    &'ast Self: Into<SqlNode<'ast>>,
+    VecOf<'ast>: From<&'ast Vec<T>>,
+{
+    fn accept(
+        &'ast self,
+        visitor: &mut dyn VisitorDispatch<'ast>,
+    ) -> EnterControlFlow {
         if self.is_empty() {
             ControlFlow::Continue(Navigation::Skip)
         } else {
@@ -38,45 +32,43 @@ where
     }
 }
 
-impl<'a, T: 'a> Visitable for Box<T>
+impl<'ast, T> Visitable<'ast> for Box<T>
 where
-    T: Visitable,
-    for<'any> &'any Self: Into<SqlNode<'any>>,
-    for<'any> BoxOf<'any>: From<&'any Box<T>>,
+    T: Visitable<'ast>,
+    &'ast Self: Into<SqlNode<'ast>>,
+    BoxOf<'ast>: From<&'ast Box<T>>,
 {
-    fn accept<'ast, 'dispatch>(
+    fn accept(
         &'ast self,
-        visitor: &'dispatch mut dyn VisitorDispatch,
-    ) -> EnterControlFlow
-    where
-        'ast: 'dispatch,
-    {
+        visitor: &mut dyn VisitorDispatch<'ast>,
+    ) -> EnterControlFlow {
         visit(SqlNode::from(self), visitor, |visitor| {
             (**self).accept(visitor)
         })
     }
 }
 
-impl<'a, T: 'a> Visitable for Option<T>
+impl<'ast, T> Visitable<'ast> for Option<T>
 where
-    T: Visitable,
-    for<'any> &'any Self: Into<SqlNode<'any>>,
-    for<'any> OptionOf<'any>: From<&'any Option<T>>,
+    T: Visitable<'ast>,
+    &'ast Self: Into<SqlNode<'ast>>,
+    OptionOf<'ast>: From<&'ast Option<T>>,
 {
-    fn accept<'ast, 'dispatch>(
+    fn accept(
         &'ast self,
-        visitor: &'dispatch mut dyn VisitorDispatch,
-    ) -> EnterControlFlow
-    where
-        'ast: 'dispatch,
-    {
+        visitor: &mut dyn VisitorDispatch<'ast>,
+    ) -> EnterControlFlow {
         if self.is_none() {
             ControlFlow::Continue(Navigation::Skip)
         } else {
-            visit(SqlNode::from(self), visitor, |visitor| match self {
-                Some(child) => child.accept(visitor),
-                None => ControlFlow::Continue(Navigation::Skip),
-            })
+            visit(
+                SqlNode::from(self),
+                visitor,
+                |visitor| match self {
+                    Some(child) => child.accept(visitor),
+                    None => ControlFlow::Continue(Navigation::Skip),
+                },
+            )
         }
     }
 }

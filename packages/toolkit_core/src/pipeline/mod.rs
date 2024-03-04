@@ -47,7 +47,7 @@ mod private {
 /// Exiting an an AST node invokes the stages in reverse:
 ///
 /// `stage2.exit(..)` then `stage1.exit(..)` then `stage0.exit(..)`.
-pub trait Pipeline: private::Sealed
+pub trait Pipeline<'ast>: private::Sealed
 where
     Self: Sized,
 {
@@ -56,26 +56,20 @@ where
 
     /// Executes and consumes the pipeline, returning `Ok(Self::Output)` or
     /// `Err(Box<dyn Error>)`.
-    fn execute<'ast, N>(self, node: &'ast N) -> Result<Self::Output, Box<dyn Error>>
+    fn execute<N>(self, node: &'ast N) -> Result<Self::Output, Box<dyn Error>>
     where
-        N: Visitable,
+        N: Visitable<'ast>,
         &'ast N: Into<SqlNode<'ast>>;
 }
 
 /// Helper for building a `Pipeline` implementation from an arbitrary number of
 /// [`VisitorDispatch`] implementations.
-pub struct PipelineBuilder<Output> {
-    stages: Vec<Box<dyn VisitorDispatch>>,
+pub struct PipelineBuilder<'ast, Output: 'ast> {
+    stages: Vec<Box<dyn VisitorDispatch<'ast>>>,
     output: Output,
 }
 
-impl Default for PipelineBuilder<()> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl PipelineBuilder<()> {
+impl<'ast> PipelineBuilder<'ast, ()> {
     /// Creates a new `PipelineBuilder`
     pub fn new() -> Self {
         PipelineBuilder {
@@ -89,7 +83,7 @@ impl PipelineBuilder<()> {
     /// trait documentation for more info.
     pub fn add_stage<Stage>(self, stage: Stage) -> Self
     where
-        Stage: 'static + VisitorDispatch,
+        Stage: 'static + VisitorDispatch<'ast>,
     {
         let mut me = self;
         me.stages.push(Box::new(stage));
@@ -97,7 +91,7 @@ impl PipelineBuilder<()> {
     }
 
     /// Sets the output value (and type) of the pipeline.
-    pub fn output<Output>(self, output: Output) -> PipelineBuilder<Output> {
+    pub fn output<Output>(self, output: Output) -> PipelineBuilder<'ast, Output> {
         PipelineBuilder {
             stages: self.stages,
             output,
@@ -105,7 +99,7 @@ impl PipelineBuilder<()> {
     }
 }
 
-impl<Output> PipelineBuilder<Output> {
+impl<'ast, Output> PipelineBuilder<'ast, Output> {
     /// Builds a `Pipeline` from the current configuration stored in this builder.
     ///
     /// Note that this method does not yet check for pointless configuration
@@ -114,7 +108,7 @@ impl<Output> PipelineBuilder<Output> {
     ///
     /// In the future it might be changed to return a `Result` (or prove
     /// correctness via the type system).
-    pub fn build(self) -> impl Pipeline<Output = Output> {
+    pub fn build(self) -> impl Pipeline<'ast, Output = Output> {
         ConcretePipeline::new(self.stages, self.output)
     }
 }
@@ -123,27 +117,27 @@ impl<Output> PipelineBuilder<Output> {
 ///
 /// When inherent associated types land in stable Rust the trait can be done
 /// away with and this type will be renamed to `Pipeline`.
-struct ConcretePipeline<Output> {
+struct ConcretePipeline<'ast, Output> {
     output: Output,
-    stages: Vec<Box<dyn VisitorDispatch>>,
+    stages: Vec<Box<dyn VisitorDispatch<'ast>>>,
 }
 
-impl<Output> ConcretePipeline<Output> {
+impl<'ast, Output> ConcretePipeline<'ast, Output> {
     /// Takes ownership if the stages and output accessor and returns a new
     /// `ConcretePipeline`.
-    fn new(stages: Vec<Box<dyn VisitorDispatch>>, output: Output) -> Self {
+    fn new(stages: Vec<Box<dyn VisitorDispatch<'ast>>>, output: Output) -> Self {
         Self { output, stages }
     }
 }
 
-impl<Output> private::Sealed for ConcretePipeline<Output> {}
+impl<'ast, Output> private::Sealed for ConcretePipeline<'ast, Output> {}
 
-impl<Output> Pipeline for ConcretePipeline<Output> {
+impl<'ast, Output> Pipeline<'ast> for ConcretePipeline<'ast, Output> {
     type Output = Output;
 
-    fn execute<'ast, N: Visitable>(self, node: &'ast N) -> Result<Self::Output, Box<dyn Error>>
+    fn execute<N: Visitable<'ast>>(self, node: &'ast N) -> Result<Self::Output, Box<dyn Error>>
     where
-        N: Visitable,
+        N: Visitable<'ast>,
         &'ast N: Into<SqlNode<'ast>>,
     {
         let mut dispatcher = PipelineDispatcher {
@@ -159,29 +153,23 @@ impl<Output> Pipeline for ConcretePipeline<Output> {
 /// `VisitorDispatch`, which means the [`Pipeline::execute`] method can
 /// completely encapsulate the pipeline execution which obtains the output and
 /// consumes the pipeline.
-struct PipelineDispatcher {
-    stages: Vec<Box<dyn VisitorDispatch>>,
+struct PipelineDispatcher<'ast> {
+    stages: Vec<Box<dyn VisitorDispatch<'ast>>>,
 }
 
 // TODO: error handling (need to change the Visitor trait signatures to enable
 // error returns first)
-impl VisitorDispatch for PipelineDispatcher {
-    fn enter<'subj, 'ast>(&'subj mut self, node: SqlNode<'ast>) -> EnterControlFlow
-    where
-        'ast: 'subj,
-    {
+impl<'ast> VisitorDispatch<'ast> for PipelineDispatcher<'ast> {
+    fn enter(&mut self, node: SqlNode<'ast>) -> EnterControlFlow {
         for stage in self.stages.iter_mut() {
-            let _ = stage.enter(node.clone());
+            let _ = stage.enter(node.clone().into());
         }
         EnterControlFlow::Continue(Navigation::Visit)
     }
 
-    fn exit<'subj, 'ast>(&mut self, node: SqlNode<'ast>) -> ExitControlFlow
-    where
-        'ast: 'subj,
-    {
+    fn exit(&mut self, node: SqlNode<'ast>) -> ExitControlFlow {
         for stage in self.stages.iter_mut().rev() {
-            let _ = stage.exit(node.clone());
+            let _ = stage.exit(node.clone().into());
         }
         ExitControlFlow::Continue(())
     }

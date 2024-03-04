@@ -1,4 +1,5 @@
 /// Utitity functions for manipulating generic types during code generation.
+
 use quote::quote;
 use syn::{PathArguments, Type, TypePath};
 

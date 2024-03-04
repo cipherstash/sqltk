@@ -42,12 +42,13 @@
 #![doc = mermaid!("dispatch_handled.mermaid")]
 #![doc = mermaid!("dispatch_fallback.mermaid")]
 
+
 use simple_mermaid::mermaid;
 use std::{marker::PhantomData, ops::ControlFlow};
 
 use crate::{
-    match_sql_node_enum, BoxOf, EnterControlFlow, ExitControlFlow, Navigation, OptionOf, SqlNode,
-    VecOf, Visitable, Visitor,
+    match_sql_node_enum, Visitable, BoxOf, SqlNode, EnterControlFlow, ExitControlFlow,
+    Navigation, OptionOf, VecOf, Visitor,
 };
 
 /// Implementations of this trait know how to dispatch any AST node type from
@@ -59,13 +60,9 @@ use crate::{
 ///
 /// This trait is typically derived by using `#[derive(VisitorDispatch)]` on a
 /// user-defined type but can be implemented directly.
-pub trait VisitorDispatch {
-    fn enter<'subj, 'ast>(&'subj mut self, node: SqlNode<'ast>) -> EnterControlFlow
-    where
-        'ast: 'subj;
-    fn exit<'subj, 'ast>(&'subj mut self, node: SqlNode<'ast>) -> ExitControlFlow
-    where
-        'ast: 'subj;
+pub trait VisitorDispatch<'ast> {
+    fn enter(&mut self, node: SqlNode<'ast>) -> EnterControlFlow;
+    fn exit(&mut self, node: SqlNode<'ast>) -> ExitControlFlow;
 }
 
 /// Marker type used by the [`DispatchTable`] trait to indicate that a
@@ -89,53 +86,41 @@ pub struct Handle<V, N>(PhantomData<(V, N)>);
 /// This trait should never be implemented directly; there are blanket
 /// implementations for [`Fallback`] and [`Handle`] which are applicable when
 /// [`VisitorDispatch`] is derived for a user-defined type.
-pub trait WithFallbackSupport<N>
+pub trait WithFallbackSupport<'ast, N>
 where
-    N: Visitable,
+    N: Visitable<'ast>,
 {
     /// The user-defined type (with #[derive(VisitorDispatch)])
     type Subject;
 
     /// Invoked when entering a `sqlparser` AST node.
-    fn enter<'subj, 'ast>(
-        maybe_visitor_of_node_type: &'subj mut Self::Subject,
+    fn enter(
+        maybe_visitor_of_node_type: &mut Self::Subject,
         node: &'ast N,
-    ) -> EnterControlFlow
-    where
-        'ast: 'subj;
+    ) -> EnterControlFlow;
 
     /// Invoked when exiting a `sqlparser` AST node.
-    fn exit<'subj, 'ast>(
-        maybe_visitor_of_node_type: &'subj mut Self::Subject,
-        node: &'ast N,
-    ) -> ExitControlFlow
-    where
-        'ast: 'subj;
+    fn exit(maybe_visitor_of_node_type: &mut Self::Subject, node: &'ast N)
+        -> ExitControlFlow;
 }
 
 /// Implementation for user-defined types that derive [`VisitorDispatch`] and
-/// implement [`Visitor<N>`].
+/// implement [`Visitor<'ast, N>`].
 ///
 /// [`WithFallbackSupport::enter`] and [`WithFallbackSupport::exit`] forward
 /// to the user-defined `Visitor` implementation methods.
-impl<N, V> WithFallbackSupport<N> for Handle<V, N>
+impl<'ast, N, V> WithFallbackSupport<'ast, N> for Handle<V, N>
 where
-    N: Visitable,
-    V: Visitor<N>,
+    N: Visitable<'ast>,
+    V: Visitor<'ast, N>,
 {
     type Subject = V;
 
-    fn enter<'subj, 'ast>(visitor: &'subj mut Self::Subject, node: &'ast N) -> EnterControlFlow
-    where
-        'ast: 'subj,
-    {
+    fn enter(visitor: &mut Self::Subject, node: &'ast N) -> EnterControlFlow {
         V::enter(visitor, node)
     }
 
-    fn exit<'subj, 'ast>(visitor: &'subj mut Self::Subject, node: &'ast N) -> ExitControlFlow
-    where
-        'ast: 'subj,
-    {
+    fn exit(visitor: &mut Self::Subject, node: &'ast N) -> ExitControlFlow {
         V::exit(visitor, node)
     }
 }
@@ -146,23 +131,18 @@ where
 ///
 /// [`WithFallbackSupport::enter`] returns `ControlFlow::Continue(Navigation::Visit)`.
 /// [`WithFallbackSupport::exit`] returns `ControlFlow::Continue(())`.
-impl<N, V> WithFallbackSupport<N> for Fallback<V>
+impl<'ast, N, V> WithFallbackSupport<'ast, N> for Fallback<V>
 where
-    N: Visitable,
+    N: Visitable<'ast>,
 {
+
     type Subject = V;
 
-    fn enter<'subj, 'ast>(_: &'subj mut Self::Subject, _: &'ast N) -> EnterControlFlow
-    where
-        'ast: 'subj,
-    {
+    fn enter(_: &mut Self::Subject, _: &'ast N) -> EnterControlFlow {
         ControlFlow::Continue(Navigation::Visit)
     }
 
-    fn exit<'subj, 'ast>(_: &'subj mut Self::Subject, _: &'ast N) -> ExitControlFlow
-    where
-        'ast: 'subj,
-    {
+    fn exit(_: &mut Self::Subject, _: &'ast N) -> ExitControlFlow {
         ControlFlow::Continue(())
     }
 }
@@ -210,8 +190,8 @@ pub struct IsVisitor<V, N>(PhantomData<(V, N)>);
 /// Credit where credit is due: this technique was lifted from the `impls` crate.
 impl<V, N> IsVisitor<V, N>
 where
-    N: Visitable,
-    V: Visitor<N>,
+    N: Visitable<'static>,
+    V: Visitor<'static, N>,
 {
     pub const ANSWER: bool = true;
 }
@@ -221,52 +201,41 @@ where
 /// The associated type allows the dispatch fallback mechanism to determine at
 /// compile time whether a particular user-defined type implements `Visitor<'_,
 /// Self>` or whether it needs a fallback.
-pub trait DispatchTableLookup
+pub trait DispatchTableLookup<'ast>
 where
     Self: Sized,
-    Self: Visitable,
+    Self: Visitable<'ast>,
 {
-    type Lookup<Table: DispatchTable>: WithFallbackSupport<Self>;
+    type Lookup<Table: DispatchTable>: WithFallbackSupport<'ast, Self>;
 }
 
 /// A trait dispatching a specific AST node type.
 ///
 /// Users should not implement this trait directly; a blanket implementation
 /// applies for all types that derive [`VisitorDispatch`].
-pub trait VisitorDispatchNode<N>
+pub trait VisitorDispatchNode<'ast, N>
 where
-    N: Visitable,
+    N: Visitable<'ast>
 {
-    fn enter<'subj, 'ast>(&'subj mut self, node: &'ast N) -> EnterControlFlow
-    where
-        'ast: 'subj;
-
-    fn exit<'subj, 'ast>(&'subj mut self, node: &'ast N) -> ExitControlFlow
-    where
-        'ast: 'subj;
+    fn enter(&mut self, node: &'ast N) -> EnterControlFlow;
+    fn exit(&mut self, node: &'ast N) -> ExitControlFlow;
 }
 
 /// Blanket implementation for all types `V` that implement [`DispatchTable`].
 /// Every used-defined type that derives [`VisitorDispatch`] also has a derived
 /// `DispatchTable` implementation.
-impl<V, N> VisitorDispatchNode<N> for V
+impl<'ast, V, N> VisitorDispatchNode<'ast, N> for V
 where
     V: DispatchTable,
-    N: Visitable,
-    N: DispatchTableLookup,
-    N::Lookup<V>: WithFallbackSupport<N, Subject = Self>,
+    &'ast N: Visitable<'ast>,
+    N: DispatchTableLookup<'ast>,
+    N::Lookup<V>: WithFallbackSupport<'ast, N, Subject = Self>,
 {
-    fn enter<'subj, 'ast>(&'subj mut self, node: &'ast N) -> EnterControlFlow
-    where
-        'ast: 'subj,
-    {
+    fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
         <N::Lookup<V> as WithFallbackSupport<N>>::enter(self, node)
     }
 
-    fn exit<'subj, 'ast>(&'subj mut self, node: &'ast N) -> ExitControlFlow
-    where
-        'ast: 'subj,
-    {
+    fn exit(&mut self, node: &'ast N) -> ExitControlFlow {
         <N::Lookup<V> as WithFallbackSupport<N>>::exit(self, node)
     }
 }

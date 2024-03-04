@@ -6,8 +6,14 @@ use proc_macro_crate::{crate_name, FoundCrate};
 use quote::{quote, quote_spanned, TokenStreamExt};
 use sqltk_codegen::NODE_LIST;
 use sqltk_meta::{SqlParserMeta, SqlParserMetaQuery};
-use sqltk_syn_helpers::generics::decompose_generic_type;
-use syn::{parse_macro_input, spanned::Spanned, DeriveInput, GenericParam, TypePath};
+use sqltk_syn_helpers::generics::{
+    decompose_generic_type
+};
+use syn::{
+    parse_macro_input,
+    spanned::Spanned,
+    DeriveInput, GenericParam, TypePath,
+};
 
 fn node_meta() -> SqlParserMetaQuery {
     let meta: SqlParserMeta = serde_json::from_str(
@@ -31,7 +37,7 @@ fn resolve_crate() -> proc_macro2::TokenStream {
     }
 }
 
-static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &str = indoc! {"
+static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &'static str = indoc! {"
     VisitorDispatch can only be derived for types with exactly zero or one
     generic lifetime parameter. More than one lifetime parameter, or any number
     of generic type parameters or generic const parameters are not permitted.
@@ -94,12 +100,13 @@ static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &str = indoc! {"
 /// use std::marker::PhantomData;
 ///
 /// #[derive(VisitorDispatch)]
-/// struct ExprCounter {
+/// struct ExprCounter<'ast> {
 ///     counter: usize,
+///     _ast: PhantomData<&'ast ()>,
 /// }
 ///
-/// impl Visitor<ast::Expr> for ExprCounter {
-///   fn enter<'me, 'ast>(&mut self, node: &'ast ast::Expr) -> EnterControlFlow where 'ast: 'me {
+/// impl<'ast> Visitor<'ast, ast::Expr> for ExprCounter<'ast> {
+///   fn enter(&mut self, node: &'ast ast::Expr) -> EnterControlFlow {
 ///     self.counter += 1;
 ///     ControlFlow::Continue(Navigation::Visit)
 ///   }
@@ -141,6 +148,18 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
     let mut output = proc_macro2::TokenStream::new();
     let mut entries = proc_macro2::TokenStream::new();
 
+    let visitor_static = if count_lifetime_params == 1 {
+        quote!(#visitor<'static>)
+    } else {
+        quote!(#visitor)
+    };
+
+    let visitor_nonstatic = if count_lifetime_params == 1 {
+        quote!(#visitor<'a>)
+    } else {
+        quote!(#visitor)
+    };
+
     for node in meta.all_nodes() {
         let chunks = decompose_generic_type(&node)
             .iter()
@@ -151,10 +170,10 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
         let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
         entries.append_all(quote! {
-            type #ty_ident = #krate::dispatch::If<
-                {#krate::dispatch::IsVisitor::<#visitor, #node>::ANSWER},
-                #krate::dispatch::Handle<#visitor, #node>,
-                #krate::dispatch::Fallback<#visitor>
+            type #ty_ident<'a> = #krate::dispatch::If<
+                {#krate::dispatch::IsVisitor::<#visitor_static, #node>::ANSWER},
+                #krate::dispatch::Handle<#visitor_nonstatic, #node>,
+                #krate::dispatch::Fallback<#visitor_nonstatic>
             >;
         });
     }
