@@ -73,7 +73,14 @@ use std::{
 /// ```text
 /// error[E0505]: cannot move out of `some_string` because it is borrowed
 /// ```
+#[derive(Debug)]
 pub struct AnnotationStore<'key, V>(HashMap<AnnotationKey<'key>, V>);
+
+impl<'key, K> Default for AnnotationStore<'key, K> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl<'key, K> AnnotationStore<'key, K> {
     /// Creates an empty `AnnotationStore`

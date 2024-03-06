@@ -19,7 +19,7 @@ pub struct ReadOnly<T> {
 
 impl<T> ReadOnly<T> {
     /// Create a new read-only view of the [`Rc<RefCell<T>>`].
-    pub(crate) fn new(value: Rc<RefCell<T>>) -> Self {
+    pub fn new(value: Rc<RefCell<T>>) -> Self {
         Self { value }
     }
 
@@ -91,7 +91,7 @@ impl<'a, T> From<&'a Rc<RefCell<T>>> for ReadWrite<T> {
 
 impl<T> ReadWrite<T> {
     /// Create a new read-write view of the [`Rc<RefCell<T>>`].
-    pub(crate) fn new(value: Rc<RefCell<T>>) -> Self {
+    pub fn new(value: Rc<RefCell<T>>) -> Self {
         Self { value }
     }
 

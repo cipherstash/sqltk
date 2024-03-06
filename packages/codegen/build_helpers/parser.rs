@@ -3,12 +3,12 @@ use std::ops::Deref;
 use std::{collections::HashSet, hash::Hash};
 
 use proc_macro2::Span;
+use sqltk_meta::{
+    ContainerNode, PrimitiveNode, SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn,
+};
 use sqltk_syn_helpers::generics::{
     compose_generic_type, container_type, decompose_generic_type, expect_type_path,
     is_generic_type, ContainerType,
-};
-use sqltk_meta::{
-    ContainerNode, PrimitiveNode, SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn,
 };
 use syn::{
     Attribute, Field, Ident, Item, ItemImpl, ItemMod, ItemUse, Meta, Type, TypePath, UseGlob,
