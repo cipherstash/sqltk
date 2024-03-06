@@ -6,14 +6,8 @@ use proc_macro_crate::{crate_name, FoundCrate};
 use quote::{quote, quote_spanned, TokenStreamExt};
 use sqltk_codegen::NODE_LIST;
 use sqltk_meta::{SqlParserMeta, SqlParserMetaQuery};
-use sqltk_syn_helpers::generics::{
-    decompose_generic_type
-};
-use syn::{
-    parse_macro_input,
-    spanned::Spanned,
-    DeriveInput, GenericParam, TypePath,
-};
+use sqltk_syn_helpers::generics::decompose_generic_type;
+use syn::{parse_macro_input, spanned::Spanned, DeriveInput, GenericParam, TypePath};
 
 fn node_meta() -> SqlParserMetaQuery {
     let meta: SqlParserMeta = serde_json::from_str(
@@ -37,16 +31,12 @@ fn resolve_crate() -> proc_macro2::TokenStream {
     }
 }
 
-static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &'static str = indoc! {"
-    VisitorDispatch can only be derived for types with exactly zero or one
-    generic lifetime parameter. More than one lifetime parameter, or any number
-    of generic type parameters or generic const parameters are not permitted.
+static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &str = indoc! {"
+    VisitorDispatch can only be derived for types with exactly zero or two
+    lifetime parameters. Generic type paramters and generic const parameters
+    are not permitted.
 
-    The sole lifetime parameter, if present, represents the lifetime of AST
-    nodes and is required if your type needs to keep references to AST nodes as
-    part of its internal state but is otherwise not required.
-
-    To workaround this limitation, define a newtype wrapper that
+    To workaround these derivation limitations, define a newtype wrapper that
     instantiates all of the generic types and derive VisitorDispatch
     on the wrapper.
 
@@ -56,18 +46,18 @@ static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &'static str = indoc! {"
 
     See the following example:
 
-    struct MyGenericVisitor<'ast, T: NodeLogger<'ast>> {
+    struct MyGenericVisitor<'state, 'ast: 'satte, T: 'state + NodeLogger<'ast>> {
         logger: T
     }
 
-    impl<'ast, T: NodeLogger> Visitor<'ast, Expr> for MyGenericVisitor<'ast, T> {
+    impl<'state, 'ast: 'state, T: 'state + NodeLogger> Visitor<'state, 'ast, Expr> for MyGenericVisitor<'state, 'ast, T> {
         fn enter(&mut self, node: &'ast Expr) -> EnterControlFlow {
             self.logger.log(node);
             ControlFlow::Continue(Navigation::Visit)
         }
     }
 
-    impl<'ast, T> Visitor<'ast, Statement> for MyGenericVisitor<'ast, T> {
+    impl<'state, 'ast: 'state, T> Visitor<'state, 'ast, Statement> for MyGenericVisitor<'state, 'ast, T + 'state> {
         fn enter(&mut self, node: &'ast Expr) -> EnterControlFlow {
             self.logger.log(node);
             ControlFlow::Continue(Navigation::Visit)
@@ -75,10 +65,10 @@ static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &'static str = indoc! {"
     }
 
     #[derive(VisitorDispatch)]
-    struct Wrapper<'ast>(MyGenericVisitor<'ast, OtelLogger>);
+    struct Wrapper<'state, 'ast: 'state>(MyGenericVisitor<'state, 'ast, OtelLogger>);
 
-    // Implement Visitor<'ast, N> on Wrapper<'ast> for all Visitor<'ast, N> implemented by the generic type.
-    impl<'ast, N> Visitor<'ast, N> for Wrapper<'ast> where MyGenericVisitor<'ast, OtelLogger>: Visitor<'ast, N> {
+    // Implement Visitor<'state, 'ast, N> on Wrapper<'state, 'ast> for all Visitor<'state, 'ast, N> implemented by the generic type.
+    impl<'state, 'ast: 'state, N> Visitor<'state, 'ast, N> for Wrapper<'state, 'ast> where MyGenericVisitor<'state, 'ast, OtelLogger>: Visitor<'state, 'ast, N> {
         fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
             self.0.enter(node)
         }
@@ -100,12 +90,13 @@ static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &'static str = indoc! {"
 /// use std::marker::PhantomData;
 ///
 /// #[derive(VisitorDispatch)]
-/// struct ExprCounter<'ast> {
+/// struct ExprCounter<'state, 'ast: 'state> {
 ///     counter: usize,
 ///     _ast: PhantomData<&'ast ()>,
+///     _state: PhantomData<&'state ()>,
 /// }
 ///
-/// impl<'ast> Visitor<'ast, ast::Expr> for ExprCounter<'ast> {
+/// impl<'state, 'ast: 'state> Visitor<'state, 'ast, ast::Expr> for ExprCounter<'state, 'ast> {
 ///   fn enter(&mut self, node: &'ast ast::Expr) -> EnterControlFlow {
 ///     self.counter += 1;
 ///     ControlFlow::Continue(Navigation::Visit)
@@ -138,7 +129,7 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
         return quote_spanned!( input.span() => compile_error!(#err_msg);).into();
     }
 
-    if count_lifetime_params > 1 {
+    if count_lifetime_params > 2 {
         let err_msg = VISITOR_DISPATCH_DERIVE_GENERIC_ERROR;
         return quote_spanned!( input.span() => compile_error!(#err_msg);).into();
     }
@@ -148,14 +139,18 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
     let mut output = proc_macro2::TokenStream::new();
     let mut entries = proc_macro2::TokenStream::new();
 
-    let visitor_static = if count_lifetime_params == 1 {
+    let visitor_static = if count_lifetime_params == 2 {
+        quote!(#visitor<'static, 'static>)
+    } else if count_lifetime_params == 1 {
         quote!(#visitor<'static>)
     } else {
         quote!(#visitor)
     };
 
-    let visitor_nonstatic = if count_lifetime_params == 1 {
-        quote!(#visitor<'a>)
+    let visitor_nonstatic = if count_lifetime_params == 2 {
+        quote!(#visitor<'s, 'a>)
+    } else if count_lifetime_params == 1 {
+        quote!(#visitor<'state>)
     } else {
         quote!(#visitor)
     };
@@ -170,7 +165,7 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
         let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
         entries.append_all(quote! {
-            type #ty_ident<'a> = #krate::dispatch::If<
+            type #ty_ident<'s, 'a: 's> = #krate::dispatch::If<
                 {#krate::dispatch::IsVisitor::<#visitor_static, #node>::ANSWER},
                 #krate::dispatch::Handle<#visitor_nonstatic, #node>,
                 #krate::dispatch::Fallback<#visitor_nonstatic>
@@ -180,6 +175,7 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
 
     // TODO: bring Nope and AssumeNotImplemented into scope
     output.append_all(quote! {
+        use #krate::Nope as _;
         impl #impl_generics #krate::DispatchTable for #visitor #ty_generics #where_clause {
             #entries
         }

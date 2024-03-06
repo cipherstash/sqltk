@@ -2,7 +2,7 @@ use sqltk_meta::{ContainerNode, PrimitiveNode, SqlParserMetaQuery};
 use syn::TypePath;
 
 use super::reachability::Reachability;
-use super::{visitable_trait_impls::VisitableImpl, sqlparser_node_extractor};
+use super::{sqlparser_node_extractor, visitable_trait_impls::VisitableImpl};
 use proc_macro2::TokenStream;
 use sqltk_syn_helpers::generics;
 
@@ -36,7 +36,7 @@ impl Codegen {
 
         let nodes = self.meta.all_nodes();
         for node in nodes.iter() {
-            let chunks = generics::decompose_generic_type(&node)
+            let chunks = generics::decompose_generic_type(node)
                 .iter()
                 .map(|tp| tp.path.segments.last().unwrap().ident.to_string())
                 .collect::<Vec<_>>();
@@ -44,7 +44,7 @@ impl Codegen {
             let type_cased = Inflector::to_pascal_case(joined_chunks);
             let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
-            entries.append_all(quote!(type #ty_ident<'ast>: WithFallbackSupport<'ast, #node>;))
+            entries.append_all(quote!(type #ty_ident<'state, 'ast: 'state>: WithFallbackSupport<'state, 'ast, #node>;))
         }
 
         generated_code.append_all(quote! {
@@ -78,7 +78,7 @@ impl Codegen {
 
         let nodes = self.meta.all_nodes();
         for node in nodes.iter() {
-            let chunks = generics::decompose_generic_type(&node)
+            let chunks = generics::decompose_generic_type(node)
                 .iter()
                 .map(|tp| tp.path.segments.last().unwrap().ident.to_string())
                 .collect::<Vec<_>>();
@@ -87,8 +87,8 @@ impl Codegen {
             let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
             entries.append_all(quote! {
-                impl<'ast> DispatchTableLookup<'ast> for #node {
-                    type Lookup<Table: DispatchTable> = Table::#ty_ident<'ast>;
+                impl<'state, 'ast: 'state> DispatchTableLookup<'state, 'ast> for #node {
+                    type Lookup<Table: DispatchTable> = Table::#ty_ident<'state, 'ast>;
                 }
             });
         }
@@ -130,7 +130,7 @@ impl Codegen {
         let bounds: proc_macro2::TokenStream = self.define_visitor_dispatch_trait_bounds();
 
         quote! {
-            impl<'ast, V> VisitorDispatch<'ast> for V
+            impl<'state, 'ast: 'state, V> VisitorDispatch<'state, 'ast> for V
             where
                 Self: #bounds
             {
@@ -149,7 +149,7 @@ impl Codegen {
         let all_nodes = self.meta.all_nodes();
         let bounds = all_nodes.iter().map(|node| {
             quote! {
-                VisitorDispatchNode<'ast, #node>
+                VisitorDispatchNode<'state, 'ast, #node>
             }
         });
 
@@ -538,10 +538,10 @@ impl Codegen {
             output.append_all(quote! {
                 #[automatically_derived]
                 impl<'ast> crate::Visitable<'ast> for #type_path {
-                    fn accept(
+                    fn accept<'state>(
                         &'ast self,
-                        visitor: &mut dyn crate::VisitorDispatch<'ast>,
-                    ) -> crate::EnterControlFlow {
+                        visitor: &mut dyn crate::VisitorDispatch<'state, 'ast>,
+                    ) -> crate::EnterControlFlow where 'ast: 'state {
                         crate::visit(
                             crate::SqlNode::from(self),
                             visitor,

@@ -56,7 +56,7 @@ pub mod test {
         }
     }
 
-    impl<'ast> Visitor<'ast, ast::Expr> for Counter {
+    impl<'state, 'ast: 'state> Visitor<'state, 'ast, ast::Expr> for Counter {
         fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
             self.count += 1;
             ControlFlow::Continue(Navigation::Visit)
@@ -106,14 +106,14 @@ pub mod test {
 
         // Types that should _not_ be visited because we know it'll be
         // None/empty with the `sql` expression below.
-        impl<'ast> Visitor<'ast, Option<ast::With>> for Recorder {
+        impl<'state, 'ast: 'state> Visitor<'state, 'ast, Option<ast::With>> for Recorder {
             fn enter(&mut self, _: &'ast Option<ast::With>) -> EnterControlFlow {
                 self.items_enter.push("Option<With>".into());
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
 
-        impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>> for Recorder {
+        impl<'state, 'ast: 'state> Visitor<'state, 'ast, Vec<ast::TableWithJoins>> for Recorder {
             fn enter(&mut self, _: &'ast Vec<ast::TableWithJoins>) -> EnterControlFlow {
                 self.items_enter.push("Vec<TableWithJoins>".into());
                 ControlFlow::Continue(Navigation::Visit)
@@ -122,14 +122,14 @@ pub mod test {
 
         // Types that _should_ be visited because we know they'll be present
         // after parsing the `sql` expression below.
-        impl<'ast> Visitor<'ast, Option<ast::Expr>> for Recorder {
+        impl<'state, 'ast: 'state> Visitor<'state, 'ast, Option<ast::Expr>> for Recorder {
             fn enter(&mut self, _: &'ast Option<ast::Expr>) -> EnterControlFlow {
                 self.items_enter.push("Option<Expr>".into());
                 ControlFlow::Continue(Navigation::Visit)
             }
         }
 
-        impl<'ast> Visitor<'ast, Vec<ast::SelectItem>> for Recorder {
+        impl<'state, 'ast: 'state> Visitor<'state, 'ast, Vec<ast::SelectItem>> for Recorder {
             fn enter(&mut self, _: &'ast Vec<ast::SelectItem>) -> EnterControlFlow {
                 self.items_enter.push("Vec<SelectItem>".into());
                 ControlFlow::Continue(Navigation::Visit)
@@ -164,7 +164,7 @@ pub mod test {
             pub order_exit: Vec<String>,
         }
 
-        impl<'ast> VisitorDispatch<'ast> for Recorder {
+        impl<'state, 'ast: 'state> VisitorDispatch<'state, 'ast> for Recorder {
             fn enter(&mut self, node: SqlNode<'ast>) -> EnterControlFlow {
                 self.order_enter.push(node.to_string());
                 ControlFlow::Continue(Navigation::Visit)
@@ -249,7 +249,7 @@ pub mod test {
             .output::<ReadOnly<ExprsBalanced>>(exprs_balanced.into())
             .build();
 
-        impl<'ast> Visitor<'ast, ast::Expr> for BalancedExprsCheck {
+        impl<'state, 'ast: 'state> Visitor<'state, 'ast, ast::Expr> for BalancedExprsCheck {
             fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
                 self.exprs_balanced.get_mut().0 = false;
                 ControlFlow::Continue(Navigation::Visit)
@@ -262,7 +262,7 @@ pub mod test {
             }
         }
 
-        impl<'ast> Visitor<'ast, ast::Expr> for ExprCounter {
+        impl<'state, 'ast: 'state> Visitor<'state, 'ast, ast::Expr> for ExprCounter {
             fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
                 self.expr_enter_count.get_mut().0 += 1;
                 ControlFlow::Continue(Navigation::Visit)
@@ -343,7 +343,7 @@ pub mod test {
             node_addrs: HashSet<(TypeId, usize)>,
         }
 
-        impl<'ast, T: Visitable<'ast> + 'static> Visitor<'ast, T> for AddrChecker {
+        impl<'state, 'ast: 'state, T: Visitable<'ast> + 'static> Visitor<'state, 'ast, T> for AddrChecker {
             fn enter(&mut self, node: &'ast T) -> EnterControlFlow {
                 self.count += 1;
                 self.node_addrs
@@ -357,12 +357,5 @@ pub mod test {
         ast.accept(&mut addr_checker);
 
         assert_eq!(addr_checker.count, addr_checker.node_addrs.len());
-    }
-
-    #[test]
-    fn basic_edit_pipeline() {
-        // First VisitorDispatch in the pipeline must build a shadow AST of Node<'ast, T: Visitable>
-        // (need a SqlNode::wrapped(&self) method)
-        // The Scope of the analysis Pipeline will contain the shadow AST + analysis results
     }
 }

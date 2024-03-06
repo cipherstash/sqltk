@@ -1,10 +1,13 @@
 use crate::*;
 
 impl<'ast, T: Visitable<'ast>> Visitable<'ast> for &'ast T {
-    fn accept(
+    fn accept<'state>(
         &'ast self,
-        visitor: &mut dyn VisitorDispatch<'ast>,
-    ) -> EnterControlFlow {
+        visitor: &mut dyn VisitorDispatch<'state, 'ast>,
+    ) -> EnterControlFlow
+    where
+        'ast: 'state,
+    {
         (*self).accept(visitor)
     }
 }
@@ -15,10 +18,10 @@ where
     &'ast Self: Into<SqlNode<'ast>>,
     VecOf<'ast>: From<&'ast Vec<T>>,
 {
-    fn accept(
-        &'ast self,
-        visitor: &mut dyn VisitorDispatch<'ast>,
-    ) -> EnterControlFlow {
+    fn accept<'state>(&'ast self, visitor: &mut dyn VisitorDispatch<'state, 'ast>) -> EnterControlFlow
+    where
+        'ast: 'state,
+    {
         if self.is_empty() {
             ControlFlow::Continue(Navigation::Skip)
         } else {
@@ -38,10 +41,10 @@ where
     &'ast Self: Into<SqlNode<'ast>>,
     BoxOf<'ast>: From<&'ast Box<T>>,
 {
-    fn accept(
-        &'ast self,
-        visitor: &mut dyn VisitorDispatch<'ast>,
-    ) -> EnterControlFlow {
+    fn accept<'state>(&'ast self, visitor: &mut dyn VisitorDispatch<'state, 'ast>) -> EnterControlFlow
+    where
+        'ast: 'state,
+    {
         visit(SqlNode::from(self), visitor, |visitor| {
             (**self).accept(visitor)
         })
@@ -54,21 +57,17 @@ where
     &'ast Self: Into<SqlNode<'ast>>,
     OptionOf<'ast>: From<&'ast Option<T>>,
 {
-    fn accept(
-        &'ast self,
-        visitor: &mut dyn VisitorDispatch<'ast>,
-    ) -> EnterControlFlow {
+    fn accept<'state>(&'ast self, visitor: &mut dyn VisitorDispatch<'state, 'ast>) -> EnterControlFlow
+    where
+        'ast: 'state,
+    {
         if self.is_none() {
             ControlFlow::Continue(Navigation::Skip)
         } else {
-            visit(
-                SqlNode::from(self),
-                visitor,
-                |visitor| match self {
-                    Some(child) => child.accept(visitor),
-                    None => ControlFlow::Continue(Navigation::Skip),
-                },
-            )
+            visit(SqlNode::from(self), visitor, |visitor| match self {
+                Some(child) => child.accept(visitor),
+                None => ControlFlow::Continue(Navigation::Skip),
+            })
         }
     }
 }

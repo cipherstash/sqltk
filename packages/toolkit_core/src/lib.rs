@@ -1,14 +1,14 @@
-mod visitable_impls;
 mod display_type_name;
 mod generated;
+mod visitable_impls;
 
 // Re-export sqlparser
 pub use sqlparser;
 // Re-export bigdecimal
 pub use bigdecimal;
 
-pub use display_type_name::*;
 pub use dispatch::*;
+pub use display_type_name::*;
 pub use generated::sql_node::*;
 
 pub mod annotation;
@@ -41,9 +41,9 @@ pub type ExitControlFlow = ControlFlow<(), ()>;
 
 /// Trait for types that visit a specific type of node.
 #[allow(unused_variables)]
-pub trait Visitor<'ast, N>
+pub trait Visitor<'state, 'ast: 'state, N>
 where
-    N: Visitable<'ast>
+    N: Visitable<'ast>,
 {
     /// Called when a node is entered.
     ///
@@ -78,5 +78,10 @@ where
     /// AST nodes from `sqlparser` are wrapped in a [`node::Node`]
     /// implementation and assigned a unique numeric ID so that derived metadata
     /// about nodes can be retained.
-    fn accept(&'ast self, dispatch: &mut dyn VisitorDispatch<'ast>) -> EnterControlFlow;
+    fn accept<'state>(
+        &'ast self,
+        dispatch: &mut dyn VisitorDispatch<'state, 'ast>,
+    ) -> EnterControlFlow
+    where
+        'ast: 'state;
 }
