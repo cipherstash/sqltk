@@ -3,7 +3,7 @@ use inflector::Inflector;
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use proc_macro_crate::{crate_name, FoundCrate};
-use quote::{quote, quote_spanned, TokenStreamExt};
+use quote::{quote, quote_spanned, ToTokens, TokenStreamExt};
 use sqltk_codegen::NODE_LIST;
 use sqltk_meta::{SqlParserMeta, SqlParserMetaQuery};
 use sqltk_syn_helpers::generics::decompose_generic_type;
@@ -46,29 +46,29 @@ static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &str = indoc! {"
 
     See the following example:
 
-    struct MyGenericVisitor<'state, 'ast: 'satte, T: 'state + NodeLogger<'ast>> {
+    struct MyGenericVisitor<'ast, T: NodeLogger<'ast>> {
         logger: T
     }
 
-    impl<'state, 'ast: 'state, T: 'state + NodeLogger> Visitor<'state, 'ast, Expr> for MyGenericVisitor<'state, 'ast, T> {
+    impl<'ast, T: NodeLogger> Visitor<'ast, Expr> for MyGenericVisitor<'ast, T> {
         fn enter(&mut self, node: &'ast Expr) -> EnterControlFlow {
             self.logger.log(node);
-            ControlFlow::Continue(Navigation::Visit)
+            ControlFlow::Continue(Nav::Visit)
         }
     }
 
-    impl<'state, 'ast: 'state, T> Visitor<'state, 'ast, Statement> for MyGenericVisitor<'state, 'ast, T + 'state> {
+    impl<'ast, T> Visitor<'ast, Statement> for MyGenericVisitor<'ast, T> {
         fn enter(&mut self, node: &'ast Expr) -> EnterControlFlow {
             self.logger.log(node);
-            ControlFlow::Continue(Navigation::Visit)
+            ControlFlow::Continue(Nav::Visit)
         }
     }
 
     #[derive(VisitorDispatch)]
-    struct Wrapper<'state, 'ast: 'state>(MyGenericVisitor<'state, 'ast, OtelLogger>);
+    struct Wrapper<'ast>(MyGenericVisitor<'ast, OtelLogger>);
 
-    // Implement Visitor<'state, 'ast, N> on Wrapper<'state, 'ast> for all Visitor<'state, 'ast, N> implemented by the generic type.
-    impl<'state, 'ast: 'state, N> Visitor<'state, 'ast, N> for Wrapper<'state, 'ast> where MyGenericVisitor<'state, 'ast, OtelLogger>: Visitor<'state, 'ast, N> {
+    // Implement Visitor<'ast, N> on Wrapper<'ast> for all Visitor<'ast, N> implemented by the generic type.
+    impl<'ast, N> Visitor<'ast, N> for Wrapper<'ast> where MyGenericVisitor<'ast, OtelLogger>: Visitor<'ast, N> {
         fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
             self.0.enter(node)
         }
@@ -88,19 +88,18 @@ static VISITOR_DISPATCH_DERIVE_GENERIC_ERROR: &str = indoc! {"
 /// use sqltk::sqlparser::*;
 /// use std::ops::ControlFlow;
 /// use std::marker::PhantomData;
+/// use derive_more::AsMut;
 ///
 /// #[derive(VisitorDispatch)]
-/// struct ExprCounter<'state, 'ast: 'state> {
-///     counter: usize,
-///     _ast: PhantomData<&'ast ()>,
-///     _state: PhantomData<&'state ()>,
+/// struct ExprCounter  {
+///     counter: usize
 /// }
 ///
-/// impl<'state, 'ast: 'state> Visitor<'state, 'ast, ast::Expr> for ExprCounter<'state, 'ast> {
-///   fn enter(&mut self, node: &'ast ast::Expr) -> EnterControlFlow {
-///     self.counter += 1;
-///     ControlFlow::Continue(Navigation::Visit)
-///   }
+/// impl<'ast> Visitor<'ast, ast::Expr> for ExprCounter {
+///     fn enter(&mut self, node: &'ast ast::Expr) -> EnterControlFlow {
+///         self.counter += 1usize;
+///         ControlFlow::Continue(Nav::Visit)
+///     }
 /// }
 /// ```
 #[proc_macro_derive(VisitorDispatch)]
@@ -124,12 +123,7 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
         }
     }
 
-    if (count_type_params, count_const_params) != (0, 0) {
-        let err_msg = VISITOR_DISPATCH_DERIVE_GENERIC_ERROR;
-        return quote_spanned!( input.span() => compile_error!(#err_msg);).into();
-    }
-
-    if count_lifetime_params > 2 {
+    if (count_type_params, count_const_params, count_lifetime_params ) != (0, 0, 0) {
         let err_msg = VISITOR_DISPATCH_DERIVE_GENERIC_ERROR;
         return quote_spanned!( input.span() => compile_error!(#err_msg);).into();
     }
@@ -138,22 +132,6 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
 
     let mut output = proc_macro2::TokenStream::new();
     let mut entries = proc_macro2::TokenStream::new();
-
-    let visitor_static = if count_lifetime_params == 2 {
-        quote!(#visitor<'static, 'static>)
-    } else if count_lifetime_params == 1 {
-        quote!(#visitor<'static>)
-    } else {
-        quote!(#visitor)
-    };
-
-    let visitor_nonstatic = if count_lifetime_params == 2 {
-        quote!(#visitor<'s, 'a>)
-    } else if count_lifetime_params == 1 {
-        quote!(#visitor<'state>)
-    } else {
-        quote!(#visitor)
-    };
 
     for node in meta.all_nodes() {
         let chunks = decompose_generic_type(&node)
@@ -164,11 +142,13 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
         let type_cased = Inflector::to_pascal_case(joined_chunks);
         let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
+        let node = rewrite_sqlparser_type(&krate, &node);
+
         entries.append_all(quote! {
-            type #ty_ident<'s, 'a: 's> = #krate::dispatch::If<
-                {#krate::dispatch::IsVisitor::<#visitor_static, #node>::ANSWER},
-                #krate::dispatch::Handle<#visitor_nonstatic, #node>,
-                #krate::dispatch::Fallback<#visitor_nonstatic>
+            type #ty_ident = #krate::dispatch::If<
+                {#krate::dispatch::IsVisitor::<#visitor, #node>::ANSWER},
+                #krate::dispatch::Handle<#visitor, #node>,
+                #krate::dispatch::Fallback<#visitor>
             >;
         });
     }
@@ -176,10 +156,17 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
     // TODO: bring Nope and AssumeNotImplemented into scope
     output.append_all(quote! {
         use #krate::Nope as _;
-        impl #impl_generics #krate::DispatchTable for #visitor #ty_generics #where_clause {
+        impl<'ast> #impl_generics #krate::DispatchTable<'ast> for #visitor #ty_generics #where_clause {
             #entries
         }
     });
 
     output.into()
+}
+
+fn rewrite_sqlparser_type(krate: &proc_macro2::TokenStream, ty: &TypePath) -> TypePath {
+    let prefix = format!("{}::sqlparser", krate.to_string());
+    let ty = ty.to_token_stream().to_string();
+    let altered = ty.replace("sqlparser", &prefix);
+    syn::parse_str(&altered).unwrap()
 }

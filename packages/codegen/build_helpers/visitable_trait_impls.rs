@@ -29,13 +29,16 @@ impl<'a> ToTokens for VisitableImpl<'a> {
         tokens.append_all(quote! {
             #[automatically_derived]
             impl<'ast> crate::Visitable<'ast> for #path {
-                fn accept<'state>(
+                fn accept<VD>(
                     &'ast self,
-                    visitor: &mut dyn crate::VisitorDispatch<'state, 'ast>,
-                ) -> crate::EnterControlFlow where 'ast: 'state {
+                    visitor: &mut VD,
+                ) -> crate::EnterControlFlow
+                    where
+                        VD: crate::VisitorDispatch<'ast>
+                {
                     crate::visit(crate::SqlNode::from(self), visitor, #[allow(unused_variables)] |visitor| {
                         #body
-                        ControlFlow::Continue(Navigation::Visit)
+                        ControlFlow::Continue(Nav::Visit)
                     })
                 }
             }

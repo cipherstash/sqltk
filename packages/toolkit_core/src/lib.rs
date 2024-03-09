@@ -21,12 +21,12 @@ pub use pipeline::*;
 pub mod private;
 
 use private::visit;
-use std::ops::ControlFlow;
+use std::{error::Error, ops::ControlFlow};
 
 #[derive(Clone, Copy)]
 /// Used as the "continue" type in the [`ControlFlow`] value returned by all
 /// visitors.
-pub enum Navigation {
+pub enum Nav {
     /// Skip visiting children of the current AST node
     Skip,
     /// Visit the children of the current AST node
@@ -34,54 +34,64 @@ pub enum Navigation {
 }
 
 /// [`ControlFlow`] type returned by [`Visitor::enter`].
-pub type EnterControlFlow = ControlFlow<(), Navigation>;
+pub type EnterControlFlow = ControlFlow<Box<dyn Error>, Nav>;
 
 /// [`ControlFlow`] type returned by [`Visitor::exit`].
-pub type ExitControlFlow = ControlFlow<(), ()>;
+pub type ExitControlFlow = ControlFlow<Box<dyn Error>, ()>;
+
+pub struct Enter;
+
+impl Enter {
+    pub fn visit() -> EnterControlFlow {
+        EnterControlFlow::Continue(Nav::Visit)
+    }
+
+    pub fn skip() -> EnterControlFlow {
+        EnterControlFlow::Continue(Nav::Skip)
+    }
+
+    pub fn error(error: Box<dyn Error>) -> EnterControlFlow {
+        EnterControlFlow::Break(error)
+    }
+}
+
+pub struct Exit;
+
+impl Exit {
+    pub fn normal() -> ExitControlFlow {
+        ExitControlFlow::Continue(())
+    }
+
+    pub fn error(error: Box<dyn Error>) -> ExitControlFlow {
+        ExitControlFlow::Break(error)
+    }
+}
 
 /// Trait for types that visit a specific type of node.
 #[allow(unused_variables)]
-pub trait Visitor<'state, 'ast: 'state, N>
-where
-    N: Visitable<'ast>,
-{
-    /// Called when a node is entered.
-    ///
-    /// The default implementation returns [`ControlFlow::Continue(Navigation::Visit)`].
-    ///
-    fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
-        ControlFlow::Continue(Navigation::Visit)
+pub trait Visitor<'ast, Node: Visitable<'ast>> {
+    /// Called when a node is entered.  The default implementation returns
+    /// [`EnterControlFlow::Continue(Nav::Visit)`].
+    fn enter(&mut self, node: &'ast Node) -> EnterControlFlow {
+        Enter::visit()
     }
 
     /// Called when a node is exited.  The default implementation returns
-    /// [`ControlFlow::Continue(Navigation::Visit)`].  Note that the
-    /// [`Navigation`] value returned in exit result is ignored.
-    ///
-    fn exit(&mut self, node: &'ast N) -> ExitControlFlow {
-        ControlFlow::Continue(())
+    /// [`ExitControlFlow::Continue(())`].
+    fn exit(&mut self, node: &'ast Node) -> ExitControlFlow {
+        Exit::normal()
     }
 }
 
 /// Trait for types that can be visited by a [`VisitorDispatch`].
-pub trait Visitable<'ast>
-where
-    Self: 'ast,
-{
+/// This trait is implemented for all AST nodes defined by `sqlparser`.
+pub trait Visitable<'ast> {
     /// Entry point to begin AST traversal with a [`VisitorDispatch`].
     ///
     /// Invokes [`VisitorDispatch::enter`] and [`VisitorDispatch::exit`] for
     /// every AST node encountered during traversal with the exception that if
     /// the `VisitorDispatch` returns
-    /// [`VisitorControlFlow::Continue(Navigation::Skip)`], remaining children
-    /// of the current node will be skipped.
-    ///
-    /// AST nodes from `sqlparser` are wrapped in a [`node::Node`]
-    /// implementation and assigned a unique numeric ID so that derived metadata
-    /// about nodes can be retained.
-    fn accept<'state>(
-        &'ast self,
-        dispatch: &mut dyn VisitorDispatch<'state, 'ast>,
-    ) -> EnterControlFlow
-    where
-        'ast: 'state;
+    /// [`EnterControlFlow::Continue(Nav::Skip)`], remaining children of the
+    /// current node will be skipped.
+    fn accept<VD: VisitorDispatch<'ast>>(&'ast self, dispatcher: &mut VD) -> EnterControlFlow;
 }

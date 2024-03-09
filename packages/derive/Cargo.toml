@@ -31,6 +31,7 @@ sqltk_codegen = { path = "../codegen" }
 sqltk_meta = { path = "../meta" }
 serde_json = "1.0.108"
 indoc = "2.0.4"
+derive_more = "0.99.17"
 
 [package.metadata.release]
 # Instruct `cargo release` to not run `cargo publish` locally:

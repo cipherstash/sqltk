@@ -26,6 +26,7 @@ bigdecimal = { workspace = true }
 simple-mermaid = { workspace = true }
 tynm = "0.1.8"
 thiserror = "1.0.56"
+frunk = "0.4.2"
 
 [build-dependencies]
 sqltk_codegen = { path = "../codegen" }

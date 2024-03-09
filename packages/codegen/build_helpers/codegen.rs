@@ -44,7 +44,7 @@ impl Codegen {
             let type_cased = Inflector::to_pascal_case(joined_chunks);
             let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
-            entries.append_all(quote!(type #ty_ident<'state, 'ast: 'state>: WithFallbackSupport<'state, 'ast, #node>;))
+            entries.append_all(quote!(type #ty_ident: WithFallbackSupport<'ast, #node>;))
         }
 
         generated_code.append_all(quote! {
@@ -54,7 +54,7 @@ impl Codegen {
             #[doc = "and therefore the default fallback handler should be invoked instead."]
             #[doc = ""]
             #[doc = "This trait is auto-generated when [`VisitorDispatch`] is derived and should not be implemented manually."]
-            pub trait DispatchTable {
+            pub trait DispatchTable<'ast> {
                 #entries
             }
         });
@@ -87,8 +87,8 @@ impl Codegen {
             let ty_ident: TypePath = syn::parse_str(&type_cased).unwrap();
 
             entries.append_all(quote! {
-                impl<'state, 'ast: 'state> DispatchTableLookup<'state, 'ast> for #node {
-                    type Lookup<Table: DispatchTable> = Table::#ty_ident<'state, 'ast>;
+                impl<'ast> DispatchTableLookup<'ast> for #node {
+                    type Lookup<Table: DispatchTable<'ast>> = Table::#ty_ident;
                 }
             });
         }
@@ -130,7 +130,7 @@ impl Codegen {
         let bounds: proc_macro2::TokenStream = self.define_visitor_dispatch_trait_bounds();
 
         quote! {
-            impl<'state, 'ast: 'state, V> VisitorDispatch<'state, 'ast> for V
+            impl<'ast, V> VisitorDispatch<'ast> for V
             where
                 Self: #bounds
             {
@@ -149,7 +149,7 @@ impl Codegen {
         let all_nodes = self.meta.all_nodes();
         let bounds = all_nodes.iter().map(|node| {
             quote! {
-                VisitorDispatchNode<'state, 'ast, #node>
+                VisitorDispatchNode<'ast, #node>
             }
         });
 
@@ -538,16 +538,19 @@ impl Codegen {
             output.append_all(quote! {
                 #[automatically_derived]
                 impl<'ast> crate::Visitable<'ast> for #type_path {
-                    fn accept<'state>(
+                    fn accept<VD>(
                         &'ast self,
-                        visitor: &mut dyn crate::VisitorDispatch<'state, 'ast>,
-                    ) -> crate::EnterControlFlow where 'ast: 'state {
+                        visitor: &mut VD,
+                    ) -> crate::EnterControlFlow
+                    where
+                        VD: crate::VisitorDispatch<'ast>
+                    {
                         crate::visit(
                             crate::SqlNode::from(self),
                             visitor,
                             #[allow(unused_variables)]
                             |visitor| {
-                                std::ops::ControlFlow::Continue(crate::Navigation::Skip)
+                                std::ops::ControlFlow::Continue(crate::Nav::Skip)
                             }
                         )
                     }

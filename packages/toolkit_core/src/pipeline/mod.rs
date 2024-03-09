@@ -2,20 +2,14 @@
 //! which facilitates the building of arbitrarily sophisticated AST analysis and
 //! transformation workflows from small unit-testable pieces.
 
-mod accessors;
+use std::{error::Error, mem};
 
-use std::error::Error;
-
-use crate::{EnterControlFlow, ExitControlFlow, Navigation, SqlNode, Visitable, VisitorDispatch};
-
-pub use accessors::*;
-
-mod private {
-    pub trait Sealed {}
-}
+use crate::{
+    Enter, EnterControlFlow, Exit, ExitControlFlow, SqlNode, Visitable, VisitorDispatch,
+};
 
 /// A `Pipeline` is a composition of `VisitorDispatch` implementations (called
-/// "stages") that colloborate to process a `sqlparser` AST to produce a
+/// "stages") that collaborate to process a `sqlparser` AST to produce a
 /// specific output.
 ///
 /// Pipelines therefore facilitate composition of small, decoupled, unit
@@ -29,154 +23,67 @@ mod private {
 ///
 /// A `Pipeline` implementation must define the associated `Output` type, which
 /// is the final result type of a successful execution.
-///
-/// ## Execution sequence
-///
-/// Pipelines are built via [`PipelineBuilder`] and stages are added by
-/// [`PipelineBuilder::add_stage`].
-///
-/// The order of calls to `add_stage` determines the execution order.
-///
-/// Imagine there are three stages that were added in this order: `stage0`,
-/// `stage1`, `stage2`.
-///
-/// When an AST node is entered, stages are executed in the following order:
-///
-/// `stage0.enter(..)` then `stage1.enter(..)` then `stage2.enter(..)`.
-///
-/// Exiting an an AST node invokes the stages in reverse:
-///
-/// `stage2.exit(..)` then `stage1.exit(..)` then `stage0.exit(..)`.
-pub trait Pipeline<'state, 'ast: 'state>: private::Sealed
-where
-    Self: Sized + 'state,
-{
-    /// The value produced from a successful execution.
-    type Output: 'state;
+pub trait Pipeline<'out, 'ast, Context> {
+    type Output: 'out;
 
-    /// Executes and consumes the pipeline, returning `Ok(Self::Output)` or
-    /// `Err(Box<dyn Error>)`.
-    fn execute<N>(self, node: &'ast N) -> Result<Self::Output, Box<dyn Error>>
+    fn execute<N>(&self, node: &'ast N) -> Result<Self::Output, Box<dyn Error>>
     where
         N: Visitable<'ast>,
         &'ast N: Into<SqlNode<'ast>>;
 }
 
-/// Helper for building a `Pipeline` implementation from an arbitrary number of
-/// [`VisitorDispatch`] implementations.
-pub struct PipelineBuilder<'state, 'ast: 'state, Output: 'ast> {
-    stages: Vec<Box<dyn VisitorDispatch<'state, 'ast>>>,
-    output: Output,
+pub trait PipelineDispatchable<'ast, Context>: VisitorDispatch<'ast> + AsMut<Context> {
+    fn enter_with_swapped_context(&mut self, context: &mut Context, node: SqlNode<'ast>) -> EnterControlFlow;
+    fn exit_with_swapped_context(&mut self, context: &mut Context, node: SqlNode<'ast>) -> ExitControlFlow;
 }
 
-impl<'state, 'ast: 'state> Default for PipelineBuilder<'state, 'ast, ()> {
-    fn default() -> Self {
-        Self::new()
+impl<'ast, Context, T> PipelineDispatchable<'ast, Context> for T where T: VisitorDispatch<'ast> + AsMut<Context> {
+    fn enter_with_swapped_context(
+        &mut self,
+        context: &mut Context,
+        node: SqlNode<'ast>,
+    ) -> EnterControlFlow {
+        mem::swap(self.as_mut(), context);
+        let result = VisitorDispatch::enter(self, node.into());
+        mem::swap(context, self.as_mut());
+        result
+    }
+
+    fn exit_with_swapped_context(
+        &mut self,
+        context: &mut Context,
+        node: SqlNode<'ast>,
+    ) -> ExitControlFlow {
+        mem::swap(self.as_mut(), context);
+        let result = VisitorDispatch::exit(self, node.into());
+        mem::swap(context, self.as_mut());
+        result
     }
 }
 
-impl<'state, 'ast: 'state> PipelineBuilder<'state, 'ast, ()> {
-    /// Creates a new `PipelineBuilder`
-    pub fn new() -> Self {
-        PipelineBuilder {
-            stages: Vec::new(),
-            output: (),
-        }
-    }
+pub struct PipelineStages<'c, 'ast, Context> {
+    stages: Vec<Box<dyn PipelineDispatchable<'ast, Context>>>,
+    context: &'c mut Context,
+}
 
-    /// Adds a new stage. The order of calls to `add_stage` determines the order
-    /// of invocation of stages during AST traversal.  See the [`Pipeline`]
-    /// trait documentation for more info.
-    pub fn add_stage<Stage>(self, stage: Stage) -> Self
-    where
-        Stage: 'static + VisitorDispatch<'state, 'ast>,
-    {
-        let mut me = self;
-        me.stages.push(Box::new(stage));
-        me
-    }
-
-    /// Sets the output value (and type) of the pipeline.
-    pub fn output<Output>(self, output: Output) -> PipelineBuilder<'state, 'ast, Output> {
-        PipelineBuilder {
-            stages: self.stages,
-            output,
-        }
+impl<'c, 'ast, Context> PipelineStages<'c, 'ast, Context> {
+    pub fn new(context: &'c mut Context, stages: Vec<Box<dyn PipelineDispatchable<'ast, Context>>>) -> Self {
+        Self { stages, context }
     }
 }
 
-impl<'state, 'ast: 'state, Output> PipelineBuilder<'state, 'ast, Output> {
-    /// Builds a `Pipeline` from the current configuration stored in this builder.
-    ///
-    /// Note that this method does not yet check for pointless configuration
-    /// (such as forgetting to set the output type, or forgetting to add
-    /// stages).
-    ///
-    /// In the future it might be changed to return a `Result` (or prove
-    /// correctness via the type system).
-    pub fn build(self) -> impl Pipeline<'state, 'ast, Output = Output> {
-        ConcretePipeline::new(self.stages, self.output)
-    }
-}
-
-/// Concrete implementation of a `Pipeline`.
-///
-/// When inherent associated types land in stable Rust the trait can be done
-/// away with and this type will be renamed to `Pipeline`.
-struct ConcretePipeline<'state, 'ast: 'state, Output> {
-    output: Output,
-    stages: Vec<Box<dyn VisitorDispatch<'state, 'ast>>>,
-}
-
-impl<'state, 'ast: 'state, Output> ConcretePipeline<'state, 'ast, Output> {
-    /// Takes ownership if the stages and output accessor and returns a new
-    /// `ConcretePipeline`.
-    fn new(stages: Vec<Box<dyn VisitorDispatch<'state, 'ast>>>, output: Output) -> Self {
-        Self { output, stages }
-    }
-}
-
-impl<'state, 'ast: 'state, Output> private::Sealed for ConcretePipeline<'state, 'ast, Output> {}
-
-impl<'state, 'ast: 'state, Output: 'state> Pipeline<'state, 'ast> for ConcretePipeline<'state, 'ast, Output> {
-    type Output = Output;
-
-    fn execute<N: Visitable<'ast>>(self, node: &'ast N) -> Result<Self::Output, Box<dyn Error>>
-    where
-        N: Visitable<'ast>,
-        &'ast N: Into<SqlNode<'ast>>,
-    {
-        let mut dispatcher = PipelineDispatcher {
-            stages: self.stages,
-        };
-        node.accept(&mut dispatcher);
-
-        Ok(self.output)
-    }
-}
-
-/// This struct exists so that the `Pipeline` trait itself does not implement
-/// `VisitorDispatch`, which means the [`Pipeline::execute`] method can
-/// completely encapsulate the pipeline execution which obtains the output and
-/// consumes the pipeline.
-struct PipelineDispatcher<'state, 'ast: 'state> {
-    stages: Vec<Box<dyn VisitorDispatch<'state, 'ast>>>,
-}
-
-// TODO: error handling (need to change the Visitor trait signatures to enable
-// error returns first)
-impl<'state, 'ast: 'state> VisitorDispatch<'state, 'ast> for PipelineDispatcher<'state, 'ast> {
+impl<'c, 'ast, Context> VisitorDispatch<'ast> for PipelineStages<'c, 'ast, Context> {
     fn enter(&mut self, node: SqlNode<'ast>) -> EnterControlFlow {
         for stage in self.stages.iter_mut() {
-            let _ = stage.enter(node.clone());
+            stage.enter_with_swapped_context(&mut self.context, node.clone())?;
         }
-        EnterControlFlow::Continue(Navigation::Visit)
+        Enter::visit()
     }
 
     fn exit(&mut self, node: SqlNode<'ast>) -> ExitControlFlow {
         for stage in self.stages.iter_mut().rev() {
-            let _ = stage.exit(node.clone());
+            stage.exit_with_swapped_context(&mut self.context, node.clone())?;
         }
-        ExitControlFlow::Continue(())
+        Exit::normal()
     }
 }
