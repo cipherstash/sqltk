@@ -31,35 +31,33 @@ pub use sqltk_derive::*;
 
 #[cfg(test)]
 pub mod test {
-    use std::{any::TypeId, cell::RefCell, collections::HashSet, ops::ControlFlow, rc::Rc};
-
-    use derive_more::Constructor;
+    use std::{
+        any::TypeId, collections::HashSet, error::Error, marker::PhantomData, ops::ControlFlow,
+    };
 
     use crate::{self as sqltk};
     use sqltk::{
-        dispatch::Nope,
-        sqlparser::{self, ast, dialect, parser},
-        EnterControlFlow, ExitControlFlow, Navigation, SqlNode, Visitable, Visitor,
-        VisitorDispatch,
+        sqlparser::{ast, dialect, parser},
+        EnterControlFlow, ExitControlFlow, Nav, SqlNode, Visitable, Visitor, VisitorDispatch,
     };
 
-    use sqltk_core::{Pipeline, PipelineBuilder, ReadOnly, ReadWrite};
+    use sqltk_core::{Pipeline, PipelineStages};
 
     #[derive(VisitorDispatch)]
     pub struct Counter {
         pub count: usize,
     }
 
-    impl<'ast> Counter {
+    impl Counter {
         pub fn new(count: usize) -> Self {
             Self { count }
         }
     }
 
-    impl<'state, 'ast: 'state> Visitor<'state, 'ast, ast::Expr> for Counter {
+    impl<'ast> Visitor<'ast, ast::Expr> for Counter {
         fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
             self.count += 1;
-            ControlFlow::Continue(Navigation::Visit)
+            ControlFlow::Continue(Nav::Visit)
         }
     }
 
@@ -106,33 +104,33 @@ pub mod test {
 
         // Types that should _not_ be visited because we know it'll be
         // None/empty with the `sql` expression below.
-        impl<'state, 'ast: 'state> Visitor<'state, 'ast, Option<ast::With>> for Recorder {
+        impl<'ast> Visitor<'ast, Option<ast::With>> for Recorder {
             fn enter(&mut self, _: &'ast Option<ast::With>) -> EnterControlFlow {
                 self.items_enter.push("Option<With>".into());
-                ControlFlow::Continue(Navigation::Visit)
+                ControlFlow::Continue(Nav::Visit)
             }
         }
 
-        impl<'state, 'ast: 'state> Visitor<'state, 'ast, Vec<ast::TableWithJoins>> for Recorder {
+        impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>> for Recorder {
             fn enter(&mut self, _: &'ast Vec<ast::TableWithJoins>) -> EnterControlFlow {
                 self.items_enter.push("Vec<TableWithJoins>".into());
-                ControlFlow::Continue(Navigation::Visit)
+                ControlFlow::Continue(Nav::Visit)
             }
         }
 
         // Types that _should_ be visited because we know they'll be present
         // after parsing the `sql` expression below.
-        impl<'state, 'ast: 'state> Visitor<'state, 'ast, Option<ast::Expr>> for Recorder {
+        impl<'ast> Visitor<'ast, Option<ast::Expr>> for Recorder {
             fn enter(&mut self, _: &'ast Option<ast::Expr>) -> EnterControlFlow {
                 self.items_enter.push("Option<Expr>".into());
-                ControlFlow::Continue(Navigation::Visit)
+                ControlFlow::Continue(Nav::Visit)
             }
         }
 
-        impl<'state, 'ast: 'state> Visitor<'state, 'ast, Vec<ast::SelectItem>> for Recorder {
+        impl<'ast> Visitor<'ast, Vec<ast::SelectItem>> for Recorder {
             fn enter(&mut self, _: &'ast Vec<ast::SelectItem>) -> EnterControlFlow {
                 self.items_enter.push("Vec<SelectItem>".into());
-                ControlFlow::Continue(Navigation::Visit)
+                ControlFlow::Continue(Nav::Visit)
             }
         }
 
@@ -164,10 +162,10 @@ pub mod test {
             pub order_exit: Vec<String>,
         }
 
-        impl<'state, 'ast: 'state> VisitorDispatch<'state, 'ast> for Recorder {
+        impl<'ast> VisitorDispatch<'ast> for Recorder {
             fn enter(&mut self, node: SqlNode<'ast>) -> EnterControlFlow {
                 self.order_enter.push(node.to_string());
-                ControlFlow::Continue(Navigation::Visit)
+                ControlFlow::Continue(Nav::Visit)
             }
 
             fn exit(&mut self, node: SqlNode<'ast>) -> ExitControlFlow {
@@ -210,66 +208,78 @@ pub mod test {
 
     #[test]
     fn basic_pipeline() {
-        #[derive(Debug, Eq, PartialEq)]
+        use derive_more::{AsRef, AsMut};
+
+        #[derive(Debug, Eq, PartialEq, Default)]
         struct ExprsBalanced(bool);
 
-        #[derive(Debug, Eq, PartialEq)]
+        #[derive(Debug, Eq, PartialEq, Default)]
         struct ExprEnterCount(usize);
 
-        #[derive(Debug, Eq, PartialEq)]
+        #[derive(Debug, Eq, PartialEq, Default)]
         struct ExprExitCount(usize);
 
-        #[derive(VisitorDispatch, Constructor)]
-        struct BalancedExprsCheck {
-            expr_enter_count: ReadOnly<ExprEnterCount>,
-            expr_exit_count: ReadOnly<ExprExitCount>,
-            exprs_balanced: ReadWrite<ExprsBalanced>,
+        #[derive(AsMut, AsRef, Default)]
+        struct MyContext {
+            #[as_mut]
+            #[as_ref]
+            expr_enter_count: ExprEnterCount,
+            #[as_mut]
+            #[as_ref]
+            expr_exit_count: ExprExitCount,
+            #[as_mut]
+            #[as_ref]
+            exprs_balanced: ExprsBalanced,
         }
 
-        #[derive(VisitorDispatch, Constructor)]
-        struct ExprCounter {
-            expr_enter_count: ReadWrite<ExprEnterCount>,
-            expr_exit_count: ReadWrite<ExprExitCount>,
+        impl From<MyContext> for ExprsBalanced {
+            fn from(value: MyContext) -> Self {
+                value.exprs_balanced
+            }
         }
 
-        let expr_enter_count = &Rc::new(RefCell::new(ExprEnterCount(0)));
-        let expr_exit_count = &Rc::new(RefCell::new(ExprExitCount(0)));
-        let exprs_balanced = &Rc::new(RefCell::new(ExprsBalanced(true)));
+        #[derive(Default, AsMut)]
+        struct BalancedExprsCheck<Context> {
+            #[as_mut]
+            context: Context,
+        }
 
-        let pipeline = PipelineBuilder::new()
-            .add_stage(BalancedExprsCheck::new(
-                expr_enter_count.into(),
-                expr_exit_count.into(),
-                exprs_balanced.into(),
-            ))
-            .add_stage(ExprCounter::new(
-                expr_enter_count.into(),
-                expr_exit_count.into(),
-            ))
-            .output::<ReadOnly<ExprsBalanced>>(exprs_balanced.into())
-            .build();
+        #[derive(Default, AsMut)]
+        struct ExprCounter<Context> {
+            #[as_mut]
+            context: Context,
+        }
 
-        impl<'state, 'ast: 'state> Visitor<'state, 'ast, ast::Expr> for BalancedExprsCheck {
+        impl<'ast, Context> Visitor<'ast, ast::Expr> for BalancedExprsCheck<Context>
+        where
+            Context: AsMut<ExprsBalanced> + AsRef<ExprEnterCount> + AsRef<ExprExitCount>,
+        {
             fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
-                self.exprs_balanced.get_mut().0 = false;
-                ControlFlow::Continue(Navigation::Visit)
+                *self.context.as_mut() = ExprsBalanced(false);
+                ControlFlow::Continue(Nav::Visit)
             }
 
             fn exit(&mut self, _: &'ast ast::Expr) -> ExitControlFlow {
-                self.exprs_balanced.get_mut().0 =
-                    self.expr_enter_count.get().0 == self.expr_exit_count.get().0;
+                let ExprEnterCount(enter_count) = self.context.as_ref();
+                let ExprExitCount(exit_count) = self.context.as_ref();
+                *self.context.as_mut() = ExprsBalanced(exit_count == enter_count);
                 ControlFlow::Continue(())
             }
         }
 
-        impl<'state, 'ast: 'state> Visitor<'state, 'ast, ast::Expr> for ExprCounter {
+        impl<'ast, Context> Visitor<'ast, ast::Expr> for ExprCounter<Context>
+        where
+            Context: AsMut<ExprEnterCount> + AsMut<ExprExitCount>,
+        {
             fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
-                self.expr_enter_count.get_mut().0 += 1;
-                ControlFlow::Continue(Navigation::Visit)
+                let ExprEnterCount(enter_count) = self.context.as_mut();
+                *enter_count += 1;
+                ControlFlow::Continue(Nav::Visit)
             }
 
             fn exit(&mut self, _: &'ast ast::Expr) -> ExitControlFlow {
-                self.expr_exit_count.get_mut().0 += 1;
+                let ExprExitCount(exit_count) = self.context.as_mut();
+                *exit_count += 1;
                 ControlFlow::Continue(())
             }
         }
@@ -283,10 +293,71 @@ pub mod test {
 
         let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
-        match pipeline.execute(&ast) {
-            Ok(exprs_balanced) => {
-                assert_eq!(*exprs_balanced.get(), ExprsBalanced(true));
+        #[derive(VisitorDispatch, Default, AsMut)]
+        #[as_mut(forward)]
+        struct BalancedExprsCheckWithContext(BalancedExprsCheck<MyContext>);
+
+        impl<'ast, N: Visitable<'ast>> Visitor<'ast, N> for BalancedExprsCheckWithContext
+        where
+            BalancedExprsCheck<MyContext>: Visitor<'ast, N>,
+        {
+            fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
+                Visitor::enter(&mut self.0, node)
             }
+
+            fn exit(&mut self, node: &'ast N) -> ExitControlFlow {
+                Visitor::exit(&mut self.0, node)
+            }
+        }
+
+        #[derive(VisitorDispatch, Default, AsMut)]
+        #[as_mut(forward)]
+        struct ExprCounterWithContext(ExprCounter<MyContext>);
+
+        impl<'ast, N: Visitable<'ast>> Visitor<'ast, N> for ExprCounterWithContext
+        where
+            ExprCounter<MyContext>: Visitor<'ast, N>,
+        {
+            fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
+                Visitor::enter(&mut self.0, node)
+            }
+
+            fn exit(&mut self, node: &'ast N) -> ExitControlFlow {
+                Visitor::exit(&mut self.0, node)
+            }
+        }
+
+        struct MyPipeline<Context>(PhantomData<Context>);
+
+        impl<'out, 'ast: 'out> Pipeline<'out, 'ast, MyContext> for MyPipeline<MyContext> {
+            type Output = ExprsBalanced;
+
+            fn execute<N>(&self, node: &'ast N) -> Result<Self::Output, Box<dyn Error>>
+            where
+                N: Visitable<'ast>,
+                &'ast N: Into<SqlNode<'ast>>,
+            {
+                let mut context = MyContext::default();
+
+                let mut stages = PipelineStages::new(
+                    &mut context,
+                    vec![
+                        Box::new(BalancedExprsCheckWithContext::default()),
+                        Box::new(ExprCounterWithContext::default()),
+                    ],
+                );
+
+                match node.accept(&mut stages) {
+                    ControlFlow::Continue(_) => Ok(context.into()),
+                    ControlFlow::Break(err) => Err(err),
+                }
+            }
+        }
+
+        let pipeline = MyPipeline::<MyContext>(PhantomData);
+
+        match pipeline.execute(&ast) {
+            Ok(exprs_balanced) => assert_eq!(exprs_balanced, ExprsBalanced(true)),
             Err(_) => assert!(false),
         }
     }
@@ -343,12 +414,12 @@ pub mod test {
             node_addrs: HashSet<(TypeId, usize)>,
         }
 
-        impl<'state, 'ast: 'state, T: Visitable<'ast> + 'static> Visitor<'state, 'ast, T> for AddrChecker {
+        impl<'ast, T: Visitable<'ast> + 'static> Visitor<'ast, T> for AddrChecker {
             fn enter(&mut self, node: &'ast T) -> EnterControlFlow {
                 self.count += 1;
                 self.node_addrs
                     .insert((TypeId::of::<T>(), node as *const T as usize));
-                ControlFlow::Continue(Navigation::Visit)
+                ControlFlow::Continue(Nav::Visit)
             }
         }
 

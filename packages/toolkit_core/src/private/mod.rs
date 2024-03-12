@@ -1,18 +1,13 @@
-use std::ops::ControlFlow;
-
-use crate::{EnterControlFlow, Navigation, SqlNode, VisitorDispatch};
+use crate::{Enter, EnterControlFlow, ExitControlFlow, Nav, SqlNode, VisitorDispatch};
 
 #[inline(always)]
-pub fn visit<'state, 'ast: 'state, F>(
-    node: SqlNode<'ast>,
-    visitor: &mut dyn VisitorDispatch<'state, 'ast>,
-    visit_children: F,
-) -> EnterControlFlow
+pub fn visit<'ast, F, VD>(node: SqlNode<'ast>, visitor: &mut VD, visit_children: F) -> EnterControlFlow
 where
-    F: Fn(&mut dyn VisitorDispatch<'state, 'ast>) -> EnterControlFlow,
+    VD: VisitorDispatch<'ast>,
+    F: Fn(&mut VD) -> EnterControlFlow,
 {
     let child_nodes_control_flow = match VisitorDispatch::enter(visitor, node.clone()) {
-        ControlFlow::Continue(Navigation::Visit) => visit_children(visitor),
+        EnterControlFlow::Continue(Nav::Visit) => visit_children(visitor),
         other => other,
     };
 
@@ -20,8 +15,8 @@ where
         child_nodes_control_flow
     } else {
         match VisitorDispatch::exit(visitor, node) {
-            ControlFlow::Continue(()) => child_nodes_control_flow,
-            _ => ControlFlow::Break(()),
+            ExitControlFlow::Continue(()) => child_nodes_control_flow,
+            ExitControlFlow::Break(err) => Enter::error(err),
         }
     }
 }

@@ -10,3 +10,4 @@ sqltk_core = { path = "../toolkit_core" }
 sqltk_derive = { path = "../derive" }
 bigdecimal = { workspace = true }
 derive_more = "0.99.17"
+frunk = "0.4.2"
