@@ -15,12 +15,6 @@ use crate::{
 /// Pipelines therefore facilitate composition of small, decoupled, unit
 /// testable pieces AST analysis functionality.
 ///
-/// Each stage can observe zero or more values produced by other stages. The
-/// underlying mechanism for datasharing is not mandated by the `Pipeline`
-/// trait, but typically stages will share data via the "accessors"
-/// [`crate::ReadOnly`] and [`crate::ReadWrite`] which are wrappers around
-/// an `Rc<RefCell<T>>` which provides opt-in encapsulation.
-///
 /// A `Pipeline` implementation must define the associated `Output` type, which
 /// is the final result type of a successful execution.
 pub trait Pipeline<'out, 'ast, Context> {
