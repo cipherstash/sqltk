@@ -21,65 +21,81 @@ pub use pipeline::*;
 pub mod private;
 
 use private::visit;
-use std::{error::Error, ops::ControlFlow};
+use std::{error::Error, marker::PhantomData, ops::ControlFlow};
 
-#[derive(Clone, Copy)]
-/// Used as the "continue" type in the [`ControlFlow`] value returned by all
-/// visitors.
-pub enum Nav {
-    /// Skip visiting children of the current AST node
-    Skip,
-    /// Visit the children of the current AST node
-    Visit,
+#[derive(Debug)]
+pub enum Break<State> {
+    SkipChildren(State),
+    Abort(State),
+    Err(Box<dyn Error>, State),
 }
 
-/// [`ControlFlow`] type returned by [`Visitor::enter`].
-pub type EnterControlFlow = ControlFlow<Box<dyn Error>, Nav>;
-
-/// [`ControlFlow`] type returned by [`Visitor::exit`].
-pub type ExitControlFlow = ControlFlow<Box<dyn Error>, ()>;
-
-pub struct Enter;
-
-impl Enter {
-    pub fn visit() -> EnterControlFlow {
-        EnterControlFlow::Continue(Nav::Visit)
-    }
-
-    pub fn skip() -> EnterControlFlow {
-        EnterControlFlow::Continue(Nav::Skip)
-    }
-
-    pub fn error(error: Box<dyn Error>) -> EnterControlFlow {
-        EnterControlFlow::Break(error)
+impl<State> PartialEq for Break<State>
+where
+    State: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::SkipChildren(l0), Self::SkipChildren(r0)) => l0 == r0,
+            (Self::Abort(l0), Self::Abort(r0)) => l0 == r0,
+            (Self::Err(_, _), Self::Err(_, _)) => false,
+            _ => false,
+        }
     }
 }
 
-pub struct Exit;
+impl<State> Eq for Break<State> where State: Eq {}
 
-impl Exit {
-    pub fn normal() -> ExitControlFlow {
-        ExitControlFlow::Continue(())
+/// [`ControlFlow`] type alias for values returned by [`Visitor::enter`] &
+/// [`Visitor::exit`].
+pub type VisitorControlFlow<State> = ControlFlow<Break<State>, State>;
+
+pub struct Flow<State>(PhantomData<State>);
+
+impl<State> Flow<State> {
+    pub fn cont(state: State) -> VisitorControlFlow<State> {
+        VisitorControlFlow::Continue(state)
     }
 
-    pub fn error(error: Box<dyn Error>) -> ExitControlFlow {
-        ExitControlFlow::Break(error)
+    pub fn skip(state: State) -> VisitorControlFlow<State> {
+        VisitorControlFlow::Break(Break::SkipChildren(state))
+    }
+
+    pub fn abort(state: State) -> VisitorControlFlow<State> {
+        VisitorControlFlow::Break(Break::Abort(state))
+    }
+
+    pub fn error(error: Box<dyn Error>, state: State) -> VisitorControlFlow<State> {
+        VisitorControlFlow::Break(Break::Err(error, state))
+    }
+
+    pub fn map_continue<F>(flow: VisitorControlFlow<State>, f: F) -> VisitorControlFlow<State>
+    where
+        F: FnOnce(State) -> VisitorControlFlow<State>,
+    {
+        match flow {
+            VisitorControlFlow::Continue(state) => f(state),
+            brk => brk,
+        }
     }
 }
 
 /// Trait for types that visit a specific type of node.
 #[allow(unused_variables)]
-pub trait Visitor<'ast, Node: Visitable<'ast>> {
+pub trait Visitor<'ast, Node, State>
+where
+    Node: Visitable<'ast>,
+{
     /// Called when a node is entered.  The default implementation returns
-    /// [`EnterControlFlow::Continue(Nav::Visit)`].
-    fn enter(&mut self, node: &'ast Node) -> EnterControlFlow {
-        Enter::visit()
+    /// [`VisitorControlFlow::Continue(Nav::Visit)`].
+    fn enter(&self, node: &'ast Node, state: State) -> VisitorControlFlow<State> {
+        Flow::cont(state)
     }
 
     /// Called when a node is exited.  The default implementation returns
-    /// [`ExitControlFlow::Continue(())`].
-    fn exit(&mut self, node: &'ast Node) -> ExitControlFlow {
-        Exit::normal()
+    /// [`VisitorControlFlow::Continue(())`].
+    fn exit(&self, node: &'ast Node, state: State) -> VisitorControlFlow<State> {
+        Flow::cont(state)
     }
 }
 
@@ -91,7 +107,11 @@ pub trait Visitable<'ast> {
     /// Invokes [`VisitorDispatch::enter`] and [`VisitorDispatch::exit`] for
     /// every AST node encountered during traversal with the exception that if
     /// the `VisitorDispatch` returns
-    /// [`EnterControlFlow::Continue(Nav::Skip)`], remaining children of the
+    /// [`VisitorControlFlow::Continue(Nav::Skip)`], remaining children of the
     /// current node will be skipped.
-    fn accept<VD: VisitorDispatch<'ast>>(&'ast self, dispatcher: &mut VD) -> EnterControlFlow;
+    fn accept<State, VD: VisitorDispatch<'ast, State>>(
+        &'ast self,
+        dispatcher: &VD,
+        state: State,
+    ) -> VisitorControlFlow<State>;
 }

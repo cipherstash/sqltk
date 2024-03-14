@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-
 use std::fs;
 
 fn main() -> std::io::Result<()> {

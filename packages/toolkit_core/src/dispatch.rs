@@ -40,13 +40,16 @@
 
 use simple_mermaid::mermaid;
 
-use crate::{Enter, EnterControlFlow, Exit, ExitControlFlow, SqlNode, Visitable, Visitor};
+use crate::{Flow, SqlNode, Visitable, Visitor, VisitorControlFlow};
 
 pub use specialization::*;
 
 /// Defines a simplistic trait specialization mechanism (in lieu of real
 /// specialization landing in stable Rust)
 pub mod specialization {
+
+    use std::marker::PhantomData;
+
     use super::*;
 
     /// Type used by the `VisitorDispatch` derive macro in order to avoid
@@ -65,7 +68,7 @@ pub mod specialization {
     ///
     /// `&mut &mut &mut Dispatch(user_type, node_type).enter(...)` (or `exit(...)`) will
     /// statically resolve to a call to one of the following in this order of
-    /// presidence:
+    /// precedence:
     ///
     /// 1. `ViaVisitor`
     /// 2. `ViaFallback`
@@ -73,101 +76,136 @@ pub mod specialization {
     ///
     /// The following conditions must be true in order for the mechanism to work:
     ///
-    /// - The type arguments `T` & `N` to `Dispatch` must be concrete at the
-    ///   call-site
+    /// - The type arguments `Visitor`, `Node`, `State` to `Dispatch` must be
+    ///   concrete at the call site.
     ///
-    /// - The call must not use less than three levels of `&mut` indirection.
+    /// - The call must not use less than three levels of `&` indirection.
     ///
     /// - The method signatures of `ViaVisitor`, `ViaFallback` and
-    ///   `ViaIgnored` must be identical
-    pub struct Dispatch<'ast, T, N>(pub T, pub &'ast N);
+    ///   `ViaIgnored` must be identical.
+    pub struct Dispatch<'visitor, 'ast, V, Node, State>(
+        pub &'visitor V,
+        pub &'ast Node,
+        pub PhantomData<State>,
+    );
 
-    /// Trait that is implemented for all `Dispatch<T, Node>` where `T:
-    /// Visitor<Node>`.
-    pub trait ViaVisitor<'ast, Node: Visitable<'ast>> {
-        fn enter(&mut self, node: &'ast Node) -> EnterControlFlow;
-
-        fn exit(&mut self, node: &'ast Node) -> ExitControlFlow;
-    }
-
-    /// Trait that is implemented for all types `Dispatch<T, Node>` where `T:
-    /// FallbackVisitor<Node>`. Only invoked when `Dispatch<T, Node>` does
-    /// **not** implement `Visitor<T, Node>.`
-    pub trait ViaFallback<'ast, Node: Visitable<'ast>> {
-        fn enter(&mut self, node: &'ast Node) -> EnterControlFlow;
-
-        fn exit(&mut self, node: &'ast Node) -> ExitControlFlow;
-    }
-
-    /// Trait with a default blanket implementation for `Dispatch<T, Node>` where
-    /// `T` implements neither `Visitor<Node>` nor `FallbackVisitor< Node>`.
-    pub trait ViaIgnored<'ast, Node: Visitable<'ast>> {
-        fn enter(&mut self, node: &'ast Node) -> EnterControlFlow;
-
-        fn exit(&mut self, node: &'ast Node) -> ExitControlFlow;
-    }
-
-    impl<'ast, N: Visitable<'ast>, T> ViaVisitor<'ast, N> for &mut &mut Dispatch<'ast, &mut T, N>
+    /// Forwards calls to a `Visitor` impl if the [`Dispatch`] target implements
+    /// `Visitor<Node, State>`.
+    pub trait ViaVisitor<'ast, Node, State>
     where
-        T: Visitor<'ast, N>,
+        Node: Visitable<'ast>,
     {
-        fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
-            Visitor::enter(self.0, node)
+        fn enter(&self, node: &'ast Node, state: State) -> VisitorControlFlow<State>;
+
+        fn exit(&self, node: &'ast Node, state: State) -> VisitorControlFlow<State>;
+    }
+
+    /// Forwards calls to a `FallbackVisitor` impl if the [`Dispatch`] target
+    /// implements `FallbackVisitor<State>` and the `Dispatch` target *does not*
+    /// implement `Visitor<Node, State>`.
+    ///
+    /// An example use case for a `FallbackVisitor` is to force an error when a
+    /// node type is encountered that you are not expecting.
+    pub trait ViaFallback<'ast, Node, State>
+    where
+        Node: Visitable<'ast>,
+    {
+        fn enter(&self, node: &'ast Node, state: State) -> VisitorControlFlow<State>;
+
+        fn exit(&self, node: &'ast Node, state: State) -> VisitorControlFlow<State>;
+    }
+
+    /// When there is no applicable [`Visitor`] or [`FallbackVisitor`] implementation,
+    /// calls to `enter` and `exit` are handled by a blanket implementation that returns
+    /// `Flow::cont(state)`. This is non-overridable.
+    pub trait ViaIgnored<'ast, Node, State>
+    where
+        Node: Visitable<'ast>,
+    {
+        fn enter(&self, node: &'ast Node, state: State) -> VisitorControlFlow<State>;
+
+        fn exit(&self, node: &'ast Node, state: State) -> VisitorControlFlow<State>;
+    }
+
+    impl<'v, 'ast, N, State, V> ViaVisitor<'ast, N, State> for &&Dispatch<'v, 'ast, V, N, State>
+    where
+        N: Visitable<'ast>,
+        V: Visitor<'ast, N, State>,
+    {
+        fn enter(&self, node: &'ast N, state: State) -> VisitorControlFlow<State> {
+            Visitor::enter(self.0, node, state)
         }
 
-        fn exit(&mut self, node: &'ast N) -> ExitControlFlow {
-            Visitor::exit(self.0, node)
+        fn exit(&self, node: &'ast N, state: State) -> VisitorControlFlow<State> {
+            Visitor::exit(self.0, node, state)
         }
     }
 
-    impl<'ast, N: 'ast + Visitable<'ast>, T> ViaFallback<'ast, N> for &mut Dispatch<'ast, &mut T, N>
+    impl<'v, 'ast, N, V, State> ViaFallback<'ast, N, State> for &Dispatch<'v, 'ast, V, N, State>
     where
-        T: FallbackVisitor<'ast>,
+        N: 'ast + Visitable<'ast>,
+        &'v V: FallbackVisitor<'ast, State>,
         &'ast N: Into<SqlNode<'ast>>,
     {
-        fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
-            FallbackVisitor::fallback_enter(self.0, node.into())
+        fn enter(&self, node: &'ast N, state: State) -> VisitorControlFlow<State> {
+            FallbackVisitor::fallback_enter(&self.0, node.into(), state)
         }
 
-        fn exit(&mut self, node: &'ast N) -> ExitControlFlow {
-            FallbackVisitor::fallback_exit(self.0, node.into())
+        fn exit(&self, node: &'ast N, state: State) -> VisitorControlFlow<State> {
+            FallbackVisitor::fallback_exit(&self.0, node.into(), state)
         }
     }
 
-    impl<'ast, N: 'ast + Visitable<'ast>, T> ViaIgnored<'ast, N> for Dispatch<'ast, &mut T, N> {
-        fn enter(&mut self, _: &'ast N) -> EnterControlFlow {
-            Enter::visit()
+    impl<'v, 'ast, N, V, State> ViaIgnored<'ast, N, State> for Dispatch<'v, 'ast, V, N, State>
+    where
+        N: 'ast + Visitable<'ast>,
+    {
+        fn enter(&self, _: &'ast N, state: State) -> VisitorControlFlow<State> {
+            Flow::cont(state)
         }
 
-        fn exit(&mut self, _: &'ast N) -> ExitControlFlow {
-            Exit::normal()
+        fn exit(&self, _: &'ast N, state: State) -> VisitorControlFlow<State> {
+            Flow::cont(state)
+        }
+    }
+
+    // Due to the way that Rust infers the type arguments for the Dispatch
+    // struct we need a blanket impementation of `&V: Visitor` where `V:
+    // Visitor`.
+    impl<'v, 'ast, N: Visitable<'ast>, V, State> Visitor<'ast, N, State> for &'v V
+    where
+        V: Visitor<'ast, N, State>,
+    {
+        fn enter(&self, node: &'ast N, state: State) -> VisitorControlFlow<State> {
+            Visitor::enter(*self, node, state)
+        }
+
+        fn exit(&self, node: &'ast N, state: State) -> VisitorControlFlow<State> {
+            Visitor::exit(*self, node, state)
         }
     }
 }
 
-/// Implementations of this trait know how to dispatch any AST node type to
-/// a [`Visitor`] impl, a [`FallbackVisitor`] impl or handle with a no-op
-/// (in that order of precedence).
-///
-/// An implementation of this trait is required as an argument to
-/// [`Visitable::accept`].
-///
 /// This trait is typically derived by using `#[derive(VisitorDispatch)]` on a
 /// user-defined type but can be implemented directly.
+///
+/// Derived implementations of this trait know how to dispatch any AST node type
+/// to a [`Visitor`] impl, a [`FallbackVisitor`] impl or handle with a no-op (in
+/// that order of precedence).
 #[allow(unused_variables)]
-pub trait VisitorDispatch<'ast> {
-    fn enter(&mut self, node: SqlNode<'ast>) -> EnterControlFlow;
+pub trait VisitorDispatch<'ast, State> {
+    fn enter(&self, node: SqlNode<'ast>, state: State) -> VisitorControlFlow<State>;
 
-    fn exit(&mut self, node: SqlNode<'ast>) -> ExitControlFlow;
+    fn exit(&self, node: SqlNode<'ast>, state: State) -> VisitorControlFlow<State>;
 }
 
 /// Implementations of this trait will be invoked when `Self` does not implement
-/// `Visitor<'ast, N>` for the wrapped node.
+/// `Visitor` for the wrapped node.
 ///
 /// This can be useful for debugging and general sanity checks when trying to
 /// verify the correctness of your [`Visitor`] implementations.
-pub trait FallbackVisitor<'ast> {
-    fn fallback_enter(&mut self, node: SqlNode<'ast>) -> EnterControlFlow;
+pub trait FallbackVisitor<'ast, State> {
+    fn fallback_enter(&self, node: SqlNode<'ast>, state: State) -> VisitorControlFlow<State>;
 
-    fn fallback_exit(&mut self, node: SqlNode<'ast>) -> ExitControlFlow;
+    fn fallback_exit(&self, node: SqlNode<'ast>, state: State) -> VisitorControlFlow<State>;
 }

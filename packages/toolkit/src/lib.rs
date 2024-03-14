@@ -31,33 +31,22 @@ pub use sqltk_derive::*;
 
 #[cfg(test)]
 pub mod test {
-    use std::{
-        any::TypeId, collections::HashSet, error::Error, marker::PhantomData, ops::ControlFlow,
-    };
+    use std::ops::ControlFlow;
 
     use crate::{self as sqltk};
     use sqltk::{
         sqlparser::{ast, dialect, parser},
-        EnterControlFlow, ExitControlFlow, Nav, SqlNode, Visitable, Visitor, VisitorDispatch,
+        Flow, Pipeline, SqlNode, Visitable, Visitor, VisitorControlFlow, VisitorDispatch,
     };
-
-    use sqltk_core::{Pipeline, PipelineStages};
+    use sqltk_core::{Break, PipelineError};
 
     #[derive(VisitorDispatch)]
-    pub struct Counter {
-        pub count: usize,
-    }
+    #[visitor_dispatch(state = usize)]
+    pub struct Counter;
 
-    impl Counter {
-        pub fn new(count: usize) -> Self {
-            Self { count }
-        }
-    }
-
-    impl<'ast> Visitor<'ast, ast::Expr> for Counter {
-        fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
-            self.count += 1;
-            ControlFlow::Continue(Nav::Visit)
+    impl<'ast> Visitor<'ast, ast::Expr, usize> for Counter {
+        fn enter(&self, _: &'ast ast::Expr, state: usize) -> VisitorControlFlow<usize> {
+            Flow::cont(state + 1)
         }
     }
 
@@ -72,65 +61,80 @@ pub mod test {
 
         let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
-        let mut visitor = Counter::new(0);
-
-        let _result = ast.accept(&mut visitor);
+        let visitor = Counter;
+        let counter: usize = 0;
 
         // The expressions are:
         // In the SELECT projection: a, b, 123, myfunc(6), 6
         // In the WHERE clause: a, b, a > b, b, 100, b < 100, a > b AND b < 100
         // In the ORDER BY clause: a, b
         // Total: 14
-        assert_eq!(14usize, visitor.count);
+        assert_eq!(
+            VisitorControlFlow::Continue(14),
+            ast.accept(&visitor, counter)
+        );
     }
 
     #[test]
     fn fallback() {
         let ast = String::from("OH HAI!");
 
-        let mut visitor = Counter::new(0);
+        let visitor = Counter;
 
-        let _result = ast.accept(&mut visitor);
-
-        assert_eq!(visitor.count, 0usize);
+        assert_eq!(VisitorControlFlow::Continue(0), ast.accept(&visitor, 0));
     }
 
     #[test]
     fn visit_useless() {
-        #[derive(VisitorDispatch, Default)]
-        pub struct Recorder {
-            pub items_enter: Vec<String>,
-        }
+        #[derive(VisitorDispatch)]
+        #[visitor_dispatch(state = Vec<String>)]
+        pub struct Recorder;
 
         // Types that should _not_ be visited because we know it'll be
         // None/empty with the `sql` expression below.
-        impl<'ast> Visitor<'ast, Option<ast::With>> for Recorder {
-            fn enter(&mut self, _: &'ast Option<ast::With>) -> EnterControlFlow {
-                self.items_enter.push("Option<With>".into());
-                ControlFlow::Continue(Nav::Visit)
+        impl<'ast> Visitor<'ast, Option<ast::With>, Vec<String>> for Recorder {
+            fn enter(
+                &self,
+                _: &'ast Option<ast::With>,
+                mut state: Vec<String>,
+            ) -> VisitorControlFlow<Vec<String>> {
+                state.push("Option<With>".into());
+                Flow::cont(state)
             }
         }
 
-        impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>> for Recorder {
-            fn enter(&mut self, _: &'ast Vec<ast::TableWithJoins>) -> EnterControlFlow {
-                self.items_enter.push("Vec<TableWithJoins>".into());
-                ControlFlow::Continue(Nav::Visit)
+        impl<'ast> Visitor<'ast, Vec<ast::TableWithJoins>, Vec<String>> for Recorder {
+            fn enter(
+                &self,
+                _: &'ast Vec<ast::TableWithJoins>,
+                mut state: Vec<String>,
+            ) -> VisitorControlFlow<Vec<String>> {
+                state.push("Vec<TableWithJoins>".into());
+                Flow::cont(state)
             }
         }
 
         // Types that _should_ be visited because we know they'll be present
         // after parsing the `sql` expression below.
-        impl<'ast> Visitor<'ast, Option<ast::Expr>> for Recorder {
-            fn enter(&mut self, _: &'ast Option<ast::Expr>) -> EnterControlFlow {
-                self.items_enter.push("Option<Expr>".into());
-                ControlFlow::Continue(Nav::Visit)
+        impl<'ast> Visitor<'ast, Option<ast::Expr>, Vec<String>> for Recorder {
+            fn enter(
+                &self,
+                _: &'ast Option<ast::Expr>,
+                mut state: Vec<String>,
+            ) -> VisitorControlFlow<Vec<String>> {
+                state.push("Option<Expr>".into());
+                Flow::cont(state)
             }
         }
 
-        impl<'ast> Visitor<'ast, Vec<ast::SelectItem>> for Recorder {
-            fn enter(&mut self, _: &'ast Vec<ast::SelectItem>) -> EnterControlFlow {
-                self.items_enter.push("Vec<SelectItem>".into());
-                ControlFlow::Continue(Nav::Visit)
+        impl<'ast> Visitor<'ast, Vec<ast::SelectItem>, Vec<String>> for Recorder {
+            fn enter(
+                &self,
+                _: &'ast Vec<ast::SelectItem>,
+                mut state: Vec<String>,
+            ) -> VisitorControlFlow<Vec<String>> {
+                state.push("Vec<SelectItem>".into());
+                Flow::cont(state)
             }
         }
 
@@ -140,37 +144,47 @@ pub mod test {
 
         let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
-        let mut visitor = Recorder::default();
+        let visitor = Recorder;
 
-        ast.accept(&mut visitor);
-
-        let mut expected_items = Vec::<String>::new();
-        expected_items.push("Option<Expr>".to_string());
-        expected_items.push("Vec<SelectItem>".to_string());
-
-        let mut visitor_items = visitor.items_enter;
-        visitor_items.sort();
-
-        assert_eq!(visitor_items, expected_items);
+        match ast.accept(&visitor, Vec::<String>::new()) {
+            ControlFlow::Continue(mut result) => {
+                result.sort();
+                let mut expected_items = Vec::<String>::new();
+                expected_items.push("Option<Expr>".to_string());
+                expected_items.push("Vec<SelectItem>".to_string());
+                assert_eq!(result, expected_items)
+            }
+            ControlFlow::Break(_) => assert!(false),
+        }
     }
 
     #[test]
     fn source_node_reachable_fields_are_visited_first() {
         #[derive(Default)]
-        struct Recorder {
-            pub order_enter: Vec<String>,
-            pub order_exit: Vec<String>,
+        struct RecorderContext {
+            order_enter: Vec<String>,
+            order_exit: Vec<String>,
         }
 
-        impl<'ast> VisitorDispatch<'ast> for Recorder {
-            fn enter(&mut self, node: SqlNode<'ast>) -> EnterControlFlow {
-                self.order_enter.push(node.to_string());
-                ControlFlow::Continue(Nav::Visit)
+        struct Recorder;
+
+        impl<'ast> VisitorDispatch<'ast, RecorderContext> for Recorder {
+            fn enter(
+                &self,
+                node: SqlNode<'ast>,
+                mut state: RecorderContext,
+            ) -> VisitorControlFlow<RecorderContext> {
+                state.order_enter.push(node.to_string());
+                Flow::cont(state)
             }
 
-            fn exit(&mut self, node: SqlNode<'ast>) -> ExitControlFlow {
-                self.order_exit.push(node.to_string());
-                ControlFlow::Continue(())
+            fn exit(
+                &self,
+                node: SqlNode<'ast>,
+                mut state: RecorderContext,
+            ) -> VisitorControlFlow<RecorderContext> {
+                state.order_exit.push(node.to_string());
+                Flow::cont(state)
             }
         }
 
@@ -183,104 +197,100 @@ pub mod test {
 
         let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
-        let mut visitor = Recorder::default();
+        let visitor = Recorder;
+        let state = RecorderContext::default();
 
-        ast.accept(&mut visitor);
+        let result = ast.accept(&visitor, state);
 
-        assert_eq!(
-            visitor.order_enter[0..12],
-            [
-                "Vec<Statement>",
-                "Statement",
-                "Box<Query>",
-                "Query",
-                "Box<SetExpr>",
-                "SetExpr",
-                "Box<Select>",
-                "Select",
-                "Vec<TableWithJoins>",
-                "TableWithJoins",
-                "TableFactor",
-                "ObjectName",
-            ]
-        );
+        match result {
+            VisitorControlFlow::Continue(RecorderContext { order_enter, .. }) => {
+                assert_eq!(
+                    order_enter[0..12],
+                    [
+                        "Vec<Statement>",
+                        "Statement",
+                        "Box<Query>",
+                        "Query",
+                        "Box<SetExpr>",
+                        "SetExpr",
+                        "Box<Select>",
+                        "Select",
+                        "Vec<TableWithJoins>",
+                        "TableWithJoins",
+                        "TableFactor",
+                        "ObjectName",
+                    ]
+                );
+            }
+            _ => assert!(false),
+        }
     }
 
     #[test]
     fn basic_pipeline() {
-        use derive_more::{AsRef, AsMut};
-
-        #[derive(Debug, Eq, PartialEq, Default)]
-        struct ExprsBalanced(bool);
-
-        #[derive(Debug, Eq, PartialEq, Default)]
-        struct ExprEnterCount(usize);
-
-        #[derive(Debug, Eq, PartialEq, Default)]
-        struct ExprExitCount(usize);
-
-        #[derive(AsMut, AsRef, Default)]
-        struct MyContext {
-            #[as_mut]
-            #[as_ref]
-            expr_enter_count: ExprEnterCount,
-            #[as_mut]
-            #[as_ref]
-            expr_exit_count: ExprExitCount,
-            #[as_mut]
-            #[as_ref]
-            exprs_balanced: ExprsBalanced,
+        #[derive(Default)]
+        struct MyState {
+            enter_count: usize,
+            exit_count: usize,
+            balanced: bool,
         }
 
-        impl From<MyContext> for ExprsBalanced {
-            fn from(value: MyContext) -> Self {
-                value.exprs_balanced
+        impl MyState {
+            fn inc_enter_count(mut self) -> Self {
+                self.enter_count += 1;
+                self
+            }
+
+            fn inc_exit_count(mut self) -> Self {
+                self.exit_count += 1;
+                self
+            }
+
+            fn update_balanced(mut self) -> Self {
+                self.balanced = self.enter_count == self.exit_count;
+                self
             }
         }
 
-        #[derive(Default, AsMut)]
-        struct BalancedExprsCheck<Context> {
-            #[as_mut]
-            context: Context,
-        }
-
-        #[derive(Default, AsMut)]
-        struct ExprCounter<Context> {
-            #[as_mut]
-            context: Context,
-        }
-
-        impl<'ast, Context> Visitor<'ast, ast::Expr> for BalancedExprsCheck<Context>
-        where
-            Context: AsMut<ExprsBalanced> + AsRef<ExprEnterCount> + AsRef<ExprExitCount>,
-        {
-            fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
-                *self.context.as_mut() = ExprsBalanced(false);
-                ControlFlow::Continue(Nav::Visit)
-            }
-
-            fn exit(&mut self, _: &'ast ast::Expr) -> ExitControlFlow {
-                let ExprEnterCount(enter_count) = self.context.as_ref();
-                let ExprExitCount(exit_count) = self.context.as_ref();
-                *self.context.as_mut() = ExprsBalanced(exit_count == enter_count);
-                ControlFlow::Continue(())
+        impl From<MyState> for bool {
+            fn from(value: MyState) -> Self {
+                value.balanced
             }
         }
 
-        impl<'ast, Context> Visitor<'ast, ast::Expr> for ExprCounter<Context>
-        where
-            Context: AsMut<ExprEnterCount> + AsMut<ExprExitCount>,
-        {
-            fn enter(&mut self, _: &'ast ast::Expr) -> EnterControlFlow {
-                let ExprEnterCount(enter_count) = self.context.as_mut();
-                *enter_count += 1;
-                ControlFlow::Continue(Nav::Visit)
+        #[derive(VisitorDispatch)]
+        #[visitor_dispatch(state = MyState)]
+        struct BalancedExprsCheck;
+
+        #[derive(VisitorDispatch)]
+        #[visitor_dispatch(state = MyState)]
+        struct ExprCounter;
+
+        impl<'ast> Visitor<'ast, ast::Expr, MyState> for BalancedExprsCheck {
+            fn exit(
+                &self,
+                _: &'ast ast::Expr,
+                state: MyState,
+            ) -> VisitorControlFlow<MyState> {
+                Flow::cont(state.update_balanced())
+            }
+        }
+
+        impl<'ast> Visitor<'ast, ast::Expr, MyState> for ExprCounter {
+            fn enter(
+                &self,
+                _: &'ast ast::Expr,
+                state: MyState,
+            ) -> VisitorControlFlow<MyState> {
+                Flow::cont(state.inc_enter_count())
             }
 
-            fn exit(&mut self, _: &'ast ast::Expr) -> ExitControlFlow {
-                let ExprExitCount(exit_count) = self.context.as_mut();
-                *exit_count += 1;
-                ControlFlow::Continue(())
+            fn exit(
+                &self,
+                _: &'ast ast::Expr,
+                state: MyState,
+            ) -> VisitorControlFlow<MyState> {
+                Flow::cont(state.inc_exit_count())
             }
         }
 
@@ -293,140 +303,36 @@ pub mod test {
 
         let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
-        #[derive(VisitorDispatch, Default, AsMut)]
-        #[as_mut(forward)]
-        struct BalancedExprsCheckWithContext(BalancedExprsCheck<MyContext>);
+        struct MyPipeline;
 
-        impl<'ast, N: Visitable<'ast>> Visitor<'ast, N> for BalancedExprsCheckWithContext
-        where
-            BalancedExprsCheck<MyContext>: Visitor<'ast, N>,
-        {
-            fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
-                Visitor::enter(&mut self.0, node)
-            }
+        impl<'out, 'ast: 'out> Pipeline<'out, 'ast, MyState> for MyPipeline {
+            type Output = bool;
 
-            fn exit(&mut self, node: &'ast N) -> ExitControlFlow {
-                Visitor::exit(&mut self.0, node)
-            }
-        }
-
-        #[derive(VisitorDispatch, Default, AsMut)]
-        #[as_mut(forward)]
-        struct ExprCounterWithContext(ExprCounter<MyContext>);
-
-        impl<'ast, N: Visitable<'ast>> Visitor<'ast, N> for ExprCounterWithContext
-        where
-            ExprCounter<MyContext>: Visitor<'ast, N>,
-        {
-            fn enter(&mut self, node: &'ast N) -> EnterControlFlow {
-                Visitor::enter(&mut self.0, node)
-            }
-
-            fn exit(&mut self, node: &'ast N) -> ExitControlFlow {
-                Visitor::exit(&mut self.0, node)
-            }
-        }
-
-        struct MyPipeline<Context>(PhantomData<Context>);
-
-        impl<'out, 'ast: 'out> Pipeline<'out, 'ast, MyContext> for MyPipeline<MyContext> {
-            type Output = ExprsBalanced;
-
-            fn execute<N>(&self, node: &'ast N) -> Result<Self::Output, Box<dyn Error>>
+            fn execute<N>(&self, node: &'ast N) -> Result<Self::Output, PipelineError<MyState>>
             where
                 N: Visitable<'ast>,
                 &'ast N: Into<SqlNode<'ast>>,
             {
-                let mut context = MyContext::default();
+                let state = MyState::default();
 
-                let mut stages = PipelineStages::new(
-                    &mut context,
-                    vec![
-                        Box::new(BalancedExprsCheckWithContext::default()),
-                        Box::new(ExprCounterWithContext::default()),
-                    ],
-                );
+                let stages: &[Box<dyn VisitorDispatch<'ast, MyState>>] =
+                    &[Box::new(BalancedExprsCheck), Box::new(ExprCounter)];
 
-                match node.accept(&mut stages) {
-                    ControlFlow::Continue(_) => Ok(context.into()),
-                    ControlFlow::Break(err) => Err(err),
+                match node.accept(&stages, state) {
+                    ControlFlow::Continue(state) => Ok(state.into()),
+                    ControlFlow::Break(Break::Err(err, state)) => {
+                        Err(PipelineError::Error(err, state))
+                    }
+                    ControlFlow::Break(_) => unimplemented!("Decide how to handle this"),
                 }
             }
         }
 
-        let pipeline = MyPipeline::<MyContext>(PhantomData);
+        let pipeline = MyPipeline;
 
         match pipeline.execute(&ast) {
-            Ok(exprs_balanced) => assert_eq!(exprs_balanced, ExprsBalanced(true)),
+            Ok(exprs_balanced) => assert!(exprs_balanced),
             Err(_) => assert!(false),
         }
-    }
-
-    // This test is a sanity check (not thorough at all - it only tests a small
-    // fragment of grammar) that sqlparser does not reuse nodes in the AST,
-    // as-in two parents point to the same child. Notionally, in memory that
-    // would be OK because it would not be observable by anything traversing the
-    // AST: they would seem like seperate nodes.
-    //
-    // The only time this would be obvservable would be when casting a reference
-    // to a usize and checking if the addresses of two nodes with different
-    // parents and the addresses of the "different" nodes happen to be the same.
-    //
-    // The reason for this test: I'm thinking of ditching the Node abstraction.
-    // It exists in order to assign a unique ID to a sqlparser AST type so that
-    // metadata can be attached.  The problem is that the IDs are assigned at
-    // AST traversal time.
-    //
-    // The implication is that if multiple passes are required and traversal
-    // order changes, the IDs will no longer line up. More realistically, if
-    // some nodes are removed in an edit pass, IDs will definitely no longer
-    // line up and this does not require a change in traversal order.
-    //
-    // What I'm considering building is a AstMetadata type that stores metadata
-    // using a (node address, TypeId) tuple as a key. TypeId is needed in
-    // addition to the address: there are a number of situations where values of
-    // two different types share an address, e.g. the address of a struct and
-    // the address of its first field will share the same memory address.
-    //
-    // Relying on memory addresses being fixed is generally regarded as a Bad
-    // Thing in Rust, because in Rust values will move when they change
-    // ownership and therefore any stored addresses will become invalid.
-    //
-    // But if we can prevent an AST from being moved it is perfectly safe. We
-    // can prevent an AST from being moved by ensuring that the AstMetaData type
-    // takes and retains a reference to the root node of the AST. The borrow
-    // checker will prevent the AST from being moved until the AstMetaData type
-    // is dropped.
-    #[test]
-    fn sqlparser_does_not_reuse_ast_nodes() {
-        let dialect = dialect::GenericDialect {};
-
-        let sql = "SELECT a, b, 123, myfunc(b) \
-                    FROM table_1 \
-                    WHERE a > b AND b < 100 \
-                    ORDER BY a DESC, b";
-
-        let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
-
-        #[derive(VisitorDispatch, Default)]
-        struct AddrChecker {
-            count: usize,
-            node_addrs: HashSet<(TypeId, usize)>,
-        }
-
-        impl<'ast, T: Visitable<'ast> + 'static> Visitor<'ast, T> for AddrChecker {
-            fn enter(&mut self, node: &'ast T) -> EnterControlFlow {
-                self.count += 1;
-                self.node_addrs
-                    .insert((TypeId::of::<T>(), node as *const T as usize));
-                ControlFlow::Continue(Nav::Visit)
-            }
-        }
-
-        let mut addr_checker = AddrChecker::default();
-
-        ast.accept(&mut addr_checker);
-
-        assert_eq!(addr_checker.count, addr_checker.node_addrs.len());
     }
 }

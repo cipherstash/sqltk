@@ -1,22 +1,20 @@
-use crate::{Enter, EnterControlFlow, ExitControlFlow, Nav, SqlNode, VisitorDispatch};
+use crate::{Flow, SqlNode, VisitorControlFlow, VisitorDispatch};
 
 #[inline(always)]
-pub fn visit<'ast, F, VD>(node: SqlNode<'ast>, visitor: &mut VD, visit_children: F) -> EnterControlFlow
+pub fn visit<'ast, F, VD, State>(
+    node: SqlNode<'ast>,
+    visitor: &VD,
+    state: State,
+    visit_children: F,
+) -> VisitorControlFlow<State>
 where
-    VD: VisitorDispatch<'ast>,
-    F: Fn(&mut VD) -> EnterControlFlow,
+    VD: VisitorDispatch<'ast, State>,
+    F: Fn(&VD, State) -> VisitorControlFlow<State>,
 {
-    let child_nodes_control_flow = match VisitorDispatch::enter(visitor, node.clone()) {
-        EnterControlFlow::Continue(Nav::Visit) => visit_children(visitor),
-        other => other,
-    };
-
-    if child_nodes_control_flow.is_break() {
-        child_nodes_control_flow
-    } else {
-        match VisitorDispatch::exit(visitor, node) {
-            ExitControlFlow::Continue(()) => child_nodes_control_flow,
-            ExitControlFlow::Break(err) => Enter::error(err),
-        }
-    }
+    let flow = VisitorDispatch::enter(visitor, node.clone(), state);
+    let flow = Flow::map_continue(flow, |state| visit_children(visitor, state));
+    let flow = Flow::map_continue(flow, |state| {
+        VisitorDispatch::exit(visitor, node.clone(), state)
+    });
+    flow
 }

@@ -1,7 +1,7 @@
-use sqltk_meta::{ContainerNode, PrimitiveNode, SqlParserMetaQuery};
 use super::reachability::Reachability;
 use super::{sqlparser_node_extractor, visitable_trait_impls::VisitableImpl};
 use proc_macro2::TokenStream;
+use sqltk_meta::{ContainerNode, PrimitiveNode, SqlParserMetaQuery};
 use sqltk_syn_helpers::generics;
 
 use inflector::Inflector;
@@ -284,7 +284,6 @@ impl Codegen {
             .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()));
     }
 
-
     pub(crate) fn impl_visitable_for_primitive_nodes(
         &self,
         primitive_nodes: impl IntoIterator<Item = PrimitiveNode>,
@@ -297,19 +296,21 @@ impl Codegen {
             output.append_all(quote! {
                 #[automatically_derived]
                 impl<'ast> crate::Visitable<'ast> for #type_path {
-                    fn accept<VD>(
+                    fn accept<State, VD>(
                         &'ast self,
-                        visitor: &mut VD,
-                    ) -> crate::EnterControlFlow
+                        visitor: &VD,
+                        state: State,
+                    ) -> crate::VisitorControlFlow<State>
                     where
-                        VD: crate::VisitorDispatch<'ast>
+                        VD: crate::VisitorDispatch<'ast, State>
                     {
                         crate::visit(
                             crate::SqlNode::from(self),
                             visitor,
+                            state,
                             #[allow(unused_variables)]
-                            |visitor| {
-                                std::ops::ControlFlow::Continue(crate::Nav::Skip)
+                            |visitor, state| {
+                                crate::Flow::cont(state)
                             }
                         )
                     }
