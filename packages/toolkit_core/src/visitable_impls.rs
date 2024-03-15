@@ -1,14 +1,15 @@
 use crate::*;
 
 impl<'ast, T: Visitable<'ast>> Visitable<'ast> for &'ast T {
-    fn accept<VD>(
+    fn accept<State, VD>(
         &'ast self,
-        visitor: &mut VD
-    ) -> EnterControlFlow
+        visitor: &VD,
+        state: State,
+    ) -> VisitorControlFlow<State>
     where
-        VD: VisitorDispatch<'ast>
+        VD: VisitorDispatch<'ast, State>,
     {
-        (*self).accept(visitor)
+        (*self).accept(visitor, state)
     }
 }
 
@@ -18,21 +19,23 @@ where
     &'ast Self: 'ast + Into<SqlNode<'ast>>,
     VecOf<'ast>: From<&'ast Vec<T>>,
 {
-    fn accept<VD>(
+    fn accept<State, VD>(
         &'ast self,
-        visitor: &mut VD
-    ) -> EnterControlFlow
+        visitor: &VD,
+        state: State,
+    ) -> VisitorControlFlow<State>
     where
-        VD: VisitorDispatch<'ast>
+        VD: VisitorDispatch<'ast, State>,
     {
         if self.is_empty() {
-            ControlFlow::Continue(Nav::Skip)
+            Flow::cont(state)
         } else {
-            visit(SqlNode::from(self), visitor, |visitor| {
+            visit(SqlNode::from(self), visitor, state, |visitor, state| {
+                let mut state = state;
                 for child in self.iter() {
-                    child.accept(visitor)?;
+                    state = child.accept(visitor, state)?;
                 }
-                ControlFlow::Continue(Nav::Visit)
+                Flow::cont(state)
             })
         }
     }
@@ -44,15 +47,16 @@ where
     &'ast Self: 'ast + Into<SqlNode<'ast>>,
     BoxOf<'ast>: From<&'ast Box<T>>,
 {
-    fn accept<VD>(
+    fn accept<State, VD>(
         &'ast self,
-        visitor: &mut VD
-    ) -> EnterControlFlow
+        visitor: &VD,
+        state: State,
+    ) -> VisitorControlFlow<State>
     where
-        VD: VisitorDispatch<'ast>
+        VD: VisitorDispatch<'ast, State>,
     {
-        visit(SqlNode::from(self), visitor, |visitor| {
-            (**self).accept(visitor)
+        visit(SqlNode::from(self), visitor, state, |visitor, state| {
+            (**self).accept(visitor, state)
         })
     }
 }
@@ -63,20 +67,26 @@ where
     &'ast Self: 'ast + Into<SqlNode<'ast>>,
     OptionOf<'ast>: From<&'ast Option<T>>,
 {
-    fn accept<VD>(
+    fn accept<State, VD>(
         &'ast self,
-        visitor: &mut VD
-    ) -> EnterControlFlow
+        visitor: &VD,
+        state: State,
+    ) -> VisitorControlFlow<State>
     where
-        VD: VisitorDispatch<'ast>
+        VD: VisitorDispatch<'ast, State>,
     {
         if self.is_none() {
-            ControlFlow::Continue(Nav::Skip)
+            Flow::cont(state)
         } else {
-            visit(SqlNode::from(self), visitor, |visitor| match self {
-                Some(child) => child.accept(visitor),
-                None => ControlFlow::Continue(Nav::Skip),
-            })
+            visit(
+                SqlNode::from(self),
+                visitor,
+                state,
+                |visitor, state| match self {
+                    Some(child) => child.accept(visitor, state),
+                    None => Flow::cont(state),
+                },
+            )
         }
     }
 }

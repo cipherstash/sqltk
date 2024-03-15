@@ -6,7 +6,7 @@ use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use sqltk_codegen::NODE_LIST;
 use sqltk_meta::{ContainerNode, SqlParserMeta, SqlParserMetaQuery};
 use sqltk_syn_helpers::generics::{self};
-use syn::{parse_macro_input, parse_quote, DeriveInput};
+use syn::{parse::Parse, parse_macro_input, parse_quote, Attribute, DeriveInput, Expr, Type};
 
 /// Derives [`VisitorDispatch`].
 ///
@@ -20,20 +20,38 @@ use syn::{parse_macro_input, parse_quote, DeriveInput};
 /// use derive_more::AsMut;
 ///
 /// #[derive(VisitorDispatch)]
-/// struct ExprCounter  {
-///     counter: usize
-/// }
+/// #[visitor_dispatch(state = usize)]
+/// struct ExprCounter;
 ///
-/// impl<'ast> Visitor<'ast, ast::Expr> for ExprCounter {
-///     fn enter(&mut self, node: &'ast ast::Expr) -> EnterControlFlow {
-///         self.counter += 1usize;
-///         ControlFlow::Continue(Nav::Visit)
+/// impl<'ast> Visitor<'ast, ast::Expr, usize> for ExprCounter {
+///     fn enter(&self, node: &'ast ast::Expr, mut counter: usize) -> VisitorControlFlow<usize> {
+///         counter += 1usize;
+///         Flow::cont(counter)
 ///     }
 /// }
+///
+/// let dialect = dialect::GenericDialect {};
+///
+/// let sql = "SELECT 123;";
+///
+/// let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
+/// let result = ast.accept(&ExprCounter, 0);
+///
+/// assert!(matches!(result, VisitorControlFlow::Continue(1) ));
 /// ```
-#[proc_macro_derive(VisitorDispatch)]
+#[proc_macro_derive(VisitorDispatch, attributes(visitor_dispatch))]
 pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input);
+
+    let args = parse_visitor_dispatch_attribute(&input.attrs);
+
+    let state_ty: Type = match args {
+        Ok(Some(VisitorDispatchArgs { state_ty })) => state_ty,
+        Ok(None) => parse_quote!(()),
+        Err(err) => {
+            return err.into_compile_error().into();
+        }
+    };
 
     let visitor = &input.ident;
     let generics = input.generics;
@@ -41,23 +59,28 @@ pub fn derive_visitor_dispatch(input: TokenStream) -> TokenStream {
 
     let mut modified_generics = generics.clone();
 
-    modified_generics.params.push(parse_quote!('ast__));
+    if !modified_generics
+        .lifetimes()
+        .any(|lt| lt.lifetime.ident == "ast")
+    {
+        modified_generics.params.push(parse_quote!('ast));
+    }
 
     let (impl_generics, _, _) = modified_generics.split_for_impl();
     let (_, ty_generics, where_clause) = generics.split_for_impl();
 
     let mut output = proc_macro2::TokenStream::new();
 
-    let dispatch_enter = dispatch_sql_node(&parse_quote!(node), DispatchFn::Enter);
-    let dispatch_exit = dispatch_sql_node(&parse_quote!(node), DispatchFn::Exit);
+    let dispatch_enter = dispatch_sql_node(state_ty.clone(), DispatchFn::Enter);
+    let dispatch_exit = dispatch_sql_node(state_ty.clone(), DispatchFn::Exit);
 
     output.append_all(quote! {
-        impl #impl_generics #krate::VisitorDispatch<'ast__> for #visitor #ty_generics #where_clause {
-            fn enter(&mut self, node: #krate::SqlNode<'ast__>) -> #krate::EnterControlFlow {
+        impl #impl_generics #krate::VisitorDispatch<'ast, #state_ty> for #visitor #ty_generics #where_clause {
+            fn enter(&self, node: #krate::SqlNode<'ast>, state: #state_ty) -> #krate::VisitorControlFlow<#state_ty> {
                 #dispatch_enter
             }
 
-            fn exit(&mut self, node: #krate::SqlNode<'ast__>) -> #krate::ExitControlFlow {
+            fn exit(&self, node: #krate::SqlNode<'ast>, state: #state_ty) -> #krate::VisitorControlFlow<#state_ty> {
                 #dispatch_exit
             }
         }
@@ -88,6 +111,7 @@ fn resolve_crate() -> proc_macro2::TokenStream {
     }
 }
 
+#[derive(Clone, Copy)]
 enum DispatchFn {
     Enter,
     Exit,
@@ -102,31 +126,63 @@ impl ToTokens for DispatchFn {
     }
 }
 
-fn dispatch_sql_node(node: &Ident, dispatch_fn: DispatchFn) -> proc_macro2::TokenStream {
+struct SqlNodeVariant {
+    match_expr: Expr,
+}
+
+impl SqlNodeVariant {
+    fn new(match_expr: Expr) -> Self {
+        Self { match_expr }
+    }
+}
+
+struct DispatchSqlNodeVariant {
+    sql_node_variant: SqlNodeVariant,
+    state_ty: Type,
+    dispatch_fn: DispatchFn,
+}
+
+impl DispatchSqlNodeVariant {
+    fn new(sql_node_variant: SqlNodeVariant, state_ty: Type, dispatch_fn: DispatchFn) -> Self {
+        Self {
+            sql_node_variant,
+            state_ty,
+            dispatch_fn,
+        }
+    }
+}
+
+impl ToTokens for DispatchSqlNodeVariant {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let Self {
+            sql_node_variant: SqlNodeVariant { match_expr },
+            state_ty,
+            dispatch_fn,
+        } = self;
+
+        tokens.append_all(quote! {
+            #match_expr => (&&&Dispatch::<'_, '_, _, _, #state_ty>(self, node, PhantomData)).#dispatch_fn(node, state)
+        });
+    }
+}
+
+fn dispatch_sql_node(state_ty: Type, dispatch_fn: DispatchFn) -> proc_macro2::TokenStream {
     let mut output = proc_macro2::TokenStream::new();
     let krate = resolve_crate();
-
     let meta = node_meta();
+    let mut sql_node_variants = Vec::<SqlNodeVariant>::new();
 
     let main_nodes = meta.main_nodes();
-    let main_node_variants = main_nodes.iter().map(|(type_path, _)| {
+    sql_node_variants.extend(main_nodes.iter().map(|(type_path, _)| {
         let ident = &type_path.path.segments.last().unwrap().ident;
-        quote! {
-            #ident(node)
-        }
-    });
+        SqlNodeVariant::new(parse_quote!(SqlNode::#ident(node)))
+    }));
 
     let primitive_nodes = meta.primitive_nodes();
-    let primitive_node_variants = primitive_nodes.iter().map(|primitive_node| {
-        let ident = primitive_node.variant_ident();
-        quote! {
-            #ident(node)
-        }
-    });
-
-    let mut vec_of_variants = Vec::<proc_macro2::TokenStream>::new();
-    let mut box_of_variants = Vec::<proc_macro2::TokenStream>::new();
-    let mut option_of_variants = Vec::<proc_macro2::TokenStream>::new();
+    sql_node_variants.extend(primitive_nodes.iter().map(|primitive_node| {
+        let variant_ident = primitive_node.variant_ident().0;
+        SqlNodeVariant::new(parse_quote!(SqlNode::#variant_ident(node)))
+    }));
 
     let container_nodes = meta.container_nodes();
 
@@ -152,33 +208,72 @@ fn dispatch_sql_node(node: &Ident, dispatch_fn: DispatchFn) -> proc_macro2::Toke
                 .join("Of")
         );
 
-        let variant = quote!(#variant_ident(node));
-
         match node {
             ContainerNode::Box(_) => {
-                box_of_variants.push(variant);
+                sql_node_variants.push(SqlNodeVariant::new(
+                    parse_quote!(SqlNode::Box(BoxOf::#variant_ident(node))),
+                ));
             }
             ContainerNode::Vec(_) => {
-                vec_of_variants.push(variant);
+                sql_node_variants.push(SqlNodeVariant::new(
+                    parse_quote!(SqlNode::Vec(VecOf::#variant_ident(node))),
+                ));
             }
             ContainerNode::Option(_) => {
-                option_of_variants.push(variant);
+                sql_node_variants.push(SqlNodeVariant::new(
+                    parse_quote!(SqlNode::Option(OptionOf::#variant_ident(node))),
+                ));
             }
         }
     }
 
+    let dispatch_arms: Vec<DispatchSqlNodeVariant> = sql_node_variants
+        .into_iter()
+        .map(|snv| DispatchSqlNodeVariant::new(snv, state_ty.clone(), dispatch_fn))
+        .collect();
+
     output.append_all(quote! {
         use #krate::dispatch::specialization::{Dispatch, ViaVisitor, ViaFallback, ViaIgnored};
-        use #krate::{BoxOf, OptionOf, VecOf};
+        use #krate::sqlparser::{self};
+        use #krate::bigdecimal::BigDecimal;
+        use #krate::{SqlNode, BoxOf, OptionOf, VecOf};
+        use core::marker::PhantomData;
 
-        match #node {
-            #( SqlNode::#main_node_variants => (&mut &mut &mut Dispatch(self, node)).#dispatch_fn(node),)*
-            #( SqlNode::#primitive_node_variants => (&mut &mut &mut Dispatch(self, node)).#dispatch_fn(node),)*
-            #( SqlNode::Box(BoxOf::#box_of_variants) => (&mut &mut &mut Dispatch(self, node)).#dispatch_fn(node),)*
-            #( SqlNode::Option(OptionOf::#option_of_variants) => (&mut &mut &mut Dispatch(self, node)).#dispatch_fn(node),)*
-            #( SqlNode::Vec(VecOf::#vec_of_variants) => (&mut &mut &mut Dispatch(self, node)).#dispatch_fn(node),)*
+        match node {
+            #( #dispatch_arms, )*
         }
     });
 
     output
+}
+
+mod kw {
+    syn::custom_keyword!(state);
+}
+
+// #[visitor_dispatch(state = State)]
+fn parse_visitor_dispatch_attribute(
+    attrs: &Vec<Attribute>,
+) -> syn::Result<Option<VisitorDispatchArgs>> {
+    for attr in attrs {
+        if attr.path().is_ident("visitor_dispatch") {
+            let args: VisitorDispatchArgs = attr.parse_args()?;
+            return Ok(Some(args));
+        }
+    }
+    Ok(None)
+}
+
+struct VisitorDispatchArgs {
+    state_ty: Type,
+}
+
+impl Parse for VisitorDispatchArgs {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let _: kw::state = input.parse()?;
+        let _: syn::Token![=] = input.parse()?;
+        Ok(Self {
+            state_ty: input.parse()?,
+        })
+    }
 }

@@ -2,11 +2,9 @@
 //! which facilitates the building of arbitrarily sophisticated AST analysis and
 //! transformation workflows from small unit-testable pieces.
 
-use std::{error::Error, mem};
+use std::error::Error;
 
-use crate::{
-    Enter, EnterControlFlow, Exit, ExitControlFlow, SqlNode, Visitable, VisitorDispatch,
-};
+use crate::{Flow, SqlNode, Visitable, VisitorDispatch};
 
 /// A `Pipeline` is a composition of `VisitorDispatch` implementations (called
 /// "stages") that collaborate to process a `sqlparser` AST to produce a
@@ -17,67 +15,99 @@ use crate::{
 ///
 /// A `Pipeline` implementation must define the associated `Output` type, which
 /// is the final result type of a successful execution.
-pub trait Pipeline<'out, 'ast, Context> {
+pub trait Pipeline<'out, 'ast, State> {
     type Output: 'out;
 
-    fn execute<N>(&self, node: &'ast N) -> Result<Self::Output, Box<dyn Error>>
+    fn execute<N>(&self, node: &'ast N) -> Result<Self::Output, PipelineError<State>>
     where
         N: Visitable<'ast>,
         &'ast N: Into<SqlNode<'ast>>;
 }
 
-pub trait PipelineDispatchable<'ast, Context>: VisitorDispatch<'ast> + AsMut<Context> {
-    fn enter_with_swapped_context(&mut self, context: &mut Context, node: SqlNode<'ast>) -> EnterControlFlow;
-    fn exit_with_swapped_context(&mut self, context: &mut Context, node: SqlNode<'ast>) -> ExitControlFlow;
+#[derive(thiserror::Error, Debug)]
+pub enum PipelineError<State> {
+    #[error("Error from Pipeline stage")]
+    Error(Box<dyn Error>, State),
 }
 
-impl<'ast, Context, T> PipelineDispatchable<'ast, Context> for T where T: VisitorDispatch<'ast> + AsMut<Context> {
-    fn enter_with_swapped_context(
-        &mut self,
-        context: &mut Context,
+impl<'v, 'ast, State> VisitorDispatch<'ast, State>
+    for &'v [Box<dyn VisitorDispatch<'ast, State>>]
+{
+    fn enter(
+        &self,
         node: SqlNode<'ast>,
-    ) -> EnterControlFlow {
-        mem::swap(self.as_mut(), context);
-        let result = VisitorDispatch::enter(self, node.into());
-        mem::swap(context, self.as_mut());
-        result
+        mut state: State,
+    ) -> crate::VisitorControlFlow<State> {
+        for dispatch in self.iter() {
+            state = dispatch.enter(node.clone(), state)?;
+        }
+        Flow::cont(state)
     }
 
-    fn exit_with_swapped_context(
-        &mut self,
-        context: &mut Context,
+    fn exit(
+        &self,
         node: SqlNode<'ast>,
-    ) -> ExitControlFlow {
-        mem::swap(self.as_mut(), context);
-        let result = VisitorDispatch::exit(self, node.into());
-        mem::swap(context, self.as_mut());
-        result
-    }
-}
-
-pub struct PipelineStages<'c, 'ast, Context> {
-    stages: Vec<Box<dyn PipelineDispatchable<'ast, Context>>>,
-    context: &'c mut Context,
-}
-
-impl<'c, 'ast, Context> PipelineStages<'c, 'ast, Context> {
-    pub fn new(context: &'c mut Context, stages: Vec<Box<dyn PipelineDispatchable<'ast, Context>>>) -> Self {
-        Self { stages, context }
-    }
-}
-
-impl<'c, 'ast, Context> VisitorDispatch<'ast> for PipelineStages<'c, 'ast, Context> {
-    fn enter(&mut self, node: SqlNode<'ast>) -> EnterControlFlow {
-        for stage in self.stages.iter_mut() {
-            stage.enter_with_swapped_context(&mut self.context, node.clone())?;
+        mut state: State,
+    ) -> crate::VisitorControlFlow<State> {
+        for dispatch in self.iter().rev() {
+            state = dispatch.exit(node.clone(), state)?;
         }
-        Enter::visit()
-    }
-
-    fn exit(&mut self, node: SqlNode<'ast>) -> ExitControlFlow {
-        for stage in self.stages.iter_mut().rev() {
-            stage.exit_with_swapped_context(&mut self.context, node.clone())?;
-        }
-        Exit::normal()
+        Flow::cont(state)
     }
 }
+
+// pub trait PipelineDispatchable<'ast, State: 'ast>: VisitorDispatch<'ast, State> + AsMut<State> {
+//     fn enter_with_swapped_context(&mut self, node: SqlNode<'ast>, state: State) -> VisitorControlFlow<State>;
+//     fn exit_with_swapped_context(&mut self, node: SqlNode<'ast>, state: State) -> VisitorControlFlow<State>;
+// }
+
+// impl<'ast, State: 'ast, T> PipelineDispatchable<'ast, State> for T where T: VisitorDispatch<'ast, State> + AsMut<State> {
+//     fn enter_with_swapped_context(
+//         &mut self,
+//         node: SqlNode<'ast>,
+//         state: State,
+//     ) -> VisitorControlFlow<State> {
+//         // mem::swap(self.as_mut(), state);
+//         let result = VisitorDispatch::enter(self, node.into(), state);
+//         // mem::swap(state, self.as_mut());
+//         result
+//     }
+
+//     fn exit_with_swapped_context(
+//         &mut self,
+//         node: SqlNode<'ast>,
+//         state: State,
+//     ) -> VisitorControlFlow<State> {
+//         // mem::swap(self.as_mut(), state);
+//         let result = VisitorDispatch::exit(self, node.into(), state);
+//         // mem::swap(state, self.as_mut());
+//         result
+//     }
+// }
+
+// pub struct PipelineStages<'c, 'ast, State> {
+//     stages: Vec<Box<dyn PipelineDispatchable<'ast, State>>>,
+//     state: &'c mut State,
+// }
+
+// impl<'c, 'ast, State> PipelineStages<'c, 'ast, State> {
+//     pub fn new(state: &'c mut State, stages: Vec<Box<dyn PipelineDispatchable<'ast, State>>>) -> Self {
+//         Self { stages, state }
+//     }
+// }
+
+// impl<'c, 'ast, State: 'ast> VisitorDispatch<'ast, State> for PipelineStages<'c, 'ast, State> {
+//     fn enter(&self, node: SqlNode<'ast>, state: State) -> VisitorControlFlow<State> {
+//         for stage in self.stages.iter_mut() {
+//             stage.enter_with_swapped_context(node.clone(), state)?;
+//         }
+//         Flow::cont(state)
+//     }
+
+//     fn exit(&self, node: SqlNode<'ast>, state: State) -> VisitorControlFlow<State> {
+//         for stage in self.stages.iter_mut().rev() {
+//             stage.exit_with_swapped_context(node.clone(), state)?;
+//         }
+//         Flow::cont(state)
+//     }
+// }

@@ -29,16 +29,19 @@ impl<'a> ToTokens for VisitableImpl<'a> {
         tokens.append_all(quote! {
             #[automatically_derived]
             impl<'ast> crate::Visitable<'ast> for #path {
-                fn accept<VD>(
+                fn accept<State, VD>(
                     &'ast self,
-                    visitor: &mut VD,
-                ) -> crate::EnterControlFlow
+                    visitor: &VD,
+                    state: State,
+                ) -> crate::VisitorControlFlow<State>
                     where
-                        VD: crate::VisitorDispatch<'ast>
+                        VD: crate::VisitorDispatch<'ast, State>
                 {
-                    crate::visit(crate::SqlNode::from(self), visitor, #[allow(unused_variables)] |visitor| {
+                    crate::visit(crate::SqlNode::from(self), visitor, state, #[allow(unused_variables)] |visitor, state| {
+                        #[allow(unused_mut)]
+                        let mut state = state;
                         #body
-                        ControlFlow::Continue(Nav::Visit)
+                        crate::Flow::cont(state)
                     })
                 }
             }
@@ -71,7 +74,7 @@ impl<'a> VisitableImpl<'a> {
                 for field in fields.iter() {
                     let ident = field.ident.clone().unwrap();
                     tokens.append_all(quote! {
-                        self.#ident.accept(visitor)?;
+                        state = self.#ident.accept(visitor, state)?;
                     });
                 }
             }
@@ -83,7 +86,7 @@ impl<'a> VisitableImpl<'a> {
                 for (idx, _) in fields.iter() {
                     let field_idx = syn::Index::from(*idx);
                     tokens.append_all(quote! {
-                        self.#field_idx.accept(visitor)?;
+                        state = self.#field_idx.accept(visitor, state)?;
                     });
                 }
             }
@@ -103,7 +106,7 @@ impl<'a> VisitableImpl<'a> {
                 for field in fields.iter() {
                     let ident = field.ident.clone().unwrap();
                     tokens.append_all(quote! {
-                        #ident.accept(visitor)?;
+                        state = #ident.accept(visitor, state)?;
                     });
                 }
             }
@@ -115,7 +118,7 @@ impl<'a> VisitableImpl<'a> {
                 for (idx, _) in fields.iter() {
                     let ident = format_ident!("field{}", idx);
                     tokens.append_all(quote! {
-                        #ident.accept(visitor)?;
+                        state = #ident.accept(visitor, state)?;
                     });
                 }
             }
