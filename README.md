@@ -4,7 +4,7 @@
 
 It uses the AST & parser from the [`sqlparser`](https://crates.io/crates/sqlparser) crate but replaces `sqlparser`'s `Visit` and `Visitor` traits with its own.
 
-`sqlparser`'s Visitor does not provide callbacks for every AST node type - which means it is not useful for any workload which requires exhaustive AST analysis. In contrast, the implementation provided by `sqltk` is *exhaustive* - as in, every node in the `sqlparser` abstract syntax tree (AST) is traversed and _reported on_ to a Visitor.
+`sqlparser`'s Visitor does not provide callbacks for every AST node type - which means it is not useful for any workload which requires exhaustive and/or artbitrary AST analysis. In contrast, the implementation provided by `sqltk` is *exhaustive* - as in, every node in the `sqlparser` abstract syntax tree (AST) is traversed and _reported on_ to a Visitor.
 
 Additionally, `sqltk` traverses the AST in an order that is useful for semantic analysis  - specifically any node that might be _referred to_ by another node will be visited _before_ a node that might refer to it.
 
@@ -28,45 +28,11 @@ It does this by running `cargo expand` and consuming the output. Note that `carg
 
 ## A tour of the cargo workspace
 
-The breakdown into multiple crates is for these main reasons:
+### sqltk
 
-1. Limit the impact of full-rebuilds
+The main crate.  Where all logic & non-generated trait & type definitions are maintained. Generated types and traits are consumed from upstream and re-exported.
 
-There is a lot of code generation and expensive analysis of the `sqlparser` crate during the build - if we can avoid that then hacking on this codebase is a much more pleasant experience.
-
-2. Testing derive macros
-
-`sqltk_core` was extracted out of `sqltk` so that `sqltk_derive` could depend on the core and permit `#[derive(VisitorDispatch)]` to be tested, which solves a circular dependency issue.
-
-3. Sharing code between different parts of the build process (keeping things DRY)
-
-### sqltk (packages/toolkit)
-
-The main crate. Publically re-exports the content of `sqltk_core` and `sqltk_derive`.
-
-Does not define any types or traits itself but does contain tests that depend on `#[derive(VisitorDispatch)]`.
-
-### sqltk_core (packages/toolkit_core)
-
-Where all logic & non-generated trait & type definitions are maintained. Generated types and traits are consumed from upstream and re-exported.
-
-### sqltk_derive (packages/derive)
-
-Where the implementation of `#[derive(VisitorDispatch)]` lives.
-
-Depends on `sqltk_core` for testing purposes and `sqltk_meta` to be able to generate `DispatchTable` trait implementations (as part of the `VisitorDispatch` derivation).
-
-Depends on `sqltk_codegen` (for the extracted & serialized `sqlparser` AST type information) and `sqltk_syn_helpers` for some utility functions.
-
-### sqltk_meta (packages/meta)
-
-Defines types that represent information about AST node types (and their fields) from `sqlparser`. Also defines `serde` serializers/deserializers so that the extracted information can be persisted to avoid repeated scanning of the `sqlparser` crate during build time.
-
-### sqltk_syn_helpers (packages/syn_helpers)
-
-Utility functions for manipulating `syn::Type` and `syn::TypePath` values.
-
-### sqltk_codegen (packages/codegen)
+### sqltk-codegen
 
 Analyses `sqlparser` source code and generates:
 
@@ -76,6 +42,10 @@ Analyses `sqlparser` source code and generates:
 
 Depends on `sqltk_meta` for serialization/derialization of data.
 Depends on `sqltk_syn_helpers` for manipulating `syn` types.
+
+### sqltk-analysis
+
+Provides utilities for performing semantic analysis of SQL statements.
 
 ## About
 
