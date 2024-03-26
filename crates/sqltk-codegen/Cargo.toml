@@ -1,0 +1,38 @@
+[package]
+name = "sqltk-codegen"
+resolver = "2"
+description = "Produces AST node metadata from sqlparser types and provides macros to generate Visitor implementations"
+version = "0.1.0"
+edition = "2021"
+authors = ["James Sadler <james@cipherstash.com>"]
+homepage = "https://github.com/cipherstash/sqltk"
+documentation = "https://docs.rs/sqltk/"
+keywords = ["ansi", "sql", "lexer", "parser", "ast", "analyze", "cipherstash"]
+repository = "https://github.com/cipherstash/sqltk"
+license = "Apache-2.0"
+include = [
+    "src/**/*.rs",
+    "Cargo.toml",
+    "LICENSE.TXT",
+]
+
+[lib]
+
+[dependencies]
+Inflector = "0.11.4"
+indoc = "2.0.5"
+lazy-static-include = "3.2.1"
+
+[package.metadata.release]
+# Instruct `cargo release` to not run `cargo publish` locally:
+# https://github.com/sunng87/cargo-release/blob/master/docs/reference.md#config-fields
+# See docs/releasing.md for details.
+publish = false
+
+[build-dependencies]
+syn = { version = "2.0.37", features = ["full", "extra-traits", "printing"] }
+proc-macro2 = { version = "1.0.67", features = ["span-locations"] }
+quote = { version = "1" }
+prettyplease = "0.2.15"
+cargo_metadata = "0.18.0"
+Inflector = "^0.11.4"
