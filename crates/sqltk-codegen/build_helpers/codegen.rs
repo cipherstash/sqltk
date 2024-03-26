@@ -79,7 +79,7 @@ impl Codegen {
         let main_nodes_variants = main_nodes.iter().map(|(type_path, _)| {
             let ident = &type_path.path.segments.last().unwrap().ident;
             let display_ident = ident.to_string();
-            let format_string = format!("{}({})", &display_ident, &display_ident);
+            let format_string = format!("{}", &display_ident);
             quote! {
                 #[display(fmt = #format_string)]
                 #ident(&'ast #type_path),
@@ -115,11 +115,11 @@ impl Codegen {
             let ident = primitive_node.variant_ident();
             let display_ident = ident.to_string();
             let format_string = if display_ident.contains("BigDecimal") {
-                format!("{}({})", &display_ident, "BigDecimal")
+                format!("{}", &display_ident)
             } else if display_ident == "String" {
-                format!("{}({})", &display_ident, "String")
+                format!("{}", &display_ident)
             } else {
-                format!("{}({})", &display_ident, &display_ident.to_lowercase())
+                format!("{}", &display_ident.to_lowercase())
             };
             let type_path = primitive_node.type_path();
             quote! {
@@ -237,10 +237,10 @@ impl Codegen {
 
             let display_ident = variant_ident.to_string();
 
-            let format_string = format!("{}({})", &display_ident, &display_ident);
 
             match node {
                 ContainerNode::Box(_) => {
+                    let format_string = format!("Box<{}>", &display_ident);
                     box_of_variants.append_all(quote! {
                         #[display(fmt = #format_string)]
                         #variant
@@ -248,6 +248,7 @@ impl Codegen {
                     box_of_from_impls.append_all(from_impl);
                 }
                 ContainerNode::Vec(_) => {
+                    let format_string = format!("Vec<{}>", &display_ident);
                     vec_of_variants.append_all(quote! {
                         #[display(fmt = #format_string)]
                         #variant
@@ -255,6 +256,7 @@ impl Codegen {
                     vec_of_from_impls.append_all(from_impl);
                 }
                 ContainerNode::Option(_) => {
+                    let format_string = format!("Option<{}>", &display_ident);
                     option_of_variants.append_all(quote! {
                         #[display(fmt = #format_string)]
                         #variant
@@ -269,29 +271,35 @@ impl Codegen {
             #[doc = indoc! {"
             A `sqlparser` AST node that's a `Box` of something.
             "}]
-            #[derive(Clone, Debug, Eq, PartialEq, Hash, derive_more::Display)]
-            #[display(fmt = "BoxOf::{}")]
+            #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash, derive_more::Display)]
+            #[display(fmt = "{}")]
             pub enum BoxOf<'ast> {
                 #box_of_variants
             }
 
+            impl<'ast> Copy for BoxOf<'ast> {}
+
             #[doc = indoc! {"
             A `sqlparser` AST node that's an `Option` of something.
             "}]
-            #[derive(Clone, Debug, Eq, PartialEq, Hash, derive_more::Display)]
-            #[display(fmt = "OptionOf::{}")]
+            #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash, derive_more::Display)]
+            #[display(fmt = "{}")]
             pub enum OptionOf<'ast> {
                 #option_of_variants
             }
 
+            impl<'ast> Copy for OptionOf<'ast> {}
+
             #[doc = indoc! {"
             A `sqlparser` AST node that's a `Vec` of something.
             "}]
-            #[derive(Clone, Debug, Eq, PartialEq, Hash, derive_more::Display)]
-            #[display(fmt = "VecOf::{}")]
+            #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash, derive_more::Display)]
+            #[display(fmt = "{}")]
             pub enum VecOf<'ast> {
                 #vec_of_variants
             }
+
+            impl<'ast> Copy for VecOf<'ast> {}
 
             #[doc = indoc! {"
             An enum with variants a variant for all `sqlparser` AST node types.
@@ -307,21 +315,23 @@ impl Codegen {
             `Node` implements [`TryFrom`] and [`From`] to support conversion from
             raw node types.
             "}]
-            #[derive(Clone, Debug, Eq, PartialEq, Hash, derive_more::Display)]
-            #[display(fmt = "Node::{}")]
+            #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash, derive_more::Display)]
+            #[display(fmt = "{}")]
             pub enum Node<'ast> {
                 #(#main_nodes_variants)*
                 #(#primitive_nodes_variants)*
 
-                #[display(fmt = "Box({})", _0)]
+                #[display(fmt = "{}", _0)]
                 Box(BoxOf<'ast>),
 
-                #[display(fmt = "Option({})", _0)]
+                #[display(fmt = "{}", _0)]
                 Option(OptionOf<'ast>),
 
-                #[display(fmt = "Vec({})", _0)]
+                #[display(fmt = "{}", _0)]
                 Vec(VecOf<'ast>),
             }
+
+            impl<'ast> Copy for Node<'ast> {}
 
             #box_of_from_impls
             #vec_of_from_impls
@@ -385,13 +395,14 @@ impl Codegen {
             output.append_all(quote! {
                 #[automatically_derived]
                 impl<'ast> crate::Visitable<'ast> for #type_path {
-                    fn accept<State, VD>(
+                    fn accept<State, E, V>(
                         &'ast self,
-                        visitor: &VD,
+                        visitor: &V,
                         state: State,
-                    ) -> crate::VisitorControlFlow<'ast, State>
+                    ) -> crate::VisitorControlFlow<'ast, State, E>
                     where
-                        VD: crate::Visitor<'ast, State>
+                        E: std::error::Error + std::fmt::Debug,
+                        V: crate::Visitor<'ast, State, E>
                     {
                         visit(
                             self,

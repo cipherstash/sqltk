@@ -2,17 +2,17 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::{collections::HashSet, hash::Hash};
 
-use proc_macro2::Span;
-use super::meta::{
-    ContainerNode, PrimitiveNode, SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn,
-};
 use super::generics::{
     compose_generic_type, container_type, decompose_generic_type, expect_type_path,
     is_generic_type, ContainerType,
 };
+use super::meta::{
+    ContainerNode, PrimitiveNode, SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn,
+};
+use proc_macro2::Span;
 use syn::{
-    Attribute, Field, Ident, Item, ItemImpl, ItemMod, ItemUse, Meta, Type, TypePath, UseGlob,
-    UseGroup, UseName, UsePath, UseRename, UseTree, Visibility,
+    parse_quote, Attribute, Field, Ident, Item, ItemImpl, ItemMod, ItemUse, Meta, Type, TypePath,
+    UseGlob, UseGroup, UseName, UsePath, UseRename, UseTree, Visibility,
 };
 
 use quote::quote;
@@ -192,6 +192,10 @@ impl SqlParserAstAnalyser {
         // parse.
 
         self.internal_types.retain(|_, ty| ty.has_visit_impl);
+
+        self.internal_types.remove(&InternalTypePath(parse_quote!(
+            sqlparser::ast::helpers::stmt_create_table::CreateTableBuilder
+        )));
 
         // 2. For every type, go through fields and variants expanding generic
         // types so that they refer to the fully qualified public sqlparser type.

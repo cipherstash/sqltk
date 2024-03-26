@@ -7,7 +7,7 @@
 //!
 //! ## Definitions
 //!
-//! 1. A SOURCE NODE TYPE is one of `ObjectName` or `Table`
+//! 1. A SOURCE NODE TYPE is currently just `Table`
 //! 2. An arbitrary node type is SOURCE NODE REACHABLE if and only if:
 //!    a. is a SOURCE NODE TYPE, or
 //!    b. it directly contains a SOURCE NODE field type of or a variant contains
@@ -19,7 +19,7 @@
 //! ## Explanation
 //!
 //! In the `sqlparser` AST all data identifiers are ultimately introduced by the
-//! `ObjectName` and `Table` types.
+//! `TableFactor` and `Table` types.
 //!
 //! ## The `Expr` type
 //!
@@ -56,7 +56,7 @@ impl Reachability {
     fn new(query: &SqlParserMetaQuery) -> Self {
         Self {
             results: HashMap::new(),
-            source_types: vec![syn::parse_quote!(ObjectName), syn::parse_quote!(Table)],
+            source_types: vec![syn::parse_quote!(Table), syn::parse_quote!(TableFactor)],
             expr_ty: syn::parse_quote!(Expr),
             nodes: query
                 .main_nodes()
@@ -146,15 +146,5 @@ impl Reachability {
 
     fn is_expr(&self, ty: &Ident) -> bool {
         ty == &self.expr_ty
-    }
-}
-
-#[cfg(test)]
-mod test {
-    #[test]
-    fn sort_order_of_bool() {
-        let mut v = vec![true, false];
-        v.sort();
-        assert_eq!(v, vec![false, true]);
     }
 }

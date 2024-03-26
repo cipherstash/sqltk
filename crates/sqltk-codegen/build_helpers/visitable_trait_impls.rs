@@ -1,3 +1,5 @@
+use core::cmp::Reverse;
+// use core::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 
 use proc_macro2::TokenStream;
@@ -29,13 +31,14 @@ impl<'a> ToTokens for VisitableImpl<'a> {
         tokens.append_all(quote! {
             #[automatically_derived]
             impl<'ast> crate::Visitable<'ast> for #path {
-                fn accept<State, VD>(
+                fn accept<State, E, V>(
                     &'ast self,
-                    visitor: &VD,
+                    visitor: &V,
                     state: State,
-                ) -> crate::VisitorControlFlow<'ast, State>
+                ) -> crate::VisitorControlFlow<'ast, State, E>
                     where
-                        VD: crate::Visitor<'ast, State>
+                        E: std::error::Error + std::fmt::Debug,
+                        V: crate::Visitor<'ast, State, E>
                 {
                     visit(self, visitor, state, #[allow(unused_variables)] |visitor, state| {
                         #[allow(unused_mut)]
@@ -68,10 +71,9 @@ impl<'a> VisitableImpl<'a> {
         let mut tokens = TokenStream::new();
         match fields {
             Fields::Named(named) => {
-                let mut fields = named.named.iter().collect::<Vec<_>>();
-                fields.sort_by_cached_key(|f| self.sort_key(f));
-                fields.reverse();
-                for field in fields.iter() {
+                let mut fields = named.named.iter().enumerate().collect::<Vec<_>>();
+                fields.sort_by_key(|(idx, f)| (Reverse(self.field_is_source_node_reachable(f)), *idx));
+                for (_, field) in fields.iter() {
                     let ident = field.ident.clone().unwrap();
                     tokens.append_all(quote! {
                         state = self.#ident.accept(visitor, state)?;
@@ -80,8 +82,7 @@ impl<'a> VisitableImpl<'a> {
             }
             Fields::Unnamed(unnamed) => {
                 let mut fields = unnamed.unnamed.iter().enumerate().collect::<Vec<_>>();
-                fields.sort_by_cached_key(|f| self.sort_key(f.1));
-                fields.reverse();
+                fields.sort_by_key(|(idx, f)| (Reverse(self.field_is_source_node_reachable(f)), *idx));
 
                 for (idx, _) in fields.iter() {
                     let field_idx = syn::Index::from(*idx);
@@ -99,11 +100,10 @@ impl<'a> VisitableImpl<'a> {
         let mut tokens = TokenStream::new();
         match fields {
             Fields::Named(named) => {
-                let mut fields = named.named.iter().collect::<Vec<_>>();
-                fields.sort_by_cached_key(|f| self.sort_key(f));
-                fields.reverse();
+                let mut fields = named.named.iter().enumerate().collect::<Vec<_>>();
+                fields.sort_by_key(|(idx, f)| (Reverse(self.field_is_source_node_reachable(f)), *idx));
 
-                for field in fields.iter() {
+                for (_, field) in fields.iter() {
                     let ident = field.ident.clone().unwrap();
                     tokens.append_all(quote! {
                         state = #ident.accept(visitor, state)?;
@@ -112,8 +112,7 @@ impl<'a> VisitableImpl<'a> {
             }
             Fields::Unnamed(unnamed) => {
                 let mut fields = unnamed.unnamed.iter().enumerate().collect::<Vec<_>>();
-                fields.sort_by_cached_key(|f| self.sort_key(f.1));
-                fields.reverse();
+                fields.sort_by_key(|(idx, f)| (Reverse(self.field_is_source_node_reachable(f)), *idx));
 
                 for (idx, _) in fields.iter() {
                     let ident = format_ident!("field{}", idx);
@@ -188,11 +187,10 @@ impl<'a> VisitableImpl<'a> {
         let ty: TypePath = syn::parse_quote!(#ty);
         let ty = generics::innermost_generic_type(&ty);
 
-        eprintln!("cargo:message=GEN {}", (&ty).into_token_stream());
         ty.path.segments.last().unwrap().ident.clone()
     }
 
-    fn sort_key(&self, field: &syn::Field) -> bool {
+    fn field_is_source_node_reachable(&self, field: &syn::Field) -> bool {
         let normalised = self.normalise_ty(&field.ty);
         if self.primitive_nodes.contains(&normalised) {
             false

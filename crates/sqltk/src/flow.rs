@@ -3,16 +3,20 @@
 use super::*;
 
 /// Shorthand for returning a  `VisitorControlFlow::Continue(state)`
-pub fn cont<'ast, State>(state: State) -> VisitorControlFlow<'ast, State> {
+pub fn cont<'ast, State, E>(state: State) -> VisitorControlFlow<'ast, State, E>
+where
+    E: Error + Debug,
+{
     VisitorControlFlow::Continue(state)
 }
 
 /// Shorthand for modifying state and then returning a
 /// `VisitorControlFlow::Continue(state)`
-pub fn modify_state<'ast, State, F, N>(
+pub fn modify_state<'ast, State, E, F, N>(
     f: F,
-) -> impl Fn(&'ast N, State) -> VisitorControlFlow<'ast, State>
+) -> impl Fn(&'ast N, State) -> VisitorControlFlow<'ast, State, E>
 where
+    E: Error + Debug,
     N: Visitable<'ast>,
     F: Fn(&mut State),
 {
@@ -24,38 +28,104 @@ where
 
 /// Shorthand for returning a
 /// `VisitorControlFlow::Break(Break::SkipChildren(state))`
-pub fn skip<'ast, State>(state: State) -> VisitorControlFlow<'ast, State> {
+pub fn skip<'ast, State, E>(state: State) -> VisitorControlFlow<'ast, State, E>
+where
+    E: Error + Debug,
+{
     VisitorControlFlow::Break(Break::SkipChildren(state))
 }
 
 /// Shorthand for returning a
 /// `VisitorControlFlow::Break(Break::Abort(state))`
-pub fn abort<'ast, State>(state: State) -> VisitorControlFlow<'ast, State> {
+pub fn abort<'ast, State, E>(state: State) -> VisitorControlFlow<'ast, State, E>
+where
+    E: Error + Debug,
+{
     VisitorControlFlow::Break(Break::Finished(state))
 }
 
 /// Shorthand for returning a
 /// `VisitorControlFlow::Break(Break::Err(Box::new(error), state))`
-pub fn error<'ast, State, E: Error + 'ast>(
-    error: E,
-    state: State,
-) -> VisitorControlFlow<'ast, State> {
-    VisitorControlFlow::Break(Break::Err(Box::new(error), state))
+pub fn error<'ast, State, E: 'ast>(error: E, state: State) -> VisitorControlFlow<'ast, State, E>
+where
+    E: Error + Debug,
+{
+    VisitorControlFlow::Break(Break::Err(error, state))
 }
 
-/// Combinator to chain calls to [`Visitor::enter`] or [`Visitor::exit`]
+/// Chains calls to [`Visitor::enter`] or [`Visitor::exit`]
 /// when the previous invocation returned
 /// `VisitorControlFlow::Continue(state)`, otherwise immediately returns the
 /// break value.
-pub fn map_continue<'ast, State, F>(
-    flow: VisitorControlFlow<'ast, State>,
+pub fn map_continue<'ast, State, E, F>(
+    flow: VisitorControlFlow<'ast, State, E>,
     visit_next: F,
-) -> VisitorControlFlow<'ast, State>
+) -> VisitorControlFlow<'ast, State, E>
 where
-    F: FnOnce(State) -> VisitorControlFlow<'ast, State>,
+    E: Error + Debug,
+    F: FnOnce(State) -> VisitorControlFlow<'ast, State, E>,
 {
     match flow {
         VisitorControlFlow::Continue(state) => visit_next(state),
         brk => brk,
+    }
+}
+
+/// Converts errors from one type to another if there is an error contained in
+/// the [`VisitorControlFlow`] value, otherwise returns the value unchanged.
+pub fn map_break_err<'ast, State, ErrFrom, ErrInto>(
+    flow: VisitorControlFlow<'ast, State, ErrFrom>,
+) -> VisitorControlFlow<'ast, State, ErrInto>
+where
+    ErrFrom: Error + Debug + Into<ErrInto>,
+    ErrInto: Error + Debug,
+{
+    match flow {
+        VisitorControlFlow::Break(Break::Err(err_from, state)) => {
+            VisitorControlFlow::Break(Break::Err(err_from.into(), state))
+        }
+        VisitorControlFlow::Break(Break::SkipChildren(state)) => {
+            VisitorControlFlow::Break(Break::SkipChildren(state))
+        }
+        VisitorControlFlow::Break(Break::Finished(state)) => {
+            VisitorControlFlow::Break(Break::Finished(state))
+        }
+        VisitorControlFlow::Continue(other) => VisitorControlFlow::Continue(other),
+    }
+}
+
+pub mod infallible {
+    use super::*;
+
+    /// Shorthand for returning a  `VisitorControlFlow::Continue(state)`
+    pub fn cont<'ast, State>(state: State) -> VisitorControlFlow<'ast, State, Infallible> {
+        VisitorControlFlow::Continue(state)
+    }
+
+    /// Shorthand for modifying state and then returning a
+    /// `VisitorControlFlow::Continue(state)`
+    pub fn modify_state<'ast, State, F, N>(
+        f: F,
+    ) -> impl Fn(&'ast N, State) -> VisitorControlFlow<'ast, State, Infallible>
+    where
+        N: Visitable<'ast>,
+        F: Fn(&mut State),
+    {
+        move |_: &'ast N, mut state: State| {
+            f(&mut state);
+            cont(state)
+        }
+    }
+
+    /// Shorthand for returning a
+    /// `VisitorControlFlow::Break(Break::SkipChildren(state))`
+    pub fn skip<'ast, State>(state: State) -> VisitorControlFlow<'ast, State, Infallible> {
+        VisitorControlFlow::Break(Break::SkipChildren(state))
+    }
+
+    /// Shorthand for returning a
+    /// `VisitorControlFlow::Break(Break::Abort(state))`
+    pub fn abort<'ast, State>(state: State) -> VisitorControlFlow<'ast, State, Infallible> {
+        VisitorControlFlow::Break(Break::Finished(state))
     }
 }

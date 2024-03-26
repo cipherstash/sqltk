@@ -1,4 +1,5 @@
-use core::{any::Any, marker::PhantomData};
+use core::{any::Any, fmt::Debug, marker::PhantomData};
+use std::error::Error;
 
 use crate::{flow, Node, Visitable, Visitor, VisitorControlFlow};
 
@@ -7,23 +8,25 @@ use crate::{flow, Node, Visitable, Visitor, VisitorControlFlow};
 /// This type is used by generated `Visitable` implementations and is not
 /// intended for direct use.
 #[doc(hidden)]
-pub struct DowncastDispatcher<'ast, DowncastTo, State, FnEnter, FnExit>
+pub struct DowncastDispatcher<'ast, DowncastTo, State, E, FnEnter, FnExit>
 where
+    E: Error + Debug,
     DowncastTo: 'ast + Visitable<'ast>,
-    FnEnter: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State>,
-    FnExit: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State>,
+    FnEnter: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State, E>,
+    FnExit: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State, E>,
 {
     enter_fn: FnEnter,
     exit_fn: FnExit,
     _phantom: PhantomData<&'ast (DowncastTo, State)>,
 }
 
-impl<'ast, DowncastTo, State, FnEnter, FnExit>
-    DowncastDispatcher<'ast, DowncastTo, State, FnEnter, FnExit>
+impl<'ast, DowncastTo, State, E, FnEnter, FnExit>
+    DowncastDispatcher<'ast, DowncastTo, State, E, FnEnter, FnExit>
 where
+    E: Error + Debug,
     DowncastTo: 'ast + Visitable<'ast>,
-    FnEnter: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State>,
-    FnExit: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State>,
+    FnEnter: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State, E>,
+    FnExit: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State, E>,
 {
     pub fn new(enter_fn: FnEnter, exit_fn: FnExit) -> Self {
         Self {
@@ -34,18 +37,19 @@ where
     }
 }
 
-impl<'ast, DowncastTo, State, FnEnter, FnExit> Visitor<'ast, State>
-    for DowncastDispatcher<'ast, DowncastTo, State, FnEnter, FnExit>
+impl<'ast, DowncastTo, State, E, FnEnter, FnExit> Visitor<'ast, State, E>
+    for DowncastDispatcher<'ast, DowncastTo, State, E, FnEnter, FnExit>
 where
+    E: Error + Debug,
     DowncastTo: 'static + Visitable<'ast>,
-    FnEnter: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State>,
-    FnExit: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State>,
+    FnEnter: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State, E>,
+    FnExit: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State, E>,
 {
     fn enter<N: 'static + Visitable<'ast>>(
         &self,
         node: &'ast N,
         state: State,
-    ) -> VisitorControlFlow<'ast, State> {
+    ) -> VisitorControlFlow<'ast, State, E> {
         match (node as &dyn Any).downcast_ref::<DowncastTo>() {
             Some(node) => (self.enter_fn)(node, state),
             None => flow::cont(state),
@@ -56,7 +60,7 @@ where
         &self,
         node: &'ast N,
         state: State,
-    ) -> VisitorControlFlow<'ast, State> {
+    ) -> VisitorControlFlow<'ast, State, E> {
         match (node as &dyn Any).downcast_ref::<DowncastTo>() {
             Some(node) => (self.exit_fn)(node, state),
             None => flow::cont(state),
@@ -65,14 +69,13 @@ where
 }
 
 ///
-pub(crate) fn ignore<'ast, State,  N>(
-) -> impl Fn(&'ast N, State) -> VisitorControlFlow<'ast, State>
+pub(crate) fn ignore<'ast, State, E, N>(
+) -> impl Fn(&'ast N, State) -> VisitorControlFlow<'ast, State, E>
 where
+    E: Error + Debug,
     N: Visitable<'ast>,
 {
-    |_: &'ast N, state: State| {
-        flow::cont(state)
-    }
+    |_: &'ast N, state: State| flow::cont(state)
 }
 
 /// Module of [`Visitor`]-building functions that will match any AST nodes
@@ -83,56 +86,67 @@ pub mod AnyNode {
 
     /// Returns a [`Visitor`] impl whose `enter` method will invoke
     /// `enter_fn` for nodes of any type.
-    pub fn on_enter<'ast, State: 'ast, FnEnter>(enter_fn: FnEnter) -> impl Visitor<'ast, State>
+    pub fn on_enter<'ast, State: 'ast, E, FnEnter>(
+        enter_fn: FnEnter,
+    ) -> impl Visitor<'ast, State, E>
     where
-        FnEnter: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State>,
+        E: Error + Debug,
+        FnEnter: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
     {
         AnyNode::on_enter_exit(enter_fn, AnyNode::ignore())
     }
 
     /// Returns a [`Visitor`] impl whose `exit` method will invoke
     /// `exit_fn` for nodes of any type.
-    pub fn on_exit<'ast, State: 'ast, FnExit>(exit_fn: FnExit) -> impl Visitor<'ast, State>
+    pub fn on_exit<'ast, State: 'ast, E, FnExit>(
+        exit_fn: FnExit,
+    ) -> impl Visitor<'ast, State, E>
     where
-        FnExit: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State>,
+        E: Error + Debug,
+        FnExit: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
     {
         AnyNode::on_enter_exit(AnyNode::ignore(), exit_fn)
     }
 
     /// Returns a [`Visitor`] impl whose `enter` & `exit` methods will
     /// invoke `enter_fn` & `exit_fn` for nodes of any type.
-    pub fn on_enter_exit<'ast, State: 'ast, FnEnter, FnExit>(
+    pub fn on_enter_exit<'ast, State: 'ast, E, FnEnter, FnExit>(
         enter_fn: FnEnter,
         exit_fn: FnExit,
-    ) -> impl Visitor<'ast, State>
+    ) -> impl Visitor<'ast, State, E>
     where
-        FnEnter: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State>,
-        FnExit: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State>,
+        E: Error + Debug,
+        FnEnter: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
+        FnExit: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
     {
-        AnyNodeDispatcher::<'ast, State, _, _>::new(enter_fn, exit_fn)
+        AnyNodeDispatcher::<'ast, State, E, _, _>::new(enter_fn, exit_fn)
     }
 
-    fn ignore<'ast, State: 'ast>() -> impl Fn(Node, State) -> VisitorControlFlow<'ast, State> {
-        |_: Node, state: State| {
-            flow::cont(state)
-        }
+    fn ignore<'ast, State: 'ast, E>(
+    ) -> impl Fn(Node, State) -> VisitorControlFlow<'ast, State, E>
+    where
+        E: Error + Debug,
+    {
+        |_: Node, state: State| flow::cont(state)
     }
 }
 
-struct AnyNodeDispatcher<'ast, State, FnEnter, FnExit>
+struct AnyNodeDispatcher<'ast, State, E, FnEnter, FnExit>
 where
-    FnEnter: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State>,
-    FnExit: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State>,
+    E: Error + Debug,
+    FnEnter: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
+    FnExit: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
 {
     enter_fn: FnEnter,
     exit_fn: FnExit,
     _phantom: PhantomData<&'ast State>,
 }
 
-impl<'ast, State, FnEnter, FnExit> AnyNodeDispatcher<'ast, State, FnEnter, FnExit>
+impl<'ast, State, E, FnEnter, FnExit> AnyNodeDispatcher<'ast, State, E, FnEnter, FnExit>
 where
-    FnEnter: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State>,
-    FnExit: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State>,
+    E: Error + Debug,
+    FnEnter: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
+    FnExit: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
 {
     pub fn new(enter_fn: FnEnter, exit_fn: FnExit) -> Self {
         Self {
@@ -143,13 +157,18 @@ where
     }
 }
 
-impl<'ast, State, FnEnter, FnExit> Visitor<'ast, State>
-    for AnyNodeDispatcher<'ast, State, FnEnter, FnExit>
+impl<'ast, State, E, FnEnter, FnExit> Visitor<'ast, State, E>
+    for AnyNodeDispatcher<'ast, State, E, FnEnter, FnExit>
 where
-    FnEnter: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State>,
-    FnExit: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State>,
+    E: Error + Debug,
+    FnEnter: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
+    FnExit: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
 {
-    fn enter<N>(&self, node: &'ast N, state: State) -> VisitorControlFlow<'ast, State>
+    fn enter<N>(
+        &self,
+        node: &'ast N,
+        state: State,
+    ) -> VisitorControlFlow<'ast, State, E>
     where
         N: 'static + Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,
@@ -157,7 +176,11 @@ where
         (self.enter_fn)(node.into(), state)
     }
 
-    fn exit<N>(&self, node: &'ast N, state: State) -> VisitorControlFlow<'ast, State>
+    fn exit<N>(
+        &self,
+        node: &'ast N,
+        state: State,
+    ) -> VisitorControlFlow<'ast, State, E>
     where
         N: 'static + Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,

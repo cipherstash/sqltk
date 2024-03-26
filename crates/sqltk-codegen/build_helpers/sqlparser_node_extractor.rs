@@ -49,7 +49,7 @@ pub fn extract(sqlparser_features: Vec<String>) -> SqlParserMeta {
         .expect("Failed to execute command");
 
     let syntax_tree = syn::parse_file(
-        &String::from_utf8(output.stdout).expect("Could not parse output of cargo-expand as UTF08"),
+        &String::from_utf8(output.stdout).expect("Could not parse output of cargo-expand as UTF8"),
     )
     .expect("Failed to parse sqlparser source code");
 
