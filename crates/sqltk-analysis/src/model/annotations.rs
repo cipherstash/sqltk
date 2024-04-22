@@ -26,7 +26,7 @@ use std::collections::HashMap;
 /// as the `Target` so it can be used as a regular `HashMap`.
 ///
 /// There is a blanket implementation for [From] for [AnnotationKey] for all
-/// [`Visitable`](crate::Visitable).
+/// [`Visitable`](sqltk::Visitable).
 ///
 /// # Example
 ///

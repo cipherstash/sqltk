@@ -10,11 +10,11 @@
 //!    types and container types (`Vec`, `Option` & `Box`)) and primitives.
 //!
 //! 2. Support for annotating AST nodes with user-defined metadata during
-//!    traversal (see: [`sqltk_analysis`])
+//!    traversal (see: [`sqltk-analysis`])
 //!
 //! 4. An API for composing [`Visitor`] implementations to facilitate complex
 //!    SQL analysis scenarios made from small, unit testable pieces
-//!    (see: [`sqltk_analysis`]).
+//!    (see: [`sqltk-analysis`]).
 //!
 //! ## Installation
 //!
