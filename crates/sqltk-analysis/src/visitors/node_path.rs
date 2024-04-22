@@ -177,7 +177,7 @@ impl<'ast> NodePathOps<'ast> for NodePath<'ast> {
     }
 
     fn get_node_path(&self) -> &NodePath<'ast> {
-        &self
+        self
     }
 }
 

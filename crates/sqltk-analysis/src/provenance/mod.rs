@@ -106,7 +106,7 @@ mod tests {
                     )))
                 );
             }
-            Err(err) => assert!(false, "{:?}", err),
+            Err(err) => panic!("{:?}", err),
         };
     }
 
@@ -155,7 +155,7 @@ mod tests {
                     )))
                 );
             }
-            Err((err, _state)) => assert!(false, "{:?}", err),
+            Err((err, _state)) => panic!("{:?}", err),
         };
     }
 
@@ -199,7 +199,7 @@ mod tests {
                     from
                         todo_list_items
                 ) as tli on tli.owner_id = u.id;
-            "#
+            "#,
         );
 
         let state = ProvenanceState {
@@ -239,7 +239,7 @@ mod tests {
                     )))
                 );
             }
-            Err((err, _state)) => assert!(false, "{:?}", err),
+            Err((err, _state)) => panic!("{:?}", err),
         };
     }
 }

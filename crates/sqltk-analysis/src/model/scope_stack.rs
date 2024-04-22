@@ -10,7 +10,7 @@ use crate::{
 };
 use sqlparser::ast::Ident;
 
-use core::{ops::{Deref, DerefMut}};
+use core::ops::{Deref, DerefMut};
 use std::{collections::BTreeSet, mem};
 
 /// A stack of [`Scope`] structs.
@@ -22,7 +22,7 @@ pub struct ScopeStack {
     top: Scope,
 }
 
-impl<'ast> Deref for ScopeStack {
+impl Deref for ScopeStack {
     type Target = Scope;
 
     fn deref(&self) -> &Self::Target {
@@ -30,7 +30,7 @@ impl<'ast> Deref for ScopeStack {
     }
 }
 
-impl<'ast> DerefMut for ScopeStack {
+impl DerefMut for ScopeStack {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.top
     }
@@ -80,15 +80,15 @@ pub struct Scope {
 impl Scope {
     /// Expand usage of a wildcard into the actual concrete table-columns it stands for.
     pub fn resolve_wildcard(&self) -> Result<Vec<Source>, ResolutionError> {
-        if self.bindings.len() == 0 {
-            return Err(ResolutionError::InvariantFailed(
+        if self.bindings.is_empty() {
+            Err(ResolutionError::InvariantFailed(
                 InvariantFailedError::EmptyScope,
-            ));
+            ))
         } else {
             let resolved: Vec<Source> = self
                 .bindings
                 .iter()
-                .map(|binding| match binding {
+                .flat_map(|binding| match binding {
                     Relation::TableLike(Table { columns, name }, _alias) => columns
                         .iter()
                         .map(|c| {
@@ -100,7 +100,6 @@ impl Scope {
                         .collect::<Vec<_>>(),
                     Relation::SubQuery(_subquery, _columns, _alias) => unimplemented!(),
                 })
-                .flatten()
                 .collect();
 
             Ok(resolved)
@@ -110,15 +109,15 @@ impl Scope {
     /// Expand usage of a qualified wildcard into the actual concrete table-columns it stands for.
     pub fn resolve_qualified_wildcard(
         &self,
-        idents: &Vec<Ident>,
+        idents: &[Ident],
     ) -> Result<Vec<Source>, ResolutionError> {
         if idents.len() > 1 {
             unimplemented!()
         }
-        if self.bindings.len() == 0 {
-            return Err(ResolutionError::InvariantFailed(
+        if self.bindings.is_empty() {
+            Err(ResolutionError::InvariantFailed(
                 InvariantFailedError::EmptyScope,
-            ));
+            ))
         } else {
             let resolved: Option<Vec<Source>> =
                 self.bindings.iter().find_map(|binding| match binding {
@@ -162,7 +161,7 @@ impl Scope {
                         None
                     }
                 }
-                Relation::SubQuery(query, projection_sources, _alias) => projection_sources
+                Relation::SubQuery(_query, projection_sources, _alias) => projection_sources
                     .iter()
                     .find_map(|(col_ref, source)| match col_ref {
                         ColumnRef::Identifier(id) => {
@@ -202,7 +201,7 @@ impl Scope {
                         table
                             .columns
                             .iter()
-                            .find(|c| c.name == second_part.to_string())
+                            .find(|c| c.name == second_part)
                             .map(|_| {
                                 Source::single(SourceItem::TableColumn(TableColumn {
                                     table: table.name.clone(),
@@ -233,8 +232,7 @@ impl Scope {
             })
             .ok_or(ResolutionError::NoSuchCompoundIdentifier(format!(
                 "{}.{}",
-                idents[0].to_string(),
-                idents[1].to_string()
+                idents[0], idents[1]
             )))
     }
 
@@ -248,13 +246,13 @@ impl Scope {
                 Relation::TableLike(table, alias) => Err(ResolutionError::AlreadyInScope(format!(
                     "Table {} (as {})",
                     &table.name,
-                    &alias.map(|a| a).unwrap_or("UNALIASED".to_owned())
+                    &alias.unwrap_or("UNALIASED".to_owned())
                 ))),
                 Relation::SubQuery(subquery, _, alias) => {
                     Err(ResolutionError::AlreadyInScope(format!(
                         "SubQuery {} (as {})",
                         &subquery.to_string(),
-                        &alias.map(|a| a).unwrap_or("UNALIASED".to_owned())
+                        &alias.unwrap_or("UNALIASED".to_owned())
                     )))
                 }
             }

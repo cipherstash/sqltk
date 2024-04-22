@@ -98,9 +98,7 @@ pub mod AnyNode {
 
     /// Returns a [`Visitor`] impl whose `exit` method will invoke
     /// `exit_fn` for nodes of any type.
-    pub fn on_exit<'ast, State: 'ast, E, FnExit>(
-        exit_fn: FnExit,
-    ) -> impl Visitor<'ast, State, E>
+    pub fn on_exit<'ast, State: 'ast, E, FnExit>(exit_fn: FnExit) -> impl Visitor<'ast, State, E>
     where
         E: Error + Debug,
         FnExit: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
@@ -122,8 +120,7 @@ pub mod AnyNode {
         AnyNodeDispatcher::<'ast, State, E, _, _>::new(enter_fn, exit_fn)
     }
 
-    fn ignore<'ast, State: 'ast, E>(
-    ) -> impl Fn(Node, State) -> VisitorControlFlow<'ast, State, E>
+    fn ignore<'ast, State: 'ast, E>() -> impl Fn(Node, State) -> VisitorControlFlow<'ast, State, E>
     where
         E: Error + Debug,
     {
@@ -164,11 +161,7 @@ where
     FnEnter: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
     FnExit: Fn(Node<'ast>, State) -> VisitorControlFlow<'ast, State, E>,
 {
-    fn enter<N>(
-        &self,
-        node: &'ast N,
-        state: State,
-    ) -> VisitorControlFlow<'ast, State, E>
+    fn enter<N>(&self, node: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E>
     where
         N: 'static + Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,
@@ -176,11 +169,7 @@ where
         (self.enter_fn)(node.into(), state)
     }
 
-    fn exit<N>(
-        &self,
-        node: &'ast N,
-        state: State,
-    ) -> VisitorControlFlow<'ast, State, E>
+    fn exit<N>(&self, node: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E>
     where
         N: 'static + Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,

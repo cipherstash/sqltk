@@ -89,9 +89,8 @@ impl<'key, V> AnnotationStore<'key, V> {
     /// &AnnotationKey<'key>>` for all annotations with a key derived from an
     /// `Expr` node.
     pub fn keys_of_type<K: 'static>(&self) -> impl Iterator<Item = &AnnotationKey<'key>> {
-        self.keys().into_iter().filter(|AnnotationKey(type_id, _, _)| {
-            TypeId::of::<K>() == *type_id
-        })
+        self.keys()
+            .filter(|AnnotationKey(type_id, _, _)| TypeId::of::<K>() == *type_id)
     }
 
     /// Returns an [`Iterator`] of all stored values where the

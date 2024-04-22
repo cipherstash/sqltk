@@ -41,7 +41,6 @@ pub trait SourceAnnotationOps<'ast> {
         &'ast N: Into<Node<'ast>>;
 }
 
-
 /// Type that provides functions for building [`Visitor`] implementations that
 /// can annotate [`Expr`] and [`SelectItem`] nodes with their [`Source`].
 pub struct AnnotateSource<'ast, State: 'ast>(PhantomData<&'ast State>);
@@ -193,8 +192,12 @@ where
             } => {
                 let mut exprs: Vec<&Expr> = Vec::new();
                 exprs.push(expr);
-                substring_from.as_ref().map(|expr| exprs.push(expr.deref()));
-                substring_for.as_ref().map(|expr| exprs.push(expr.deref()));
+                if let Some(expr) = substring_from.as_ref() {
+                    exprs.push(expr.deref())
+                }
+                if let Some(expr) = substring_for.as_ref() {
+                    exprs.push(expr.deref())
+                }
                 Self::resolve_sources(node, &exprs[..], state)
             }
             Expr::Trim {
@@ -205,10 +208,12 @@ where
             } => {
                 let mut exprs: Vec<&Expr> = Vec::new();
                 exprs.push(expr);
-                trim_what.as_ref().map(|expr| exprs.push(expr.deref()));
-                trim_characters
-                    .as_ref()
-                    .map(|multiple_exprs| exprs.extend(&multiple_exprs[..]));
+                if let Some(expr) = trim_what.as_ref() {
+                    exprs.push(expr.deref())
+                }
+                if let Some(multiple_exprs) = trim_characters.as_ref() {
+                    exprs.extend(&multiple_exprs[..])
+                }
                 Self::resolve_sources(node, &exprs[..], state)
             }
             Expr::Overlay {
@@ -218,10 +223,12 @@ where
                 overlay_for,
             } => {
                 let mut exprs: Vec<&Expr> = Vec::new();
-                exprs.push(&expr);
-                exprs.push(&overlay_what);
-                exprs.push(&overlay_from);
-                overlay_for.as_ref().map(|expr| exprs.push(&expr));
+                exprs.push(expr);
+                exprs.push(overlay_what);
+                exprs.push(overlay_from);
+                if let Some(expr) = overlay_for.as_ref() {
+                    exprs.push(expr)
+                }
                 Self::resolve_sources(node, &exprs[..], state)
             }
             Expr::Collate { expr, collation: _ } => Self::resolve_one_source(node, expr, state),
@@ -238,17 +245,23 @@ where
                 flow::cont(state)
             }
             Expr::TypedString { data_type, value } => {
-                state.add_source(node, SourceItem::TypedString(data_type.clone(), value.clone()).into());
+                state.add_source(
+                    node,
+                    SourceItem::TypedString(data_type.clone(), value.clone()).into(),
+                );
                 flow::cont(state)
             }
             Expr::MapAccess { column, keys } => {
                 let mut exprs: Vec<&Expr> = Vec::new();
-                exprs.push(&column);
+                exprs.push(column);
                 exprs.extend(&keys[..]);
                 Self::resolve_sources(node, &exprs[..], state)
             }
             Expr::Function(function) => {
-                state.add_source(node, SourceItem::FunctionCall(function.name.to_string()).into());
+                state.add_source(
+                    node,
+                    SourceItem::FunctionCall(function.name.to_string()).into(),
+                );
                 flow::cont(state)
             }
             Expr::AggregateExpressionWithFilter { expr, filter } => {
@@ -261,12 +274,14 @@ where
                 else_result,
             } => {
                 let mut exprs: Vec<&Expr> = Vec::new();
-                operand.as_ref().map(|operand| exprs.push(&operand));
+                if let Some(operand) = operand.as_ref() {
+                    exprs.push(operand)
+                }
                 exprs.extend(&conditions[..]);
                 exprs.extend(&results[..]);
-                else_result
-                    .as_ref()
-                    .map(|else_result| exprs.push(&else_result));
+                if let Some(else_result) = else_result.as_ref() {
+                    exprs.push(else_result)
+                }
                 Self::resolve_sources(node, &exprs[..], state)
             }
             // TODO: figure out how to record this.
@@ -289,22 +304,22 @@ where
             Expr::Exists {
                 subquery: _,
                 negated: _,
-            } => {
-                flow::cont(state)
-            }
+            } => flow::cont(state),
             Expr::Subquery(query) => {
-                let result = state.get_source(query.deref()).cloned().map(|source| {
-                    state.add_source(node, source)
-                });
+                let result = state
+                    .get_source(query.deref())
+                    .cloned()
+                    .map(|source| state.add_source(node, source));
                 match result {
                     Ok(_) => flow::cont(state),
                     Err(err) => flow::error(err, state),
                 }
             }
             Expr::ArraySubquery(query) => {
-                let result = state.get_source(query.deref()).cloned().map(|source| {
-                    state.add_source(node, source)
-                });
+                let result = state
+                    .get_source(query.deref())
+                    .cloned()
+                    .map(|source| state.add_source(node, source));
                 match result {
                     Ok(_) => flow::cont(state),
                     Err(err) => flow::error(err, state),
@@ -313,8 +328,10 @@ where
             Expr::ListAgg(agg) => {
                 let mut exprs: Vec<&Expr> = Vec::new();
                 exprs.push(agg.expr.deref());
-                agg.separator.as_ref().map(|sep| exprs.push(sep.deref()));
-                agg.on_overflow.as_ref().map(|overflow| {
+                if let Some(sep) = agg.separator.as_ref() {
+                    exprs.push(sep.deref())
+                }
+                if let Some(overflow) = agg.on_overflow.as_ref() {
                     if let ListAggOnOverflow::Truncate {
                         filler: Some(filler),
                         with_count: _,
@@ -322,17 +339,18 @@ where
                     {
                         exprs.push(filler)
                     }
-                });
+                }
                 Self::resolve_sources(node, &exprs[..], state)
             }
             Expr::ArrayAgg(agg) => {
                 let mut exprs: Vec<&Expr> = Vec::new();
                 exprs.push(agg.expr.deref());
-                agg.order_by.as_ref().map(|order_by| {
-                    let order_by_exprs = order_by.iter().map(|ob| &ob.expr).collect::<Vec<_>>();
-                    exprs.extend(&order_by_exprs[..])
-                });
-                agg.limit.as_ref().map(|limit| exprs.push(limit.deref()));
+                if let Some(order_by) = agg.order_by.as_ref() {
+                    exprs.extend(order_by.iter().map(|ob| &ob.expr))
+                }
+                if let Some(limit) = agg.limit.as_ref() {
+                    exprs.push(limit.deref())
+                }
                 Self::resolve_sources(node, &exprs[..], state)
             }
             Expr::GroupingSets(grouping_sets) => {
@@ -429,12 +447,10 @@ where
     ) -> VisitorControlFlow<'ast, State, ResolutionError> {
         let sources = exprs
             .iter()
-            .fold(Ok(Vec::with_capacity(exprs.len())), |acc, expr| {
-                acc.and_then(|mut all_sources| {
-                    state.get_source(*expr).cloned().map(|source| {
-                        all_sources.push(source);
-                        all_sources
-                    })
+            .try_fold(Vec::with_capacity(exprs.len()), |mut acc, expr| {
+                state.get_source(*expr).cloned().map(|source| {
+                    acc.push(source);
+                    acc
                 })
             });
 

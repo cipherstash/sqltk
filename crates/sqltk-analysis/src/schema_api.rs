@@ -2,7 +2,6 @@
 
 use crate::model::schema::Schema;
 
-
 /// Trait that provides a method for retrieving the database schema against
 /// which tables/views/columns can be resolved.
 pub trait SchemaOps {

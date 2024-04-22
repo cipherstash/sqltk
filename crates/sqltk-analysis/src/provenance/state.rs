@@ -2,12 +2,12 @@
 
 use core::{fmt::Debug, ops::Deref};
 
-use std::rc::Rc;
 use sqlparser::ast::{Ident, SetExpr, Statement};
 use sqltk::{
     prelude::{Node, Select},
     Visitable,
 };
+use std::rc::Rc;
 
 use crate::{
     annotate_sources::SourceAnnotationOps,
@@ -57,7 +57,10 @@ impl<'ast> ProvenanceState<'ast> {
     /// Returns `Ok(provenance)` if successful or `Err(ResolutionError)` if provenance cannot be determined.
     ///
     /// TODO: fix the unimplemented!() calls (by implementing them!)
-    pub fn statement_provenance(&self, statement: &'ast Statement) -> Result<Provenance, ResolutionError> {
+    pub fn statement_provenance(
+        &self,
+        statement: &'ast Statement,
+    ) -> Result<Provenance, ResolutionError> {
         match statement {
             Statement::Query(query) => match query.body.deref() {
                 SetExpr::Select(select) => {
@@ -66,7 +69,7 @@ impl<'ast> ProvenanceState<'ast> {
                         .iter()
                         .map(|item| self.get_source(item).cloned())
                         .collect();
-                    sources.map(|sources| Provenance(sources))
+                    sources.map(Provenance)
                 }
                 _ => unimplemented!("SetExpr variant not yet supported"),
             },
@@ -118,7 +121,7 @@ impl<'ast> LexicalScopeOps<'ast> for ProvenanceState<'ast> {
 
     fn resolve_qualified_wildcard(
         &self,
-        idents: &'ast Vec<Ident>,
+        idents: &'ast [Ident],
     ) -> Result<Vec<Source>, ResolutionError> {
         self.scope.resolve_qualified_wildcard(idents)
     }
@@ -136,9 +139,7 @@ where
 
         self.source_annotations
             .entry(key)
-            .and_modify(|existing| {
-                *existing = Source::merge(&*existing, &source).into()
-            })
+            .and_modify(|existing| *existing = Source::merge(&*existing, &source).into())
             .or_insert(Rc::new(source));
     }
 
@@ -153,7 +154,7 @@ where
         let sources = self.source_annotations.get(&key);
 
         match sources {
-            Some(sources) => Ok(&sources),
+            Some(sources) => Ok(sources),
             None => Err(ResolutionError::InvariantFailed(
                 InvariantFailedError::CouldNotResolveSource(self.get_node_path().to_string()),
             )),

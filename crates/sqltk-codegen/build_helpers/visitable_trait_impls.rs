@@ -6,8 +6,8 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::{Fields, Ident, ItemEnum, Type, TypePath};
 
-use super::meta::{SqlParserTypeDef, SqlParserTypeDefKind};
 use super::generics::{self};
+use super::meta::{SqlParserTypeDef, SqlParserTypeDefKind};
 
 pub(crate) struct VisitableImpl<'a> {
     node: &'a TypePath,
@@ -72,7 +72,9 @@ impl<'a> VisitableImpl<'a> {
         match fields {
             Fields::Named(named) => {
                 let mut fields = named.named.iter().enumerate().collect::<Vec<_>>();
-                fields.sort_by_key(|(idx, f)| (Reverse(self.field_is_source_node_reachable(f)), *idx));
+                fields.sort_by_key(|(idx, f)| {
+                    (Reverse(self.field_is_source_node_reachable(f)), *idx)
+                });
                 for (_, field) in fields.iter() {
                     let ident = field.ident.clone().unwrap();
                     tokens.append_all(quote! {
@@ -82,7 +84,9 @@ impl<'a> VisitableImpl<'a> {
             }
             Fields::Unnamed(unnamed) => {
                 let mut fields = unnamed.unnamed.iter().enumerate().collect::<Vec<_>>();
-                fields.sort_by_key(|(idx, f)| (Reverse(self.field_is_source_node_reachable(f)), *idx));
+                fields.sort_by_key(|(idx, f)| {
+                    (Reverse(self.field_is_source_node_reachable(f)), *idx)
+                });
 
                 for (idx, _) in fields.iter() {
                     let field_idx = syn::Index::from(*idx);
@@ -101,7 +105,9 @@ impl<'a> VisitableImpl<'a> {
         match fields {
             Fields::Named(named) => {
                 let mut fields = named.named.iter().enumerate().collect::<Vec<_>>();
-                fields.sort_by_key(|(idx, f)| (Reverse(self.field_is_source_node_reachable(f)), *idx));
+                fields.sort_by_key(|(idx, f)| {
+                    (Reverse(self.field_is_source_node_reachable(f)), *idx)
+                });
 
                 for (_, field) in fields.iter() {
                     let ident = field.ident.clone().unwrap();
@@ -112,7 +118,9 @@ impl<'a> VisitableImpl<'a> {
             }
             Fields::Unnamed(unnamed) => {
                 let mut fields = unnamed.unnamed.iter().enumerate().collect::<Vec<_>>();
-                fields.sort_by_key(|(idx, f)| (Reverse(self.field_is_source_node_reachable(f)), *idx));
+                fields.sort_by_key(|(idx, f)| {
+                    (Reverse(self.field_is_source_node_reachable(f)), *idx)
+                });
 
                 for (idx, _) in fields.iter() {
                     let ident = format_ident!("field{}", idx);

@@ -92,6 +92,6 @@ where
 {
     let flow = Visitor::enter(visitor, node, state);
     let flow = flow::map_continue(flow, |state| visit_children(visitor, state));
-    let flow = flow::map_continue(flow, |state| Visitor::exit(visitor, node, state));
-    flow
+
+    flow::map_continue(flow, |state| Visitor::exit(visitor, node, state))
 }

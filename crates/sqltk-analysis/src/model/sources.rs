@@ -61,12 +61,7 @@ impl Source {
     /// contains sub-expressions.
     pub fn merge(a: &Self, b: &Self) -> Self {
         Self {
-            items: BTreeSet::from_iter(
-                a.items
-                    .iter()
-                    .chain(b.items.iter())
-                    .map(|item| item.clone()),
-            ),
+            items: BTreeSet::from_iter(a.items.iter().chain(b.items.iter()).cloned()),
         }
     }
 }

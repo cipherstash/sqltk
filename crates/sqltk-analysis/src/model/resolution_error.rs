@@ -22,7 +22,7 @@ pub enum ResolutionError {
     AlreadyInScope(String),
 
     #[error("Something went wrong: {}", _0)]
-    InvariantFailed(InvariantFailedError)
+    InvariantFailed(InvariantFailedError),
 }
 
 #[derive(Debug, thiserror::Error)]

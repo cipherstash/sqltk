@@ -118,7 +118,7 @@ macro_rules! make_schema {
     // Main entry point
     ($($table:ident $tokens:tt)*) => {
         {
-            let schema = crate::schema::Schema::new("Test schema");
+            let schema = $crate::schema::Schema::new("Test schema");
             $( make_schema!(@add_table schema $table $tokens); )*
             schema
         }

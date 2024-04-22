@@ -23,6 +23,16 @@ where
     visitors: Vec<Box<dyn ObjectSafeVisitor<'ast, State, E> + 'ast>>,
 }
 
+impl<'ast, State, E> Default for VisitorStack<'ast, State, E>
+where
+    State: 'ast,
+    E: 'static + Error + Debug,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'ast, State, E> VisitorStack<'ast, State, E>
 where
     State: 'ast,

@@ -51,7 +51,7 @@
 //!
 //! match ast.evaluate(&visitor, 0) {
 //!     Ok(count) => assert_eq!(14, count),
-//!     _ => assert!(false)
+//!     err => panic!("{:#?}", err)
 //! };
 //! ```
 
@@ -141,11 +141,7 @@ where
     ///
     /// Returns `Ok(state)` on success, or `Err((err, state))` if an error
     /// occurs.
-    fn evaluate<State, V, E>(
-        &'ast self,
-        visitor: &V,
-        state: State,
-    ) -> Result<State, (E, State)>
+    fn evaluate<State, V, E>(&'ast self, visitor: &V, state: State) -> Result<State, (E, State)>
     where
         E: Error + Debug,
         V: Visitor<'ast, State, E>,
@@ -155,7 +151,7 @@ where
             VisitorControlFlow::Break(brk) => match brk {
                 Break::Finished(state) => Ok(state),
                 Break::SkipChildren(state) => Ok(state),
-                Break::Err(err, state) => Err((err.into(), state)),
+                Break::Err(err, state) => Err((err, state)),
             },
         }
     }
@@ -167,7 +163,7 @@ where
         State: 'ast,
         E: Error + Debug,
         // FnEnter: 'ast + Fn(&'ast Self, State) -> VisitorControlFlow<'ast, State, E>,
-        FnEnter:  Fn(&'ast Self, State) -> VisitorControlFlow<'ast, State, E>,
+        FnEnter: Fn(&'ast Self, State) -> VisitorControlFlow<'ast, State, E>,
     {
         Self::on_enter_exit(enter_fn, ignore())
     }
@@ -237,7 +233,7 @@ where
     }
 }
 
-impl<'ast, State, E> Eq for Break<State, E>
+impl<State, E> Eq for Break<State, E>
 where
     E: Error + Debug,
     State: Eq,
@@ -280,7 +276,7 @@ pub mod test {
         // Total: 14
         match ast.evaluate(&visitor, 0) {
             Ok(count) => assert_eq!(14, count),
-            _ => assert!(false),
+            err => panic!("{:#?}", err),
         };
     }
 
@@ -306,20 +302,22 @@ pub mod test {
         let mut stack = VisitorStack::<'_, Vec<String>, Infallible>::new();
         // Types that should _not_ be visited because we know it'll be
         // None/empty with the `sql` expression below.
-        stack.push(Option::<With>::on_enter(
-            flow::infallible::modify_state(|state: &mut Vec<String>| state.push("Option<With>".into())),
-        ));
+        stack.push(Option::<With>::on_enter(flow::infallible::modify_state(
+            |state: &mut Vec<String>| state.push("Option<With>".into()),
+        )));
         stack.push(Vec::<TableWithJoins>::on_enter(
-            flow::infallible::modify_state(|state: &mut Vec<String>| state.push("Vec<TableWithJoins>".into())),
+            flow::infallible::modify_state(|state: &mut Vec<String>| {
+                state.push("Vec<TableWithJoins>".into())
+            }),
         ));
         // Types that _should_ be visited because we know they'll be present
         // after parsing the `sql` expression below.
-        stack.push(Option::<Expr>::on_enter(
-            flow::infallible::modify_state(|state: &mut Vec<String>| state.push("Option<Expr>".into())),
-        ));
-        stack.push(Vec::<SelectItem>::on_enter(
-            flow::infallible::modify_state(|state: &mut Vec<String>| state.push("Vec<SelectItem>".into())),
-        ));
+        stack.push(Option::<Expr>::on_enter(flow::infallible::modify_state(
+            |state: &mut Vec<String>| state.push("Option<Expr>".into()),
+        )));
+        stack.push(Vec::<SelectItem>::on_enter(flow::infallible::modify_state(
+            |state: &mut Vec<String>| state.push("Vec<SelectItem>".into()),
+        )));
 
         match ast.evaluate(&stack, Vec::<String>::new()) {
             Ok(mut state) => {
@@ -329,7 +327,7 @@ pub mod test {
                 expected_items.push("Vec<SelectItem>".to_string());
                 assert_eq!(state, expected_items)
             }
-            Err((err, _)) => assert!(false, "{:?}", err),
+            Err((err, _)) => panic!("{:?}", err),
         };
     }
 
@@ -419,7 +417,7 @@ pub mod test {
 
         match ast.evaluate(&stack, MyState::default()) {
             Ok(state) => assert!(state.balanced),
-            Err((err, _)) => assert!(false, "{:?}", err),
+            Err((err, _)) => panic!("{:?}", err),
         };
     }
 

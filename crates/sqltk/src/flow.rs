@@ -73,9 +73,9 @@ where
 
 /// Converts errors from one type to another if there is an error contained in
 /// the [`VisitorControlFlow`] value, otherwise returns the value unchanged.
-pub fn map_break_err<'ast, State, ErrFrom, ErrInto>(
-    flow: VisitorControlFlow<'ast, State, ErrFrom>,
-) -> VisitorControlFlow<'ast, State, ErrInto>
+pub fn map_break_err<State, ErrFrom, ErrInto>(
+    flow: VisitorControlFlow<'_, State, ErrFrom>,
+) -> VisitorControlFlow<'_, State, ErrInto>
 where
     ErrFrom: Error + Debug + Into<ErrInto>,
     ErrInto: Error + Debug,

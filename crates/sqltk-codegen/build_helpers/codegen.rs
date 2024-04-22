@@ -1,8 +1,8 @@
+use super::generics;
+use super::meta::{ContainerNode, PrimitiveNode, SqlParserMetaQuery};
 use super::reachability::Reachability;
 use super::{sqlparser_node_extractor, visitable_trait_impls::VisitableImpl};
 use proc_macro2::TokenStream;
-use super::meta::{ContainerNode, PrimitiveNode, SqlParserMetaQuery};
-use super::generics;
 
 use inflector::Inflector;
 
@@ -79,7 +79,7 @@ impl Codegen {
         let main_nodes_variants = main_nodes.iter().map(|(type_path, _)| {
             let ident = &type_path.path.segments.last().unwrap().ident;
             let display_ident = ident.to_string();
-            let format_string = format!("{}", &display_ident);
+            let format_string = display_ident.to_string();
             quote! {
                 #[display(fmt = #format_string)]
                 #ident(&'ast #type_path),
@@ -114,12 +114,11 @@ impl Codegen {
         let primitive_nodes_variants = primitive_nodes.iter().map(|primitive_node| {
             let ident = primitive_node.variant_ident();
             let display_ident = ident.to_string();
-            let format_string = if display_ident.contains("BigDecimal") {
-                format!("{}", &display_ident)
-            } else if display_ident == "String" {
-                format!("{}", &display_ident)
+            let format_string = if display_ident.contains("BigDecimal") || display_ident == "String"
+            {
+                display_ident.to_string()
             } else {
-                format!("{}", &display_ident.to_lowercase())
+                display_ident.to_lowercase().to_string()
             };
             let type_path = primitive_node.type_path();
             quote! {
@@ -236,7 +235,6 @@ impl Codegen {
             };
 
             let display_ident = variant_ident.to_string();
-
 
             match node {
                 ContainerNode::Box(_) => {

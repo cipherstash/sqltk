@@ -40,7 +40,7 @@ pub trait LexicalScopeOps<'ast> {
     /// Expands a qualified wildcard within the current scope.
     fn resolve_qualified_wildcard(
         &self,
-        ident: &'ast Vec<Ident>,
+        ident: &'ast [Ident],
     ) -> Result<Vec<Source>, ResolutionError>;
 }
 
@@ -100,6 +100,7 @@ where
                 alias,
             } => {
                 let query = subquery.deref();
+                #[allow(unused_variables)]
                 match query.body.deref() {
                     SetExpr::Select(select) => {
                         let projection_sources: Result<Vec<_>, _> = select
@@ -130,12 +131,12 @@ where
 
                         match projection_sources {
                             Ok(projection_sources) => {
-                                match table_alias(alias).and_then(|alias| {
-                                    Ok(state.add_relation(Relation::SubQuery(
+                                match table_alias(alias).map(|alias| {
+                                    state.add_relation(Relation::SubQuery(
                                         query.clone(),
                                         projection_sources,
                                         alias,
-                                    )))
+                                    ))
                                 }) {
                                     Ok(_) => flow::cont(state),
                                     Err(err) => flow::error(err, state),
@@ -157,29 +158,35 @@ where
                     SetExpr::Table(_) => todo!("SetExpr::Table"),
                 }
             }
+            #[allow(unused_variables)]
             TableFactor::TableFunction { expr, alias } => todo!("TableFactor::TableFunction"),
+            #[allow(unused_variables)]
             TableFactor::Function {
                 lateral,
                 name,
                 args,
                 alias,
             } => todo!("TableFactor::Function"),
+            #[allow(unused_variables)]
             TableFactor::UNNEST {
                 alias,
                 array_exprs,
                 with_offset,
                 with_offset_alias,
             } => todo!("TableFactor::UNNEST"),
+            #[allow(unused_variables)]
             TableFactor::JsonTable {
                 json_expr,
                 json_path,
                 columns,
                 alias,
             } => todo!("TableFactor::JsonTable"),
+            #[allow(unused_variables)]
             TableFactor::NestedJoin {
                 table_with_joins,
                 alias,
             } => todo!("TableFactor::NestedJoin"),
+            #[allow(unused_variables)]
             TableFactor::Pivot {
                 table,
                 aggregate_function,
@@ -187,6 +194,7 @@ where
                 pivot_values,
                 alias,
             } => todo!("TableFactor::Pivot"),
+            #[allow(unused_variables)]
             TableFactor::Unpivot {
                 table,
                 value,
@@ -220,7 +228,7 @@ where
 
 fn table_alias(alias: &Option<TableAlias>) -> Result<Option<String>, ResolutionError> {
     match alias {
-        Some(TableAlias { name, columns }) if columns.len() == 0 => {
+        Some(TableAlias { name, columns }) if columns.is_empty() => {
             Ok(Some(name.to_string().clone()))
         }
         Some(alias) => unimplemented!("Unhandled TableAlias variant: {:?}", alias),
