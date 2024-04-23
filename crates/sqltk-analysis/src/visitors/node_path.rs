@@ -2,6 +2,7 @@
 
 use core::convert::Infallible;
 use core::fmt::{self, Debug, Display};
+use std::ops::Deref;
 
 use sqlparser::ast::{Ident, IdentWithAlias, Join, ObjectName, TableFactor};
 use sqltk::prelude::{Node, VisitorControlFlow};
@@ -24,6 +25,14 @@ pub trait NodePathOps<'ast> {
 #[derive(Default, Debug, Clone, PartialEq, PartialOrd, Ord, Eq)]
 pub struct NodePath<'ast> {
     entries: Vec<NodePathEntry<'ast>>,
+}
+
+impl<'ast> Deref for NodePath<'ast> {
+    type Target = Vec<NodePathEntry<'ast>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entries
+    }
 }
 
 impl<'ast> NodePath<'ast> {
@@ -187,7 +196,7 @@ impl<'ast> NodePathOps<'ast> for NodePath<'ast> {
 /// and only provides custom formatting for a handful of [`Node`] variants.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NodePathEntry<'ast> {
-    node: Node<'ast>,
+    pub node: Node<'ast>,
 }
 
 impl<'ast> NodePathEntry<'ast> {

@@ -17,7 +17,8 @@ fn main() -> std::io::Result<()> {
     )?;
 
     fs::write(
-        PathBuf::from(&std::env::var("OUT_DIR").unwrap()).join("generated_node_enum_match_macro.rs"),
+        PathBuf::from(&std::env::var("OUT_DIR").unwrap())
+            .join("generated_node_enum_match_macro.rs"),
         *sqltk_codegen::NODE_ENUM_MATCH_MACRO,
     )?;
 

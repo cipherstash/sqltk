@@ -5,6 +5,7 @@
 use core::fmt::Debug;
 use derive_more::Display;
 use std::collections::HashMap;
+use unicase::UniCase;
 
 /// A database schema.
 ///
@@ -12,8 +13,8 @@ use std::collections::HashMap;
 /// it makes no difference to the analysis functionality.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Schema {
-    pub name: String,
-    pub tables: HashMap<String, Table>,
+    pub name: UniCase<String>,
+    pub tables: HashMap<UniCase<String>, Table>,
 }
 
 /// A table (or view).
@@ -22,7 +23,7 @@ pub struct Schema {
 #[derive(Debug, Clone, PartialEq, Eq, Display, PartialOrd, Ord, Hash)]
 #[display(fmt = "{}", name)]
 pub struct Table {
-    pub name: String,
+    pub name: UniCase<String>,
     pub columns: Vec<Column>,
 }
 
@@ -32,14 +33,14 @@ pub struct Table {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Display, Hash)]
 #[display(fmt = "{} [{}]", name, ty)]
 pub struct Column {
-    pub name: String,
+    pub name: UniCase<String>,
     pub ty: ColumnType,
 }
 
 /// The type of a column.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Display)]
 #[display(fmt = "{}", _0)]
-pub struct ColumnType(pub String);
+pub struct ColumnType(pub UniCase<String>);
 
 impl Schema {
     /// Creates a new named empty schema.
@@ -57,7 +58,7 @@ impl Schema {
     }
 
     /// Resolves a table by name in the schema.
-    pub fn resolve_table(&self, name: &str) -> Option<Table> {
+    pub fn resolve_table(&self, name: &UniCase<String>) -> Option<Table> {
         self.tables.get(name).cloned()
     }
 }
@@ -78,13 +79,13 @@ impl Table {
     }
 
     /// Checks if a column named `name` exists in the table.
-    pub fn contains_column(&self, name: &str) -> bool {
+    pub fn contains_column(&self, name: &UniCase<String>) -> bool {
         self.get_column(name).map(|_| true).unwrap_or(false)
     }
 
     /// Gets a column from a table by name.
-    pub fn get_column(&self, name: &str) -> Option<&Column> {
-        self.columns.iter().find(|c| c.name == name)
+    pub fn get_column(&self, name: &UniCase<String>) -> Option<&Column> {
+        self.columns.iter().find(|c| &c.name == name)
     }
 }
 
@@ -109,11 +110,11 @@ macro_rules! make_schema {
         );
     };
     (@column_type $column_ty:ident) => {
-        ColumnType(String::from(stringify!($column_ty)))
+        ColumnType(unicase::UniCase::new(stringify!($column_ty).into()))
     };
     // Default to "text" if the column type is unspecified
     (@column_type) => {
-        ColumnType(String::from("text"))
+        ColumnType(unicase::UniCase::new("text".into()))
     };
     // Main entry point
     ($($table:ident $tokens:tt)*) => {

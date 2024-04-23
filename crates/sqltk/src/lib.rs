@@ -119,7 +119,7 @@ where
 /// This trait is implemented for all AST nodes defined by `sqlparser`.
 pub trait Visitable<'ast>
 where
-    Self: 'static + Sized,
+    Self: 'static + Sized + Debug,
 {
     /// Entry point to begin AST traversal with a [`Visitor`].
     ///

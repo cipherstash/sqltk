@@ -3,10 +3,13 @@
 use sqltk::prelude::*;
 
 use crate::{
-    annotate_sources::{AnnotateSource, SourceAnnotationOps},
+    annotate_sources::AnnotateSource,
+    annotations::Annotates,
     lexical_scope::{LexicalScope, LexicalScopeOps},
     model::resolution_error::ResolutionError,
     node_path::{NodePath, NodePathOps},
+    projection_annotation::ProjectionAnnotation,
+    source_annotation::SourceAnnotation,
     SchemaOps,
 };
 
@@ -18,20 +21,48 @@ mod state;
 /// Returns a [`Visitor`] that performs provenance analysis of a SQL AST.
 pub fn new_provenance_visitor<'ast, State: 'ast>() -> impl Visitor<'ast, State, ProvenanceError>
 where
-    State: LexicalScopeOps<'ast> + SourceAnnotationOps<'ast> + SchemaOps + NodePathOps<'ast>,
+    State: LexicalScopeOps<'ast>
+        + Annotates<'ast, Expr, SourceAnnotation>
+        // + Annotates<'ast, SelectItem, SourceAnnotation>
+        + Annotates<'ast, Expr, ProjectionAnnotation>
+        + Annotates<'ast, Query, ProjectionAnnotation>
+        + Annotates<'ast, SetExpr, ProjectionAnnotation>
+        + Annotates<'ast, Select, ProjectionAnnotation>
+        + SchemaOps
+        + NodePathOps<'ast>,
 {
     let mut visitor = VisitorStack::<State, ProvenanceError>::new();
 
     visitor.push(NodePath::track());
 
-    #[cfg(test)]
-    visitor.push(NodePath::log_top_entry());
+    // #[cfg(test)]
+    // visitor.push(NodePath::log_top_entry());
 
-    visitor.push(LexicalScope::reset_for_each_statement());
-    visitor.push(LexicalScope::bring_tables_into_scope());
+    visitor.push(Statement::on_enter(flow::infallible::modify_state(
+        |state: &mut State| state.push_scope(),
+    )));
+
+    visitor.push(Query::on_enter(flow::infallible::modify_state(
+        |state: &mut State| state.push_scope(),
+    )));
+
+    // visitor.push(LexicalScope::push_and_pop_scope_for_statements());
+    // visitor.push(LexicalScope::push_and_pop_scope_for_subqueries());
+    visitor.push(LexicalScope::bring_table_factor_into_scope());
+    visitor.push(LexicalScope::bring_cte_into_scope());
 
     visitor.push(AnnotateSource::annotate_expr_with_source());
-    visitor.push(AnnotateSource::annotate_select_item_with_source());
+    visitor.push(AnnotateSource::annotate_set_expr_with_projection());
+    visitor.push(AnnotateSource::annotate_select_with_projection());
+    visitor.push(AnnotateSource::annotate_query_with_projection());
+
+    visitor.push(Statement::on_exit(flow::infallible::modify_state(
+        |state: &mut State| state.pop_scope(),
+    )));
+
+    visitor.push(Query::on_exit(flow::infallible::modify_state(
+        |state: &mut State| state.pop_scope(),
+    )));
 
     visitor
 }
@@ -57,12 +88,15 @@ impl From<Infallible> for ProvenanceError {
 mod tests {
 
     use core::ops::Deref;
+    use std::rc::Rc;
 
     use crate::{
         make_schema, new_provenance_visitor,
+        projection_annotation::{Projection, ProjectionAnnotation},
         schema::{Column, ColumnType, Table},
-        sources::{ColumnRef, Source, SourceItem, TableColumn},
+        source_annotation::{SourceAnnotation, SourceAnnotationItem, TableColumn},
     };
+    use bigdecimal::BigDecimal;
     use sqltk::prelude::*;
 
     use super::state::ProvenanceState;
@@ -91,23 +125,23 @@ mod tests {
 
         let visitor = new_provenance_visitor();
 
-        match statements.evaluate(&visitor, state) {
-            Ok(state) => {
-                let projection = state
-                    .source_annotations
-                    .values_for_key_type::<SelectItem>()
-                    .collect::<Vec<_>>();
+        let state = statements.evaluate(&visitor, state).unwrap();
+        let projection = state
+            .projection_annotations
+            .values_for_key_type::<Query>()
+            .collect::<Vec<_>>();
 
-                assert_eq!(
-                    projection[0].deref(),
-                    &Source::single(SourceItem::TableColumn(TableColumn::new(
-                        "users".into(),
-                        ColumnRef::Identifier("id".into())
-                    )))
-                );
-            }
-            Err(err) => panic!("{:?}", err),
-        };
+        assert_eq!(
+            projection[0].deref(),
+            &ProjectionAnnotation::Query(Projection {
+                columns: vec![(
+                    Rc::new(SourceAnnotation::single(SourceAnnotationItem::TableColumn(
+                        TableColumn::new("users".into(), "id".into())
+                    ))),
+                    Some("id".into())
+                )]
+            })
+        );
     }
 
     #[test]
@@ -138,25 +172,25 @@ mod tests {
 
         let visitor = new_provenance_visitor();
 
-        match statements.evaluate(&visitor, state) {
-            Ok(state) => {
-                let projection = state
-                    .source_annotations
-                    .values_for_key_type::<SelectItem>()
-                    .collect::<Vec<_>>();
+        let state = statements.evaluate(&visitor, state).unwrap();
+        let projection = state
+            .projection_annotations
+            .values_for_key_type::<Query>()
+            .collect::<Vec<_>>();
 
-                assert_eq!(projection.len(), 1);
+        assert_eq!(projection.len(), 1);
 
-                assert_eq!(
-                    projection[0].deref(),
-                    &Source::single(SourceItem::TableColumn(TableColumn::new(
-                        "users".into(),
-                        ColumnRef::Identifier("id".into())
-                    )))
-                );
-            }
-            Err((err, _state)) => panic!("{:?}", err),
-        };
+        assert_eq!(
+            projection[0].deref(),
+            &ProjectionAnnotation::Query(Projection {
+                columns: vec![(
+                    Rc::new(SourceAnnotation::single(SourceAnnotationItem::TableColumn(
+                        TableColumn::new("users".into(), "id".into())
+                    ))),
+                    None
+                )]
+            })
+        );
     }
 
     #[test]
@@ -209,37 +243,132 @@ mod tests {
 
         let visitor = new_provenance_visitor();
 
-        match statements.evaluate(&visitor, state) {
-            Ok(state) => {
-                let projection = state.statement_provenance(&statements[0]).unwrap();
+        let state = statements.evaluate(&visitor, state).unwrap();
+        let projection = state.statement_provenance(&statements[0]).unwrap();
 
-                assert_eq!(projection.len(), 3);
+        assert_eq!(projection.columns.len(), 3);
 
-                assert_eq!(
-                    projection[0],
-                    Source::single(SourceItem::TableColumn(TableColumn::new(
-                        "users".into(),
-                        ColumnRef::Identifier("id".into())
-                    )))
-                );
+        assert_eq!(
+            &projection.columns[0].0,
+            &Rc::new(SourceAnnotation::single(SourceAnnotationItem::TableColumn(
+                TableColumn::new("users".into(), "id".into())
+            )))
+        );
 
-                assert_eq!(
-                    projection[1],
-                    Source::single(SourceItem::TableColumn(TableColumn::new(
-                        "todo_list_items".into(),
-                        ColumnRef::Identifier("id".into())
-                    )))
-                );
+        assert_eq!(
+            &projection.columns[1].0,
+            &Rc::new(SourceAnnotation::single(SourceAnnotationItem::TableColumn(
+                TableColumn::new("todo_list_items".into(), "id".into())
+            )))
+        );
 
-                assert_eq!(
-                    projection[2],
-                    Source::single(SourceItem::TableColumn(TableColumn::new(
-                        "todo_list_items".into(),
-                        ColumnRef::Identifier("description".into())
-                    )))
-                );
-            }
-            Err((err, _state)) => panic!("{:?}", err),
+        assert_eq!(
+            &projection.columns[2].0,
+            &Rc::new(SourceAnnotation::single(SourceAnnotationItem::TableColumn(
+                TableColumn::new("todo_list_items".into(), "description".into())
+            )))
+        );
+    }
+
+    #[test]
+    fn select_columns_from_correlated_subquery() {
+        let schema = make_schema! {
+            film (
+                id
+                title
+                length
+                rating
+            )
         };
+
+        let statements = parse_sql(
+            r#"
+            select f.id, f.title, f.length, f.rating
+            from film f
+            where length > (
+                select avg(length)
+                from film
+                where rating = f.rating
+            );
+            "#,
+        );
+
+        let state = ProvenanceState {
+            schema,
+            ..Default::default()
+        };
+
+        let visitor = new_provenance_visitor();
+
+        let state = statements.evaluate(&visitor, state).unwrap();
+        let projection = state.statement_provenance(&statements[0]).unwrap();
+
+        assert_eq!(projection.columns.len(), 4);
+
+        assert_eq!(
+            projection.columns[0].0.deref(),
+            &SourceAnnotation::single(SourceAnnotationItem::TableColumn(TableColumn::new(
+                "film".into(),
+                "id".into()
+            )))
+        );
+
+        assert_eq!(
+            projection.columns[1].0.deref(),
+            &SourceAnnotation::single(SourceAnnotationItem::TableColumn(TableColumn::new(
+                "film".into(),
+                "title".into()
+            )))
+        );
+
+        assert_eq!(
+            projection.columns[2].0.deref(),
+            &SourceAnnotation::single(SourceAnnotationItem::TableColumn(TableColumn::new(
+                "film".into(),
+                "length".into()
+            )))
+        );
+
+        assert_eq!(
+            projection.columns[3].0.deref(),
+            &SourceAnnotation::single(SourceAnnotationItem::TableColumn(TableColumn::new(
+                "film".into(),
+                "rating".into()
+            )))
+        );
+    }
+
+    #[test]
+    fn select_columns_from_cte() {
+        let schema = make_schema! {};
+
+        let statements = parse_sql(
+            r#"
+                with some_cte as (
+                    select 123 as id
+                )
+                select id from some_cte;
+            "#,
+        );
+
+        let state = ProvenanceState {
+            schema,
+            ..Default::default()
+        };
+
+        let visitor = new_provenance_visitor();
+
+        let state = statements.evaluate(&visitor, state).unwrap();
+        let projection = state.statement_provenance(&statements[0]).unwrap();
+
+        assert_eq!(projection.columns.len(), 1);
+
+        assert_eq!(
+            projection.columns[0].0.deref(),
+            &SourceAnnotation::single(SourceAnnotationItem::Value(Value::Number(
+                BigDecimal::from(123),
+                false
+            )))
+        );
     }
 }
