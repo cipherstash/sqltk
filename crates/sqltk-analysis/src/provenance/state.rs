@@ -111,7 +111,7 @@ impl<'ast> LexicalScopeOps<'ast> for ProvenanceState<'ast> {
         self.scope.resolve_ident(ident)
     }
 
-    fn resolve_compound_ident(&self, ident: &'ast Vec<Ident>) -> Result<Source, ResolutionError> {
+    fn resolve_compound_ident(&self, ident: &'ast [Ident]) -> Result<Source, ResolutionError> {
         self.scope.resolve_compound_ident(ident)
     }
 

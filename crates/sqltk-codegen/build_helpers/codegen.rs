@@ -8,6 +8,7 @@ use inflector::Inflector;
 
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 
+use std::process::Command;
 use std::{collections::HashSet, fs::File, io::Write, path::PathBuf};
 
 pub struct Codegen {
@@ -417,5 +418,103 @@ impl Codegen {
         }
 
         output
+    }
+
+    /// Creates a macro_rules macro that can generate a match statement for the
+    /// Node enum with a handler for the match arms provided by the macro
+    /// caller.
+    pub fn generate_node_enum_match_macro(&self, dest_file: &PathBuf) {
+        let mut output = proc_macro2::TokenStream::new();
+
+        let main_nodes = self.meta.main_nodes();
+        let main_node_variants = main_nodes.iter().map(|(type_path, _)| {
+            let ident = &type_path.path.segments.last().unwrap().ident;
+            quote! {
+                #ident(concrete_node)
+            }
+        });
+
+        let primitive_nodes = self.meta.primitive_nodes();
+        let primitive_node_variants = primitive_nodes.iter().map(|primitive_node| {
+            let ident = primitive_node.variant_ident();
+            quote! {
+                #ident(concrete_node)
+            }
+        });
+
+        let mut vec_of_variants = Vec::<proc_macro2::TokenStream>::new();
+        let mut box_of_variants = Vec::<proc_macro2::TokenStream>::new();
+        let mut option_of_variants = Vec::<proc_macro2::TokenStream>::new();
+
+        let container_nodes = self.meta.container_nodes();
+
+        for node in container_nodes.iter() {
+            let type_path = &node.type_path();
+            let type_path_of_generic = &generics::extract_generic_argument(type_path);
+
+            let decomposed_generics = generics::decompose_generic_type(type_path_of_generic);
+
+            let variant_ident = format_ident!(
+                "{}",
+                decomposed_generics
+                    .iter()
+                    .map(|tp| tp
+                        .path
+                        .segments
+                        .last()
+                        .unwrap()
+                        .ident
+                        .to_string()
+                        .to_pascal_case())
+                    .collect::<Vec<String>>()
+                    .join("Of")
+            );
+
+            let variant = quote!(#variant_ident(concrete_node));
+
+            match node {
+                ContainerNode::Box(_) => {
+                    box_of_variants.push(variant);
+                }
+                ContainerNode::Vec(_) => {
+                    vec_of_variants.push(variant);
+                }
+                ContainerNode::Option(_) => {
+                    option_of_variants.push(variant);
+                }
+            }
+        }
+        output.append_all(
+            quote! {
+                #[doc(hidden)]
+                macro_rules! dispatch_node {
+                    ($node:ident, $visitor:expr, $action:ident, $state:expr) => {
+                        match $node {
+                            #( Node::#main_node_variants => $visitor.$action(concrete_node, $state),)*
+
+                            #( Node::#primitive_node_variants => $visitor.$action(concrete_node, $state),)*
+
+                            #( Node::Box(crate::BoxOf::#box_of_variants) => $visitor.$action(concrete_node, $state),)*
+
+                            #( Node::Option(crate::OptionOf::#option_of_variants) => $visitor.$action(concrete_node, $state),)*
+
+                            #( Node::Vec(crate::VecOf::#vec_of_variants) => $visitor.$action(concrete_node, $state),)*
+                        }
+                    }
+                }
+            }
+        );
+
+        let mut file = File::create(dest_file)
+            .unwrap_or_else(|_| panic!("Could not open {}", &dest_file.display()));
+
+        file.write_all(output.to_string().as_bytes())
+            .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()));
+
+        // rustfmt <filename>
+        Command::new("rustfmt")
+            .args([dest_file.to_str().unwrap()])
+            .output()
+            .expect("failed to execute formatting command");
     }
 }

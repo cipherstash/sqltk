@@ -165,16 +165,7 @@ where
                 expr,
                 data_type: _,
                 format: _,
-            } => Self::resolve_one_source(node, expr, state),
-            Expr::TryCast {
-                expr,
-                data_type: _,
-                format: _,
-            } => Self::resolve_one_source(node, expr, state),
-            Expr::SafeCast {
-                expr,
-                data_type: _,
-                format: _,
+                kind: _,
             } => Self::resolve_one_source(node, expr, state),
             Expr::AtTimeZone {
                 timestamp,
@@ -254,7 +245,7 @@ where
             Expr::MapAccess { column, keys } => {
                 let mut exprs: Vec<&Expr> = Vec::new();
                 exprs.push(column);
-                exprs.extend(&keys[..]);
+                exprs.extend(keys[..].into_iter().map(|k| &k.key));
                 Self::resolve_sources(node, &exprs[..], state)
             }
             Expr::Function(function) => {
@@ -408,6 +399,15 @@ where
                 }
             }
             Expr::OuterJoin(expr) => Self::resolve_one_source(node, expr, state),
+            Expr::Dictionary(dictionary_field) => Self::resolve_sources(
+                node,
+                dictionary_field
+                    .iter()
+                    .map(|df| df.value.deref())
+                    .collect::<Vec<&Expr>>()
+                    .as_slice(),
+                state,
+            ),
         }
     }
     fn resolve_ident_and_record_source(
@@ -428,7 +428,7 @@ where
     fn resolve_compound_ident_and_record_source(
         expr: &'ast Expr,
         mut state: State,
-        compound_ident: &'ast Vec<Ident>,
+        compound_ident: &'ast [Ident],
     ) -> VisitorControlFlow<'ast, State, ResolutionError> {
         let resolved = state.resolve_compound_ident(compound_ident);
         match resolved {
