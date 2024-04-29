@@ -15,9 +15,13 @@ fn main() {
 
     codegen.generated_node_enum(&output_path("node_enum.rs"));
 
+    codegen.generate_node_enum_match_macro(&output_path("node_enum_match_macro.rs"));
+
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo:rerun-if-changed=Cargo.lock");
+    println!("cargo:rerun-if-changed=../Cargo.toml");
+    println!("cargo:rerun-if-changed=../Cargo.lock");
 }
 fn manifest_dir() -> String {
     std::env::var("CARGO_MANIFEST_DIR").unwrap()

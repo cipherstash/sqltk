@@ -32,7 +32,7 @@ pub trait LexicalScopeOps<'ast> {
     fn resolve_ident(&self, ident: &'ast Ident) -> Result<Source, ResolutionError>;
 
     /// Resolves a compound identifier within the current scope.
-    fn resolve_compound_ident(&self, ident: &'ast Vec<Ident>) -> Result<Source, ResolutionError>;
+    fn resolve_compound_ident(&self, ident: &'ast [Ident]) -> Result<Source, ResolutionError>;
 
     /// Expands a wildcard within the current scope.
     fn resolve_wildcard(&self) -> Result<Vec<Source>, ResolutionError>;

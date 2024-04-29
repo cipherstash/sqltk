@@ -5,5 +5,9 @@ lazy_static_include_str!(
 );
 
 lazy_static_include_str!(
-    pub SQL_NODE_ENUM => "generated/node_enum.rs"
+    pub NODE_ENUM => "generated/node_enum.rs"
+);
+
+lazy_static_include_str!(
+    pub NODE_ENUM_MATCH_MACRO => "generated/node_enum_match_macro.rs"
 );

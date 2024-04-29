@@ -36,7 +36,7 @@ impl DerefMut for ScopeStack {
     }
 }
 
-impl<'ast> ScopeStack {
+impl ScopeStack {
     /// Push a new empty [`Scope`] onto the stack.
     pub(crate) fn push(&mut self) {
         let top = mem::take(&mut self.top);
@@ -181,7 +181,7 @@ impl Scope {
     ///
     /// Note that currently only compound identifier of length 2 are supported
     /// and resolution will fail if the identifier has more than two parts.
-    pub fn resolve_compound_ident(&self, idents: &Vec<Ident>) -> Result<Source, ResolutionError> {
+    pub fn resolve_compound_ident(&self, idents: &[Ident]) -> Result<Source, ResolutionError> {
         // TODO: deal with multiple schemas (idents.len() > 2). Currently defaulting implicitly to the public schema within a database.
         // TODO: change type from Vec (which is unbounded) to an enum with a fixed number of variants
         // TODO: take into account the `search_path` (PG-specific, but suggests the resolution logic should be behind a trait which is implemented per database variant)
