@@ -15,6 +15,7 @@ use unicase::UniCase;
 pub struct Schema {
     pub name: UniCase<String>,
     pub tables: HashMap<UniCase<String>, Table>,
+    pub aggregates: Vec<String>,
 }
 
 /// A table (or view).
@@ -34,6 +35,7 @@ impl Schema {
         Self {
             name: name.into(),
             tables: Default::default(),
+            aggregates: Default::default(),
         }
     }
 
