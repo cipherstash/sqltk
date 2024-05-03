@@ -24,6 +24,7 @@ pub struct Schema {
 #[display(fmt = "{}", name)]
 pub struct Table {
     pub name: UniCase<String>,
+    pub primary_key_columns: Vec<UniCase<String>>,
     pub columns: Vec<Column>,
 }
 
@@ -31,16 +32,10 @@ pub struct Table {
 ///
 /// It has a name and a type.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Display, Hash)]
-#[display(fmt = "{} [{}]", name, ty)]
+#[display(fmt = "{}", name)]
 pub struct Column {
     pub name: UniCase<String>,
-    pub ty: ColumnType,
 }
-
-/// The type of a column.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Display)]
-#[display(fmt = "{}", _0)]
-pub struct ColumnType(pub UniCase<String>);
 
 impl Schema {
     /// Creates a new named empty schema.
@@ -68,6 +63,7 @@ impl Table {
     pub fn new(name: &str) -> Self {
         Self {
             name: name.into(),
+            primary_key_columns: Vec::with_capacity(1),
             columns: Vec::with_capacity(16),
         }
     }
@@ -91,30 +87,23 @@ impl Table {
 
 impl Column {
     /// Create a column with a name and a type.
-    pub fn new(name: &str, ty: ColumnType) -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
             name: name.into(),
-            ty,
         }
     }
 }
 
 /// A DSL to create a [`Schema`] for testing against
+/// TODO: add support for marking columns as participting in a primary key
 #[cfg(test)]
 #[macro_export]
 macro_rules! make_schema {
-    (@add_table $schema:ident $table:ident ( $($column:ident $(: $column_ty:ident)?)+ )) => {
+    (@add_table $schema:ident $table:ident ( $($column:ident )+ )) => {
         let $schema = $schema.add_table(
             Table::new(stringify!($table))
-                $( .add_column(Column::new(stringify!($column), make_schema!(@column_type $($column_ty)?)  ))  )+
+                $( .add_column(Column::new(stringify!($column) ))  )+
         );
-    };
-    (@column_type $column_ty:ident) => {
-        ColumnType(unicase::UniCase::new(stringify!($column_ty).into()))
-    };
-    // Default to "text" if the column type is unspecified
-    (@column_type) => {
-        ColumnType(unicase::UniCase::new("text".into()))
     };
     // Main entry point
     ($($table:ident $tokens:tt)*) => {
