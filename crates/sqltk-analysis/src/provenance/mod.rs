@@ -93,7 +93,7 @@ mod tests {
     use crate::{
         make_schema, new_provenance_visitor,
         projection_annotation::{Projection, ProjectionAnnotation},
-        schema::{Column, Table},
+        schema::Table,
         source_annotation::{SourceAnnotation, SourceAnnotationItem, TableColumn},
     };
     use bigdecimal::BigDecimal;

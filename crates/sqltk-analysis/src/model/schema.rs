@@ -25,16 +25,7 @@ pub struct Schema {
 pub struct Table {
     pub name: UniCase<String>,
     pub primary_key_columns: Vec<UniCase<String>>,
-    pub columns: Vec<Column>,
-}
-
-/// A column.
-///
-/// It has a name and a type.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Display, Hash)]
-#[display(fmt = "{}", name)]
-pub struct Column {
-    pub name: UniCase<String>,
+    pub columns: Vec<UniCase<String>>,
 }
 
 impl Schema {
@@ -69,7 +60,7 @@ impl Table {
     }
 
     /// Adds a column to the table.
-    pub fn add_column(mut self, column: Column) -> Self {
+    pub fn add_column(mut self, column: UniCase<String>) -> Self {
         self.columns.push(column);
         self
     }
@@ -80,17 +71,8 @@ impl Table {
     }
 
     /// Gets a column from a table by name.
-    pub fn get_column(&self, name: &UniCase<String>) -> Option<&Column> {
-        self.columns.iter().find(|c| &c.name == name)
-    }
-}
-
-impl Column {
-    /// Create a column with a name and a type.
-    pub fn new(name: &str) -> Self {
-        Self {
-            name: name.into(),
-        }
+    pub fn get_column(&self, name: &UniCase<String>) -> Option<&UniCase<String>> {
+        self.columns.iter().find(|c| *c == name)
     }
 }
 
@@ -102,7 +84,7 @@ macro_rules! make_schema {
     (@add_table $schema:ident $table:ident ( $($column:ident )+ )) => {
         let $schema = $schema.add_table(
             Table::new(stringify!($table))
-                $( .add_column(Column::new(stringify!($column) ))  )+
+                $( .add_column(unicase::UniCase::new(stringify!($column).into()))  )+
         );
     };
     // Main entry point

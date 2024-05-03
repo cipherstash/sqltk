@@ -43,9 +43,9 @@ impl From<&Table> for Projection {
                 .map(|c| {
                     (
                         Rc::new(SourceAnnotation::single(SourceAnnotationItem::TableColumn(
-                            TableColumn::new(table.name.clone(), c.name.clone()),
+                            TableColumn::new(table.name.clone(), c.clone()),
                         ))),
-                        Some(c.name.clone()),
+                        Some(c.clone()),
                     )
                 })
                 .collect(),
