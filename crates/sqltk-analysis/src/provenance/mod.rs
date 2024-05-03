@@ -93,7 +93,7 @@ mod tests {
     use crate::{
         make_schema, new_provenance_visitor,
         projection_annotation::{Projection, ProjectionAnnotation},
-        schema::{Column, ColumnType, Table},
+        schema::{Column, Table},
         source_annotation::{SourceAnnotation, SourceAnnotationItem, TableColumn},
     };
     use bigdecimal::BigDecimal;
@@ -110,7 +110,7 @@ mod tests {
     fn select_one_column_from_one_table() {
         let schema = make_schema! {
             users (
-                id:uuid
+                id
                 email
                 first_name
             )
@@ -148,16 +148,16 @@ mod tests {
     fn select_columns_from_multiple_tables() {
         let schema = make_schema! {
             users (
-                id:uuid
+                id
                 email
                 first_name
             )
             todo_lists (
-                id:uuid
+                id
                 name
-                owner_id:uuid
-                created_at:timestamp
-                updated_at:timestamp
+                owner_id
+                created_at
+                updated_at
             )
         };
 
@@ -197,23 +197,23 @@ mod tests {
     fn select_columns_from_subquery() {
         let schema = make_schema! {
             users (
-                id:uuid
+                id
                 email
                 first_name
             )
             todo_lists (
-                id:uuid
+                id
                 name
-                owner_id:uuid
-                created_at:timestamp
-                updated_at:timestamp
+                owner_id
+                created_at
+                updated_at
             )
             todo_list_items (
-                id:uuid
+                id
                 description
-                owner_id:uuid
-                created_at:timestamp
-                updated_at:timestamp
+                owner_id
+                created_at
+                updated_at
             )
         };
 
