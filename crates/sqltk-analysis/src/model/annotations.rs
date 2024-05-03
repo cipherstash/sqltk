@@ -5,6 +5,12 @@ use core::{
     {any::TypeId, fmt::Debug, marker::PhantomData},
 };
 use std::collections::HashMap;
+use std::rc::Rc;
+
+use sqlparser::ast::{Query, Select, SetExpr};
+use sqltk::prelude::{Expr, SelectItem, Visitable};
+
+use crate::{projection_annotation::ProjectionAnnotation, source_annotation::SourceAnnotation};
 
 /// Key-value store that can associate a specific type of value with any
 /// type of key where the key type has a `'static` lifetime.
@@ -137,3 +143,82 @@ impl<'key, V> DerefMut for AnnotationStore<'key, V> {
         &mut self.0
     }
 }
+
+/// Trait that is implemented by [`AnnotationStore`] for every AST node type
+/// that it supports.
+///
+/// The reason this trait exists is to make it a compilation error to try to
+/// read an annotation from an AST node type for which analysis has not yet been
+/// implemented.
+pub trait Annotates<'ast, N: Visitable<'ast>, A> {
+    /// Adds an annotation of type `A` for an AST node `self`.
+    ///
+    /// Panics if an annotation of type `A` is already present for `node`.
+    fn add_annotation(&mut self, node: &'ast N, annotation: impl Into<Rc<A>>) -> Rc<A>;
+
+    /// Gets an annotation of type `Rc<A>` from `self` for a particular AST node
+    /// `node`. Returns `Some<Rc<A>>` if an annotation is present on the AST node
+    /// or `None` if it does not exist.
+    fn get_annotation(&self, node: &'ast N) -> Option<Rc<A>>;
+
+    /// Same as [`Annotates::get_annotation`], but returns a [`Result`] instead
+    /// of an [`Option`].
+    ///
+    /// Use this method when specific annotations are expected to be present.
+    fn expect_annotation(&self, node: &'ast N) -> Result<Rc<A>, ExpectedAnnotationError<A>>;
+}
+
+/// Error returned when attempting to retrieve an expected annotation when it is not present.
+#[derive(Debug, thiserror::Error)]
+#[error(
+    "Expected {} annotation on AST node: {}",
+    "std::any::type_name::<A>()",
+    _0
+)]
+pub struct ExpectedAnnotationError<A>(pub String, PhantomData<A>);
+
+macro_rules! annotates {
+    ($node:ty, $annotation:ty) => {
+        impl<'ast> Annotates<'ast, $node, $annotation> for AnnotationStore<'ast, Rc<$annotation>> {
+            fn add_annotation(
+                &mut self,
+                node: &'ast $node,
+                annotation: impl Into<Rc<$annotation>>,
+            ) -> Rc<$annotation> {
+                let key = AnnotationKey::from(node);
+                let annotation: Rc<$annotation> = annotation.into();
+
+                if let Some(_) = self.insert(key, annotation) {
+                    panic!(
+                        "Already an existing {} on node",
+                        std::any::type_name::<$annotation>()
+                    );
+                }
+
+                self.get(&key)
+                    .expect("to get the entry that was just added")
+                    .clone()
+            }
+
+            fn get_annotation(&self, node: &'ast $node) -> Option<Rc<$annotation>> {
+                self.get(&AnnotationKey::from(node)).cloned()
+            }
+
+            fn expect_annotation(
+                &self,
+                node: &'ast $node,
+            ) -> Result<Rc<$annotation>, ExpectedAnnotationError<$annotation>> {
+                self.get_annotation(node)
+                    .ok_or(ExpectedAnnotationError(node.to_string(), PhantomData))
+            }
+        }
+    };
+}
+
+// TODO: move these, they don't belong here
+annotates!(Expr, SourceAnnotation);
+annotates!(SelectItem, SourceAnnotation);
+annotates!(Expr, ProjectionAnnotation);
+annotates!(Query, ProjectionAnnotation);
+annotates!(Select, ProjectionAnnotation);
+annotates!(SetExpr, ProjectionAnnotation);

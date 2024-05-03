@@ -4,7 +4,10 @@ use std::fmt::Debug;
 
 use crate::{flow, Break, Node, Visitable, Visitor, VisitorControlFlow};
 
-include!(concat!(env!("OUT_DIR"), "/generated_node_enum_match_macro.rs"));
+include!(concat!(
+    env!("OUT_DIR"),
+    "/generated_node_enum_match_macro.rs"
+));
 
 /// Composes multiple [`Visitor`] implementations into a single `Visitor`.
 ///

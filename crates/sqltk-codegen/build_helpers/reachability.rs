@@ -56,7 +56,11 @@ impl Reachability {
     fn new(query: &SqlParserMetaQuery) -> Self {
         Self {
             results: HashMap::new(),
-            source_types: vec![syn::parse_quote!(Table), syn::parse_quote!(TableFactor)],
+            source_types: vec![
+                syn::parse_quote!(With),
+                syn::parse_quote!(Table),
+                syn::parse_quote!(TableFactor),
+            ],
             expr_ty: syn::parse_quote!(Expr),
             nodes: query
                 .main_nodes()

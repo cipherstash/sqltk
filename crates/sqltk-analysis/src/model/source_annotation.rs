@@ -5,11 +5,12 @@ use core::fmt::Display;
 use std::fmt;
 
 use derive_new::new;
-use sqlparser::ast::{DataType, Query, Value};
+use sqlparser::ast::{DataType, Value};
 use std::collections::BTreeSet;
 use std::rc::Rc;
+use unicase::UniCase;
 
-use super::schema::Table;
+use crate::projection_annotation::Projection;
 
 /// A `Source` records the provenance of a single `Expr` or `SelectItem` node.
 ///
@@ -31,14 +32,14 @@ use super::schema::Table;
 /// arbitrary large AST values contained within a `SourceItem` are allocated
 /// only once.
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct Source {
+pub struct SourceAnnotation {
     /// A set of one or more items.
-    items: BTreeSet<Rc<SourceItem>>,
+    pub items: BTreeSet<Rc<SourceAnnotationItem>>,
 }
 
-impl Source {
+impl SourceAnnotation {
     /// Create a `Source` containing a single `SourceItem`.
-    pub fn single(item: impl Into<Rc<SourceItem>>) -> Source {
+    pub fn single(item: impl Into<Rc<SourceAnnotationItem>>) -> SourceAnnotation {
         Self {
             items: BTreeSet::from([item.into()]),
         }
@@ -46,23 +47,18 @@ impl Source {
 
     /// Create a `Source` containing a multiple `SourceItem`s.
     pub fn multiple(
-        item: impl Into<Rc<SourceItem>>,
-        rest: impl IntoIterator<Item = Rc<SourceItem>>,
-    ) -> Source {
-        let mut items = BTreeSet::<Rc<SourceItem>>::new();
+        item: impl Into<Rc<SourceAnnotationItem>>,
+        rest: impl IntoIterator<Item = Rc<SourceAnnotationItem>>,
+    ) -> SourceAnnotation {
+        let mut items = BTreeSet::<Rc<SourceAnnotationItem>>::new();
         items.insert(item.into());
         items.extend(rest);
         Self { items }
     }
-
-    /// Merge two `Sources` into a new `Source`.
-    ///
-    /// This is used to compose sources for an [`sqlparser::ast::Expr`] that
-    /// contains sub-expressions.
-    pub fn merge(a: &Self, b: &Self) -> Self {
-        Self {
+    pub fn merge(a: &Rc<Self>, b: &Rc<Self>) -> Rc<Self> {
+        Rc::new(Self {
             items: BTreeSet::from_iter(a.items.iter().chain(b.items.iter()).cloned()),
-        }
+        })
     }
 }
 
@@ -71,69 +67,74 @@ impl Source {
 /// For example:
 /// -  an identifier `Expr` could be refering to a table column
 /// -  a value `Expr` could be referring to a literal or a placeholder parameter
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub enum SourceItem {
+#[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
+pub enum SourceAnnotationItem {
     /// Refers to a Table + Column
     TableColumn(TableColumn),
 
     /// A literal or a placeholder
     Value(Value),
 
-    /// Refers to a "typed string". This is fairly obscure and is included for completeness.
-    /// Annoyingly a "typed string" is not a value expression in sqlparser.
+    /// A column of a `VALUES` expression (which can contain multiple rows).
+    /// The values themselves are not recorded. This decision may be revised.
+    ColumnOfValues,
+
+    /// Refers to a "typed string". This is fairly obscure and is included for
+    /// completeness.  Annoyingly a "typed string" is not a value expression in
+    /// sqlparser.
     TypedString(DataType, String),
 
-    /// Refers to a "introduced string". This is fairly obscure and is included for completeness.
-    /// Annoyingly a "introduced string" is not a value expression in sqlparser.
+    /// Refers to a "introduced string". This is fairly obscure and is included
+    /// for completeness.  Annoyingly a "introduced string" is not a value
+    /// expression in sqlparser.
     IntroducedString(String, Value),
 
     /// A value produced by a function call.
-    FunctionCall(String),
+    FunctionCall(UniCase<String>),
 }
 
-impl From<SourceItem> for Source {
-    fn from(value: SourceItem) -> Self {
-        Source::single(value)
+impl From<SourceAnnotationItem> for Rc<SourceAnnotation> {
+    fn from(value: SourceAnnotationItem) -> Self {
+        Rc::new(SourceAnnotation::single(value))
     }
 }
 
 /// Describes a reference to a table + column.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd, new)]
 pub struct TableColumn {
-    pub table: String,
-    pub column: ColumnRef,
+    pub table: UniCase<String>,
+    pub column: UniCase<String>,
 }
 
-/// In `sqltk`, a `Relation` is a component of a SQL statement that has rows &
-/// columns and can be referred to in joins etc. Tables, views and subqueries
-/// are all relations.
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub enum Relation {
-    /// A table or view with an optional alias
-    TableLike(Table, Option<String>),
-
-    /// A subquery with an optional alias
-    SubQuery(Query, Vec<(ColumnRef, Source)>, Option<String>),
+pub struct UnnamedRelation {
+    pub projection: Projection,
 }
 
-/// A reference to a column either by identifier or ordinal position.
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub enum ColumnRef {
-    /// For a column referenced by name
-    Identifier(String),
-
-    /// For a column referenced by ordinal position
-    Ordinal(usize),
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
+pub struct NamedRelation {
+    pub name: UniCase<String>,
+    pub projection: Projection,
 }
 
-impl Display for ColumnRef {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ColumnRef::Identifier(ident) => f.write_str(ident),
-            ColumnRef::Ordinal(ordinal) => f.write_str(&ordinal.to_string()),
-        }
-    }
-}
+// /// A reference to a column either by identifier or ordinal position.
+// #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
+// pub enum ColumnRef {
+//     /// For a column referenced by name
+//     Identifier(String),
+
+//     /// For a column referenced by ordinal position
+//     Ordinal(usize),
+// }
+
+// impl Display for ColumnRef {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         match self {
+//             ColumnRef::Identifier(ident) => f.write_str(ident),
+//             ColumnRef::Ordinal(ordinal) => f.write_str(&ordinal.to_string()),
+//         }
+//     }
+// }
 
 impl Display for TableColumn {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
