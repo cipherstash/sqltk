@@ -4,67 +4,135 @@ use sqltk::prelude::*;
 
 use crate::{
     annotate_sources::AnnotateSource,
-    annotations::Annotates,
-    lexical_scope::{LexicalScope, LexicalScopeOps},
-    model::resolution_error::ResolutionError,
+    model::Annotates,
+    model::Provenance,
+    model::ResolutionError,
     node_path::{NodePath, NodePathOps},
-    projection_annotation::ProjectionAnnotation,
-    source_annotation::SourceAnnotation,
+    model::{Projection, ProjectionColumn},
+    publish_relations::PublishRelationsIntoScope,
+    model::ScopeOps,
+    model::Source,
+    update_stack::UpdateStack,
     SchemaOps,
 };
 
-use std::convert::Infallible;
+use std::{convert::Infallible, rc::Rc};
+use std::fmt::Debug;
 use thiserror::Error;
 
 mod state;
 
-/// Returns a [`Visitor`] that performs provenance analysis of a SQL AST.
-pub fn new_provenance_visitor<'ast, State: 'ast>() -> impl Visitor<'ast, State, ProvenanceError>
+use derive_more::Deref;
+pub use state::*;
+
+#[derive(Debug, Deref)]
+pub struct ProvenanceAnalyzer<'ast, State: 'ast>
 where
-    State: LexicalScopeOps<'ast>
-        + Annotates<'ast, Expr, SourceAnnotation>
-        // + Annotates<'ast, SelectItem, SourceAnnotation>
-        + Annotates<'ast, Expr, ProjectionAnnotation>
-        + Annotates<'ast, Query, ProjectionAnnotation>
-        + Annotates<'ast, SetExpr, ProjectionAnnotation>
-        + Annotates<'ast, Select, ProjectionAnnotation>
+    State: Debug
+        + ScopeOps<'ast>
+        + Annotates<'ast, Expr, Source>
+        + Annotates<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + Annotates<'ast, Expr, Projection>
+        + Annotates<'ast, Query, Projection>
+        + Annotates<'ast, SetExpr, Projection>
+        + Annotates<'ast, Select, Projection>
+        + Annotates<'ast, Statement, Provenance>
         + SchemaOps
         + NodePathOps<'ast>,
 {
-    let mut visitor = VisitorStack::<State, ProvenanceError>::new();
+    stack: VisitorStack<'ast, State, ProvenanceError>,
+}
 
-    visitor.push(NodePath::track());
+impl<'ast, State> Visitor<'ast, State, ProvenanceError> for ProvenanceAnalyzer<'ast, State>
+where
+    State: Debug
+        + ScopeOps<'ast>
+        + Annotates<'ast, Expr, Source>
+        + Annotates<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + Annotates<'ast, Expr, Projection>
+        + Annotates<'ast, Query, Projection>
+        + Annotates<'ast, SetExpr, Projection>
+        + Annotates<'ast, Select, Projection>
+        + Annotates<'ast, Statement, Provenance>
+        + SchemaOps
+        + NodePathOps<'ast>,
+{
+    fn enter<N: 'static>(
+        &self,
+        node: &'ast N,
+        state: State,
+    ) -> VisitorControlFlow<'ast, State, ProvenanceError>
+    where
+        &'ast N: Into<Node<'ast>>,
+    {
+        self.stack.enter(node, state)
+    }
 
-    // #[cfg(test)]
-    // visitor.push(NodePath::log_top_entry());
+    fn exit<N: 'static>(
+        &self,
+        node: &'ast N,
+        state: State,
+    ) -> VisitorControlFlow<'ast, State, ProvenanceError>
+    where
+        &'ast N: Into<Node<'ast>>,
+    {
+        self.stack.exit(node, state)
+    }
+}
 
-    visitor.push(Statement::on_enter(flow::infallible::modify_state(
-        |state: &mut State| state.push_scope(),
-    )));
+impl<'ast, State: 'ast> ProvenanceAnalyzer<'ast, State>
+where
+    State: Debug
+        + ScopeOps<'ast>
+        + Annotates<'ast, Expr, Source>
+        + Annotates<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + Annotates<'ast, Expr, Projection>
+        + Annotates<'ast, Query, Projection>
+        + Annotates<'ast, SetExpr, Projection>
+        + Annotates<'ast, Select, Projection>
+        + Annotates<'ast, Statement, Provenance>
+        + SchemaOps
+        + NodePathOps<'ast>,
+{
+    pub fn new() -> Self {
+        let mut stack = VisitorStack::<State, ProvenanceError>::new();
+        stack.push(NodePath::track());
 
-    visitor.push(Query::on_enter(flow::infallible::modify_state(
-        |state: &mut State| state.push_scope(),
-    )));
+        // NOTE: uncomment the two lines below for (very noisy) debugging.
+        // #[cfg(test)]
+        // stack.push(NodePath::log_top_entry());
 
-    // visitor.push(LexicalScope::push_and_pop_scope_for_statements());
-    // visitor.push(LexicalScope::push_and_pop_scope_for_subqueries());
-    visitor.push(LexicalScope::bring_table_factor_into_scope());
-    visitor.push(LexicalScope::bring_cte_into_scope());
+        #[cfg(test)]
+        stack.push(AnyNode::on_enter(|_, state: State| {
+            if let Some(entry) = state.peek_path_entry() {
+                eprintln!("{:indent$}ENTER: {}", "", entry, indent = entry.depth);
+                // state.dump_scope();
+            }
+            flow::infallible::cont(state)
+        }));
 
-    visitor.push(AnnotateSource::annotate_expr_with_source());
-    visitor.push(AnnotateSource::annotate_set_expr_with_projection());
-    visitor.push(AnnotateSource::annotate_select_with_projection());
-    visitor.push(AnnotateSource::annotate_query_with_projection());
+        stack.push(UpdateStack);
 
-    visitor.push(Statement::on_exit(flow::infallible::modify_state(
-        |state: &mut State| state.pop_scope(),
-    )));
+        stack.push(PublishRelationsIntoScope::new());
 
-    visitor.push(Query::on_exit(flow::infallible::modify_state(
-        |state: &mut State| state.pop_scope(),
-    )));
+        stack.push(AnnotateSource::annotate_expr_with_source());
+        stack.push(AnnotateSource::annotate_set_expr_with_projection());
+        stack.push(AnnotateSource::annotate_select_with_projection());
+        stack.push(AnnotateSource::annotate_query_with_projection());
+        stack.push(AnnotateSource::annotate_select_item_with_source());
+        stack.push(AnnotateSource::annotate_statement_with_projection());
 
-    visitor
+        #[cfg(test)]
+        stack.push(AnyNode::on_exit(|_, state: State| {
+            if let Some(entry) = state.peek_path_entry() {
+                eprintln!("{:indent$}EXIT: {}", "", entry, indent = entry.depth);
+                // state.dump_scope();
+            }
+            flow::infallible::cont(state)
+        }));
+
+        Self { stack }
+    }
 }
 
 /// Errors that can be returned during provenance analysis.
@@ -91,10 +159,14 @@ mod tests {
     use std::rc::Rc;
 
     use crate::{
-        make_schema, new_provenance_visitor,
-        projection_annotation::{Projection, ProjectionAnnotation},
-        schema::Table,
-        source_annotation::{SourceAnnotation, SourceAnnotationItem, TableColumn},
+        make_schema,
+        model::Annotates,
+        model::{InsertProvenance, SelectProvenance},
+        model::{Projection, ProjectionColumn},
+        model::Provenance,
+        model::{CanonicalIdent, SqlIdent, Table},
+        model::{Source, SourceItem, TableColumn},
+        ProvenanceAnalyzer,
     };
     use bigdecimal::BigDecimal;
     use sqltk::prelude::*;
@@ -109,113 +181,144 @@ mod tests {
     #[test]
     fn select_one_column_from_one_table() {
         let schema = make_schema! {
-            users (
-                id
-                email
-                first_name
-            )
+            tables: {
+                users: {
+                    id (PK),
+                    email,
+                    first_name,
+                }
+            }
         };
+
+        let user_id_column = schema.resolve_table_column(&SqlIdent::unquoted("users"), &SqlIdent::unquoted("id")).unwrap();
 
         let statements = parse_sql("select id from users;");
 
-        let state = ProvenanceState {
-            schema,
-            ..Default::default()
-        };
+        let state = ProvenanceState::new(schema);
 
-        let visitor = new_provenance_visitor();
+        let visitor = ProvenanceAnalyzer::new();
 
-        let state = statements.evaluate(&visitor, state).unwrap();
-        let projection = state
-            .projection_annotations
-            .values_for_key_type::<Query>()
-            .collect::<Vec<_>>();
-
-        assert_eq!(
-            projection[0].deref(),
-            &ProjectionAnnotation::Query(Projection {
-                columns: vec![(
-                    Rc::new(SourceAnnotation::single(SourceAnnotationItem::TableColumn(
-                        TableColumn::new("users".into(), "id".into())
-                    ))),
-                    Some("id".into())
-                )]
-            })
-        );
+        match statements.evaluate(&visitor, state) {
+            Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
+                Ok(Provenance::Select(provenance)) => {
+                    let SelectProvenance { projection } = provenance.deref();
+                    assert_eq!(
+                        projection.deref(),
+                        &Projection {
+                            columns: vec![ProjectionColumn {
+                                source: Source::single(SourceItem::TableColumn(user_id_column.clone()))
+                                .into(),
+                                alias: Some(SqlIdent::canonical("id").into())
+                            }
+                            .into()]
+                        }
+                    );
+                }
+                Ok(_) => {
+                    assert!(false, "Wrong Provenance variant")
+                }
+                Err(err) => {
+                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                }
+            },
+            Err(err) => {
+                assert!(false, "Error during AST evaluation: {:#?}", err)
+            }
+        }
     }
 
     #[test]
     fn select_columns_from_multiple_tables() {
         let schema = make_schema! {
-            users (
-                id
-                email
-                first_name
-            )
-            todo_lists (
-                id
-                name
-                owner_id
-                created_at
-                updated_at
-            )
+            tables: {
+                users: {
+                    id (PK),
+                    email,
+                    first_name,
+                }
+                todo_lists: {
+                    id (PK),
+                    name,
+                    owner_id,
+                    created_at,
+                    updated_at,
+                }
+            }
         };
+
+        let users_table = schema.resolve_table(&SqlIdent::unquoted("users")).unwrap();
+        let user_id_column = users_table.get_column(&SqlIdent::unquoted("id")).unwrap();
 
         let statements = parse_sql(
             "select u.id from users as u inner join todo_lists as tl on tl.owner_id = u.id;",
         );
 
-        let state = ProvenanceState {
-            schema,
-            ..Default::default()
-        };
+        let state = ProvenanceState::new(schema);
 
-        let visitor = new_provenance_visitor();
+        let visitor = ProvenanceAnalyzer::new();
 
-        let state = statements.evaluate(&visitor, state).unwrap();
-        let projection = state
-            .projection_annotations
-            .values_for_key_type::<Query>()
-            .collect::<Vec<_>>();
-
-        assert_eq!(projection.len(), 1);
-
-        assert_eq!(
-            projection[0].deref(),
-            &ProjectionAnnotation::Query(Projection {
-                columns: vec![(
-                    Rc::new(SourceAnnotation::single(SourceAnnotationItem::TableColumn(
-                        TableColumn::new("users".into(), "id".into())
-                    ))),
-                    None
-                )]
-            })
-        );
+        match statements.evaluate(&visitor, state) {
+            Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
+                Ok(Provenance::Select(provenance)) => {
+                    let SelectProvenance { projection } = provenance.deref();
+                    assert_eq!(projection.deref().columns.len(), 1);
+                    assert_eq!(
+                        projection.deref(),
+                        &Projection {
+                            columns: vec![ProjectionColumn {
+                                source: Source::single(SourceItem::TableColumn(TableColumn::new(
+                                    Rc::clone(&users_table),
+                                    Rc::clone(&user_id_column),
+                                )))
+                                .into(),
+                                alias: None,
+                            }
+                            .into()]
+                        }
+                    );
+                }
+                Ok(_) => {
+                    assert!(false, "Wrong Provenance variant")
+                }
+                Err(err) => {
+                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                }
+            },
+            Err(err) => {
+                assert!(false, "Error during AST evaluation: {:#?}", err)
+            }
+        }
     }
 
     #[test]
     fn select_columns_from_subquery() {
         let schema = make_schema! {
-            users (
-                id
-                email
-                first_name
-            )
-            todo_lists (
-                id
-                name
-                owner_id
-                created_at
-                updated_at
-            )
-            todo_list_items (
-                id
-                description
-                owner_id
-                created_at
-                updated_at
-            )
+            tables: {
+                users: {
+                    id,
+                    email,
+                    first_name,
+                }
+                todo_lists: {
+                    id,
+                    name,
+                    owner_id,
+                    created_at,
+                    updated_at,
+                }
+                todo_list_items: {
+                    id,
+                    description,
+                    owner_id,
+                    created_at,
+                    updated_at,
+                }
+            }
         };
+
+        let user_id_column = schema.resolve_table_column(&SqlIdent::unquoted("users"), &SqlIdent::unquoted("id")).unwrap();
+        let todo_list_items_id_column = schema.resolve_table_column(&SqlIdent::unquoted("todo_list_items"), &SqlIdent::unquoted("id")).unwrap();
+        let todo_list_items_description_column = schema.resolve_table_column(&SqlIdent::unquoted("todo_list_items"), &SqlIdent::unquoted("description")).unwrap();
 
         let statements = parse_sql(
             r#"
@@ -236,111 +339,120 @@ mod tests {
             "#,
         );
 
-        let state = ProvenanceState {
-            schema,
-            ..Default::default()
-        };
+        let state = ProvenanceState::new(schema);
 
-        let visitor = new_provenance_visitor();
+        let visitor = ProvenanceAnalyzer::new();
 
-        let state = statements.evaluate(&visitor, state).unwrap();
-        let projection = state.statement_provenance(&statements[0]).unwrap();
+        match statements.evaluate(&visitor, state) {
+            Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
+                Ok(Provenance::Select(provenance)) => {
+                    let SelectProvenance { projection } = provenance.deref();
+                    assert_eq!(projection.columns.len(), 3);
 
-        assert_eq!(projection.columns.len(), 3);
+                    assert_eq!(
+                        &projection.columns[0].source,
+                        &Rc::new(Source::single(SourceItem::TableColumn(user_id_column.clone())))
+                    );
 
-        assert_eq!(
-            &projection.columns[0].0,
-            &Rc::new(SourceAnnotation::single(SourceAnnotationItem::TableColumn(
-                TableColumn::new("users".into(), "id".into())
-            )))
-        );
+                    assert_eq!(
+                        &projection.columns[1].source,
+                        &Rc::new(Source::single(SourceItem::TableColumn(todo_list_items_id_column.clone())))
+                    );
 
-        assert_eq!(
-            &projection.columns[1].0,
-            &Rc::new(SourceAnnotation::single(SourceAnnotationItem::TableColumn(
-                TableColumn::new("todo_list_items".into(), "id".into())
-            )))
-        );
-
-        assert_eq!(
-            &projection.columns[2].0,
-            &Rc::new(SourceAnnotation::single(SourceAnnotationItem::TableColumn(
-                TableColumn::new("todo_list_items".into(), "description".into())
-            )))
-        );
+                    assert_eq!(
+                        &projection.columns[2].source,
+                        &Rc::new(Source::single(SourceItem::TableColumn(todo_list_items_description_column.clone())))
+                    );
+                }
+                Ok(_) => {
+                    assert!(false, "Wrong Provenance variant")
+                }
+                Err(err) => {
+                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                }
+            },
+            Err(err) => {
+                assert!(false, "Error during AST evaluation: {:#?}", err)
+            }
+        }
     }
 
     #[test]
     fn select_columns_from_correlated_subquery() {
         let schema = make_schema! {
-            film (
-                id
-                title
-                length
-                rating
-            )
+            tables: {
+                films: {
+                    id,
+                    title,
+                    length,
+                    rating,
+                }
+            }
         };
+
+        let films_id_column = schema.resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("id")).unwrap();
+        let films_title_column = schema.resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("title")).unwrap();
+        let films_length_column = schema.resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("length")).unwrap();
+        let films_rating_column = schema.resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("rating")).unwrap();
 
         let statements = parse_sql(
             r#"
             select f.id, f.title, f.length, f.rating
-            from film f
+            from films f
             where length > (
                 select avg(length)
-                from film
+                from films
                 where rating = f.rating
             );
-            "#,
+        "#,
         );
 
-        let state = ProvenanceState {
-            schema,
-            ..Default::default()
-        };
+        let state = ProvenanceState::new(schema);
 
-        let visitor = new_provenance_visitor();
+        let visitor = ProvenanceAnalyzer::new();
 
-        let state = statements.evaluate(&visitor, state).unwrap();
-        let projection = state.statement_provenance(&statements[0]).unwrap();
+        match statements.evaluate(&visitor, state) {
+            Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
+                Ok(Provenance::Select(provenance)) => {
+                    let SelectProvenance { projection } = provenance.deref();
+                    assert_eq!(projection.columns.len(), 4);
 
-        assert_eq!(projection.columns.len(), 4);
+                    assert_eq!(
+                        &projection.columns[0].source,
+                        &Rc::new(Source::single(SourceItem::TableColumn(films_id_column.clone())))
+                    );
 
-        assert_eq!(
-            projection.columns[0].0.deref(),
-            &SourceAnnotation::single(SourceAnnotationItem::TableColumn(TableColumn::new(
-                "film".into(),
-                "id".into()
-            )))
-        );
+                    assert_eq!(
+                        &projection.columns[1].source,
+                        &Rc::new(Source::single(SourceItem::TableColumn(films_title_column.clone())))
+                    );
 
-        assert_eq!(
-            projection.columns[1].0.deref(),
-            &SourceAnnotation::single(SourceAnnotationItem::TableColumn(TableColumn::new(
-                "film".into(),
-                "title".into()
-            )))
-        );
+                    assert_eq!(
+                        &projection.columns[2].source,
+                        &Rc::new(Source::single(SourceItem::TableColumn(films_length_column.clone())))
+                    );
 
-        assert_eq!(
-            projection.columns[2].0.deref(),
-            &SourceAnnotation::single(SourceAnnotationItem::TableColumn(TableColumn::new(
-                "film".into(),
-                "length".into()
-            )))
-        );
-
-        assert_eq!(
-            projection.columns[3].0.deref(),
-            &SourceAnnotation::single(SourceAnnotationItem::TableColumn(TableColumn::new(
-                "film".into(),
-                "rating".into()
-            )))
-        );
+                    assert_eq!(
+                        &projection.columns[3].source,
+                        &Rc::new(Source::single(SourceItem::TableColumn(films_rating_column.clone())))
+                    );
+                }
+                Ok(_) => {
+                    assert!(false, "Wrong Provenance variant")
+                }
+                Err(err) => {
+                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                }
+            },
+            Err(err) => {
+                assert!(false, "Error during AST evaluation: {:#?}", err)
+            }
+        }
     }
 
     #[test]
     fn select_columns_from_cte() {
-        let schema = make_schema! {};
+        let schema = make_schema! { name: "public" };
 
         let statements = parse_sql(
             r#"
@@ -351,24 +463,120 @@ mod tests {
             "#,
         );
 
-        let state = ProvenanceState {
-            schema,
-            ..Default::default()
+        let state = ProvenanceState::new(schema);
+
+        let visitor = ProvenanceAnalyzer::new();
+
+        match statements.evaluate(&visitor, state) {
+            Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
+                Ok(Provenance::Select(provenance)) => {
+                    let SelectProvenance { projection } = provenance.deref();
+                    assert_eq!(projection.columns.len(), 1);
+
+                    assert_eq!(
+                        &projection.columns[0].source,
+                        &Rc::new(Source::single(SourceItem::Value(Value::Number(
+                            BigDecimal::from(123),
+                            false
+                        ))))
+                    );
+                }
+                Ok(_) => {
+                    assert!(false, "Wrong Provenance variant")
+                }
+                Err(err) => {
+                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                }
+            },
+            Err(err) => {
+                assert!(false, "Error during AST evaluation: {:#?}", err)
+            }
+        }
+    }
+
+    #[test]
+    fn basic_insert() {
+        let schema = make_schema! {
+            tables: {
+                films: {
+                    id,
+                    title,
+                    length,
+                    rating,
+                }
+            }
         };
 
-        let visitor = new_provenance_visitor();
-
-        let state = statements.evaluate(&visitor, state).unwrap();
-        let projection = state.statement_provenance(&statements[0]).unwrap();
-
-        assert_eq!(projection.columns.len(), 1);
-
-        assert_eq!(
-            projection.columns[0].0.deref(),
-            &SourceAnnotation::single(SourceAnnotationItem::Value(Value::Number(
-                BigDecimal::from(123),
-                false
-            )))
+        let statements = parse_sql(
+            r#"
+            insert into films (title, length, rating)
+                values ('Star Wars', '2 hours', '10/10')
+                returning id;
+        "#,
         );
+
+        let films_id_column = schema.resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("id")).unwrap();
+
+        let state = ProvenanceState::new(schema);
+
+        let visitor = ProvenanceAnalyzer::new();
+
+        match statements.evaluate(&visitor, state) {
+            Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
+                Ok(Provenance::Insert(provenance)) => {
+                    if let InsertProvenance {
+                        into_table,
+                        columns_written,
+                        returning: Some(projection),
+                    } = provenance.deref()
+                    {
+                        assert_eq!(into_table.name.deref(), &CanonicalIdent::from("films"));
+
+                        assert_eq!(columns_written.len(), 3);
+                        assert_eq!(
+                            columns_written[0].column.deref(),
+                            &CanonicalIdent::from("title")
+                        );
+                        assert_eq!(
+                            columns_written[0].data.deref(),
+                            &Source::single(SourceItem::ColumnOfValues)
+                        );
+
+                        assert_eq!(
+                            columns_written[1].column.deref(),
+                            &CanonicalIdent::from("length")
+                        );
+                        assert_eq!(
+                            columns_written[1].data.deref(),
+                            &Source::single(SourceItem::ColumnOfValues)
+                        );
+
+                        assert_eq!(&*columns_written[2].column, &CanonicalIdent::from("rating"));
+                        assert_eq!(
+                            columns_written[2].data.deref(),
+                            &Source::single(SourceItem::ColumnOfValues)
+                        );
+
+                        assert_eq!(projection.columns.len(), 1);
+
+                        assert_eq!(
+                            &projection.columns[0].source,
+                            &Rc::new(Source::single(SourceItem::TableColumn(films_id_column.clone())))
+                        );
+                    } else {
+                        assert!(false, "expected Some(projection)")
+                    }
+                }
+                Ok(_) => {
+                    assert!(false, "Wrong Provenance variant")
+                }
+                Err(err) => {
+                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                }
+            },
+            Err(err) => {
+                assert!(false, "Error during AST evaluation: {:#?}", err)
+            }
+        }
     }
 }

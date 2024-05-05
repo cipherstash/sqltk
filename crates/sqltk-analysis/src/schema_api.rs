@@ -1,6 +1,6 @@
 //! Defines the [`SchemaOps`] trait.
 
-use crate::model::schema::Schema;
+use crate::model::Schema;
 
 /// Trait that provides a method for retrieving the database schema against
 /// which tables/views/columns can be resolved.

@@ -4,21 +4,23 @@ use core::marker::PhantomData;
 use core::ops::Deref;
 use std::rc::Rc;
 
-use crate::annotations::Annotates;
-use crate::lexical_scope::LexicalScopeOps;
+use crate::model::Annotates;
+use crate::model::ResolutionError;
+use crate::model::ScopeOps;
+use crate::model::{CanonicalIdent, SqlIdent};
+use crate::model::{ColumnWritten, InsertProvenance, Provenance, SelectProvenance};
+use crate::model::{Projection, ProjectionColumn};
+use crate::model::{Source, SourceItem};
 use crate::node_path::NodePathOps;
-use crate::projection_annotation::{Projection, ProjectionAnnotation};
-use crate::resolution_error::ResolutionError;
-use crate::source_annotation::SourceAnnotationItem;
+use crate::SchemaOps;
 
 use sqltk::prelude::{Ident, Query};
 use sqltk::{flow, VisitorControlFlow};
 use sqltk::{Visitable, Visitor};
 
-use sqlparser::ast::{Expr, Function, ListAggOnOverflow, Select, SelectItem, SetExpr};
-use unicase::UniCase;
-
-use crate::model::source_annotation::SourceAnnotation;
+use sqlparser::ast::{
+    Expr, Function, Insert, ListAggOnOverflow, Select, SelectItem, SetExpr, Statement,
+};
 
 /// Type that provides functions for building [`Visitor`] implementations that
 /// can annotate [`Expr`] and [`SelectItem`] nodes with their [`Source`].
@@ -26,13 +28,16 @@ pub struct AnnotateSource<'ast, State: 'ast>(PhantomData<&'ast State>);
 
 impl<'ast, State: 'ast> AnnotateSource<'ast, State>
 where
-    State: LexicalScopeOps<'ast>
-        + Annotates<'ast, Expr, SourceAnnotation>
-        + Annotates<'ast, Expr, ProjectionAnnotation>
-        + Annotates<'ast, Query, ProjectionAnnotation>
-        + Annotates<'ast, SetExpr, ProjectionAnnotation>
-        + Annotates<'ast, Select, ProjectionAnnotation>
-        + NodePathOps<'ast>,
+    State: ScopeOps<'ast>
+        + Annotates<'ast, Expr, Source>
+        + Annotates<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + Annotates<'ast, Expr, Projection>
+        + Annotates<'ast, Query, Projection>
+        + Annotates<'ast, SetExpr, Projection>
+        + Annotates<'ast, Select, Projection>
+        + Annotates<'ast, Statement, Provenance>
+        + NodePathOps<'ast>
+        + SchemaOps,
 {
     pub fn annotate_expr_with_source() -> impl Visitor<'ast, State, ResolutionError> {
         Expr::on_exit(&Self::annotate_expr)
@@ -45,70 +50,99 @@ where
     pub fn annotate_query_with_projection() -> impl Visitor<'ast, State, ResolutionError> {
         Query::on_exit(&Self::annotate_query)
     }
+    pub fn annotate_select_item_with_source() -> impl Visitor<'ast, State, ResolutionError> {
+        SelectItem::on_exit(&Self::annotate_select_item_with_projection_column)
+    }
 
     pub fn annotate_set_expr_with_projection() -> impl Visitor<'ast, State, ResolutionError> {
         SetExpr::on_exit(&Self::annotate_set_expr)
     }
 
+    pub fn annotate_statement_with_projection() -> impl Visitor<'ast, State, ResolutionError> {
+        Statement::on_exit(&Self::annotate_statement)
+    }
+
+    fn annotate_select_item_with_projection_column(
+        node: &'ast SelectItem,
+        mut state: State,
+    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
+        let result: Vec<Result<Rc<ProjectionColumn>, ResolutionError>> = match node {
+            SelectItem::UnnamedExpr(expr) => match expr {
+                Expr::Identifier(ident) => vec![state
+                    .expect_annotation(expr)
+                    .map(|source: Rc<Source>| {
+                        ProjectionColumn::new(source.clone(), Some(SqlIdent::from(ident).into()))
+                            .into()
+                    })
+                    .map_err(ResolutionError::from)],
+                expr => vec![state
+                    .expect_annotation(expr)
+                    .map(|source: Rc<Source>| ProjectionColumn::new(source.clone(), None).into())
+                    .map_err(ResolutionError::from)],
+            },
+            SelectItem::ExprWithAlias { expr, alias } => vec![state
+                .expect_annotation(expr)
+                .map(|source: Rc<Source>| {
+                    ProjectionColumn::new(source.clone(), Some(SqlIdent::from(alias).into())).into()
+                })
+                .map_err(ResolutionError::from)]
+            .into(),
+            SelectItem::QualifiedWildcard(obj_name, _) => {
+                let idents: Vec<SqlIdent> = obj_name.0.iter().map(SqlIdent::from).collect();
+                match state.resolve_qualified_wildcard(idents.as_slice()) {
+                    Ok(projection) => {
+                        Vec::from_iter(projection.columns.clone().into_iter().map(|c| Ok(c)))
+                    }
+                    Err(err) => vec![Err(err.into())],
+                }
+            }
+            SelectItem::Wildcard(_) => match state.resolve_wildcard() {
+                Ok(projection) => Vec::from_iter(projection.columns.iter().map(|c| Ok(c.clone()))),
+                Err(err) => vec![Err(err)],
+            },
+        };
+
+        let result: Result<Vec<Rc<ProjectionColumn>>, ResolutionError> =
+            result.into_iter().collect();
+
+        match result {
+            Ok(columns) => {
+                state.add_annotation(node, columns);
+                flow::cont(state)
+            }
+            Err(err) => flow::error(err, state),
+        }
+    }
+
     fn annotate_select(
         node: &'ast Select,
         mut state: State,
-    ) -> VisitorControlFlow<'ast, State, ResolutionError>
-    where
-        State: LexicalScopeOps<'ast>
-            + Annotates<'ast, Expr, SourceAnnotation>
-            + Annotates<'ast, Select, ProjectionAnnotation>
-            + NodePathOps<'ast>,
-    {
+    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
         let Select {
             projection: select_items,
             ..
         } = node;
 
-        let result = select_items
+        let result: Result<Vec<Rc<Vec<Rc<ProjectionColumn>>>>, ResolutionError> = select_items
             .iter()
-            .flat_map(|item| match item {
-                SelectItem::UnnamedExpr(expr) => match expr {
-                    Expr::Identifier(ident) => vec![state
-                        .expect_annotation(expr)
-                        .map(|source: Rc<SourceAnnotation>| {
-                            (source.clone(), Some(UniCase::new(ident.to_string())))
-                        })
-                        .map_err(ResolutionError::from)],
-                    expr => vec![state
-                        .expect_annotation(expr)
-                        .map(|source: Rc<SourceAnnotation>| (source.clone(), None))
-                        .map_err(ResolutionError::from)],
-                },
-                SelectItem::ExprWithAlias { expr, alias } => vec![state
-                    .expect_annotation(expr)
-                    .map(|source: Rc<SourceAnnotation>| {
-                        (source.clone(), Some(UniCase::new(alias.to_string())))
-                    })
-                    .map_err(ResolutionError::from)],
-                SelectItem::QualifiedWildcard(obj_name, _) => {
-                    match state.resolve_qualified_wildcard(&obj_name.0) {
-                        Ok(projection) => {
-                            Vec::from_iter(projection.columns.iter().map(|c| Ok(c.clone())))
-                        }
-                        Err(err) => vec![Err(err)],
-                    }
-                }
-                SelectItem::Wildcard(_) => match state.resolve_wildcard() {
-                    Ok(projection) => {
-                        Vec::from_iter(projection.columns.iter().map(|c| Ok(c.clone())))
-                    }
-                    Err(err) => vec![Err(err)],
-                },
+            .map(|item| {
+                state
+                    .expect_annotation(item)
+                    .map_err(|err| ResolutionError::from(err))
             })
-            .collect::<Vec<_>>();
+            .collect();
 
-        let result: Result<Vec<(Rc<SourceAnnotation>, Option<UniCase<String>>)>, ResolutionError> =
-            result.into_iter().collect();
+        let result: Result<Vec<Rc<ProjectionColumn>>, ResolutionError> = result.map(|items| {
+            items
+                .into_iter()
+                .map(|item| item.deref().clone().into_iter().collect::<Vec<_>>())
+                .flatten()
+                .collect()
+        });
 
         match result {
             Ok(columns) => {
-                state.add_annotation(node, ProjectionAnnotation::Query(Projection { columns }));
+                state.add_annotation(node, Projection { columns });
                 flow::cont(state)
             }
             Err(err) => flow::error(err, state),
@@ -119,10 +153,7 @@ where
     fn annotate_expr(
         node: &'ast Expr,
         mut state: State,
-    ) -> VisitorControlFlow<'ast, State, ResolutionError>
-    where
-        State: LexicalScopeOps<'ast> + Annotates<'ast, Expr, SourceAnnotation> + NodePathOps<'ast>,
-    {
+    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
         match node {
             Expr::Identifier(ident) => Self::resolve_ident_and_record_source(node, state, ident),
             Expr::CompoundIdentifier(idents) => {
@@ -281,16 +312,13 @@ where
             Expr::Collate { expr, collation: _ } => Self::resolve_one_source(node, expr, state),
             Expr::Nested(expr) => Self::resolve_one_source(node, expr, state),
             Expr::Value(value) => {
-                state.add_annotation(
-                    node,
-                    SourceAnnotation::single(SourceAnnotationItem::Value(value.clone())),
-                );
+                state.add_annotation(node, Source::single(SourceItem::Value(value.clone())));
                 flow::cont(state)
             }
             Expr::IntroducedString { introducer, value } => {
                 state.add_annotation(
                     node,
-                    SourceAnnotation::single(SourceAnnotationItem::IntroducedString(
+                    Source::single(SourceItem::IntroducedString(
                         introducer.clone(),
                         value.clone(),
                     )),
@@ -300,10 +328,7 @@ where
             Expr::TypedString { data_type, value } => {
                 state.add_annotation(
                     node,
-                    SourceAnnotation::single(SourceAnnotationItem::TypedString(
-                        data_type.clone(),
-                        value.clone(),
-                    )),
+                    Source::single(SourceItem::TypedString(data_type.clone(), value.clone())),
                 );
                 flow::cont(state)
             }
@@ -314,13 +339,17 @@ where
                 Self::resolve_sources(node, &exprs[..], state)
             }
             Expr::Function(Function { args: _, name, .. }) => {
-                // TODO: Expr::Function - extract sources from function args
-
                 state.add_annotation(
                     node,
-                    SourceAnnotation::single(SourceAnnotationItem::FunctionCall(
-                        name.to_string().into(),
-                    )),
+                    Source::single(SourceItem::FunctionCall {
+                        ident: SqlIdent::from(
+                            name.0.last().expect(
+                                "A sqlparser ObjectName to have at least one identifier part",
+                            ),
+                        ),
+
+                        arg_sources: vec![], // TODO: capture the Sources for the function args
+                    }),
                 );
                 flow::cont(state)
             }
@@ -366,31 +395,27 @@ where
                 negated: _,
             } => flow::cont(state),
             Expr::Subquery(query) => {
-                let result: Result<Rc<SourceAnnotation>, ResolutionError> =
-                    match <State as Annotates<'_, Query, ProjectionAnnotation>>::expect_annotation(
+                let result: Result<Rc<Source>, ResolutionError> =
+                    match <State as Annotates<'_, Query, Projection>>::expect_annotation(
                         &state,
                         query.deref(),
                     ) {
-                        Ok(projection_annotation) => match projection_annotation.deref() {
-                            ProjectionAnnotation::Query(Projection { columns })
-                            | ProjectionAnnotation::Insert {
-                                returning: Some(Projection { columns }),
-                                ..
-                            } => {
-                                if let Some(((first, _), rest)) = columns.split_first() {
-                                    let merged = rest.iter().fold(
-                                        first.clone(),
-                                        |acc, (source_annotation, _)| {
-                                            SourceAnnotation::merge(&acc, source_annotation)
-                                        },
-                                    );
-                                    Ok(<State as Annotates<'_, Expr, SourceAnnotation>>::add_annotation(&mut state, node, merged))
-                                } else {
-                                    Err(ResolutionError::InvalidSubqueryExpr(query.clone()))
-                                }
+                        Ok(projection) => {
+                            let Projection { columns } = projection.deref();
+                            if let Some((projection_column, rest)) = columns.split_first() {
+                                let merged = rest.iter().fold(
+                                    projection_column.source.clone(),
+                                    |acc, projection_column| {
+                                        Source::merge(&acc, &projection_column.source)
+                                    },
+                                );
+                                Ok(<State as Annotates<'_, Expr, Source>>::add_annotation(
+                                    &mut state, node, merged,
+                                ))
+                            } else {
+                                Err(ResolutionError::InvalidSubqueryExpr(query.clone()))
                             }
-                            _ => Err(ResolutionError::InvalidSubqueryExpr(query.clone())),
-                        },
+                        }
                         Err(err) => Err(ResolutionError::ExpectedProjectionAnnotation(err)),
                     };
 
@@ -400,31 +425,22 @@ where
                 }
             }
             Expr::ArraySubquery(query) => {
-                let result: Result<Rc<SourceAnnotation>, ResolutionError> =
-                    match <State as Annotates<'_, Query, ProjectionAnnotation>>::expect_annotation(
-                        &state,
-                        query.deref(),
-                    ) {
-                        Ok(projection_annotation) => match projection_annotation.deref() {
-                            ProjectionAnnotation::Query(Projection { columns })
-                            | ProjectionAnnotation::Insert {
-                                returning: Some(Projection { columns }),
-                                ..
-                            } => {
-                                if let Some(((first, _), rest)) = columns.split_first() {
-                                    let merged = rest.iter().fold(
-                                        first.clone(),
-                                        |acc, (source_annotation, _)| {
-                                            SourceAnnotation::merge(&acc, source_annotation)
-                                        },
-                                    );
-                                    Ok(<State as Annotates<'_, Expr, SourceAnnotation>>::add_annotation(&mut state, node, merged))
-                                } else {
-                                    Err(ResolutionError::InvalidArraySubqueryExpr(query.clone()))
-                                }
+                let result: Result<Rc<Source>, ResolutionError> =
+                    match state.expect_annotation(query.deref()) {
+                        Ok(projection) => {
+                            let Projection { columns } = projection.deref();
+                            if let Some((projection_column, rest)) = columns.split_first() {
+                                let merged = rest.iter().fold(
+                                    projection_column.source.clone(),
+                                    |acc, projection_column| {
+                                        Source::merge(&acc, &projection_column.source)
+                                    },
+                                );
+                                Ok(state.add_annotation(node, merged))
+                            } else {
+                                Err(ResolutionError::InvalidArraySubqueryExpr(query.clone()))
                             }
-                            _ => Err(ResolutionError::InvalidArraySubqueryExpr(query.clone())),
-                        },
+                        }
                         Err(err) => Err(ResolutionError::ExpectedProjectionAnnotation(err)),
                     };
 
@@ -494,11 +510,12 @@ where
             Expr::MatchAgainst { .. } => flow::error(ResolutionError::Unimplemented, state),
             Expr::Wildcard => {
                 let result = state.resolve_wildcard().map(|projection| {
-                    if let Some(((first, _), rest)) = projection.columns.split_first() {
-                        let merged = rest.iter().fold(first.clone(), |acc, (source, _)| {
-                            SourceAnnotation::merge(&acc, source)
-                        });
-                        <State as Annotates<'_, Expr, SourceAnnotation>>::add_annotation(
+                    if let Some((projection_column, rest)) = projection.columns.split_first() {
+                        let merged = rest.iter().fold(
+                            projection_column.source.clone(),
+                            |acc, projection_column| Source::merge(&acc, &projection_column.source),
+                        );
+                        <State as Annotates<'_, Expr, Source>>::add_annotation(
                             &mut state, node, merged,
                         );
                         Ok(())
@@ -516,13 +533,18 @@ where
             }
             Expr::QualifiedWildcard(wildcard) => {
                 let result = state
-                    .resolve_qualified_wildcard(&wildcard.0)
+                    .resolve_qualified_wildcard(
+                        Vec::from_iter(wildcard.0.iter().map(SqlIdent::from)).as_slice(),
+                    )
                     .map(|projection| {
-                        if let Some(((first, _), rest)) = projection.columns.split_first() {
-                            let merged = rest.iter().fold(first.clone(), |acc, (source, _)| {
-                                SourceAnnotation::merge(&acc, source)
-                            });
-                            <State as Annotates<'_, Expr, SourceAnnotation>>::add_annotation(
+                        if let Some((projection_column, rest)) = projection.columns.split_first() {
+                            let merged = rest.iter().fold(
+                                projection_column.source.clone(),
+                                |acc, projection_column| {
+                                    Source::merge(&acc, &projection_column.source)
+                                },
+                            );
+                            <State as Annotates<'_, Expr, Source>>::add_annotation(
                                 &mut state, node, merged,
                             );
                             Ok(())
@@ -555,12 +577,10 @@ where
         mut state: State,
         ident: &'ast Ident,
     ) -> VisitorControlFlow<'ast, State, ResolutionError> {
-        let resolved = state.resolve_ident(ident);
+        let resolved = state.resolve_ident(&ident.into());
         match resolved {
             Ok(source) => {
-                <State as Annotates<'_, Expr, SourceAnnotation>>::add_annotation(
-                    &mut state, expr, source,
-                );
+                <State as Annotates<'_, Expr, Source>>::add_annotation(&mut state, expr, source);
                 flow::cont(state)
             }
             Err(err) => flow::error(err, state),
@@ -572,12 +592,12 @@ where
         mut state: State,
         compound_ident: &'ast [Ident],
     ) -> VisitorControlFlow<'ast, State, ResolutionError> {
-        let resolved = state.resolve_compound_ident(compound_ident);
+        let resolved = state.resolve_compound_ident(
+            Vec::from_iter(compound_ident.iter().map(SqlIdent::from)).as_slice(),
+        );
         match resolved {
             Ok(source) => {
-                <State as Annotates<'_, Expr, SourceAnnotation>>::add_annotation(
-                    &mut state, expr, source,
-                );
+                <State as Annotates<'_, Expr, Source>>::add_annotation(&mut state, expr, source);
                 flow::cont(state)
             }
             Err(err) => flow::error(err, state),
@@ -592,11 +612,12 @@ where
         let sources = exprs
             .iter()
             .try_fold(Vec::with_capacity(exprs.len()), |mut acc, expr| {
-                <State as Annotates<'_, Expr, SourceAnnotation>>::expect_annotation(&state, *expr)
-                    .map(|source| {
+                <State as Annotates<'_, Expr, Source>>::expect_annotation(&state, *expr).map(
+                    |source| {
                         acc.push(source);
                         acc
-                    })
+                    },
+                )
             });
 
         match sources {
@@ -604,12 +625,10 @@ where
                 let (first, rest) = sources
                     .split_first()
                     .expect("there should be a source for every Expr");
-                let merged = rest.iter().fold(first.clone(), |acc, source| {
-                    SourceAnnotation::merge(&acc, source)
-                });
-                <State as Annotates<'_, Expr, SourceAnnotation>>::add_annotation(
-                    &mut state, node, merged,
-                );
+                let merged = rest
+                    .iter()
+                    .fold(first.clone(), |acc, source| Source::merge(&acc, source));
+                <State as Annotates<'_, Expr, Source>>::add_annotation(&mut state, node, merged);
                 flow::cont(state)
             }
             Err(err) => flow::error(err.into(), state),
@@ -636,10 +655,7 @@ where
     fn annotate_query(
         query: &'ast Query,
         mut state: State,
-    ) -> VisitorControlFlow<'ast, State, ResolutionError>
-    where
-        State: LexicalScopeOps<'ast> + Annotates<'ast, SetExpr, ProjectionAnnotation>,
-    {
+    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
         match state.expect_annotation(query.body.deref()) {
             Ok(projection_annotation) => {
                 state.add_annotation(query, projection_annotation);
@@ -649,29 +665,158 @@ where
         }
     }
 
+    fn annotate_statement(
+        statement: &'ast Statement,
+        mut state: State,
+    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
+        let result: Result<State, (ResolutionError, State)> = match statement {
+            Statement::Query(query) => match state.expect_annotation(query.deref()) {
+                Ok(projection) => {
+                    state.add_annotation(
+                        statement,
+                        Provenance::Select(
+                            SelectProvenance {
+                                projection: projection.clone(),
+                            }
+                            .into(),
+                        ),
+                    );
+                    Ok(state)
+                }
+                Err(err) => Err((err.into(), state)),
+            },
+            Statement::Insert(Insert {
+                table_name,
+                columns,
+                source,
+                returning,
+                ..
+            }) => {
+                let table: Result<_, ResolutionError> = state
+                    .get_schema()
+                    .resolve_table(&SqlIdent::from(table_name.0.last().unwrap()))
+                    .map_err(|err| err.into());
+
+                let source: Result<Option<Rc<Projection>>, ResolutionError> = match source {
+                    Some(source) => state
+                        .expect_annotation(source.deref())
+                        .map(|projection| projection.clone())
+                        .map(Some)
+                        .map_err(ResolutionError::from),
+                    None => Ok(None),
+                };
+
+                let columns_written: Result<Vec<ColumnWritten>, ResolutionError> = match source {
+                    Ok(Some(projection)) => columns
+                        .clone()
+                        .into_iter()
+                        .map(|ident| CanonicalIdent::from(ident.value))
+                        .zip(projection.columns.iter())
+                        .map(|(ident, column)| {
+                            Ok(ColumnWritten {
+                                column: ident.into(),
+                                data: column.source.clone(),
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>(),
+                    Ok(None) => Ok(vec![]),
+                    Err(err) => Err(err.into()),
+                };
+
+                let returning: Result<Option<Rc<Projection>>, ResolutionError> = match returning {
+                    Some(select_items) => {
+                        match select_items
+                            .iter()
+                            .map(|item| state.expect_annotation(item))
+                            .collect::<Result<Vec<Rc<Vec<Rc<ProjectionColumn>>>>, _>>()
+                        {
+                            Ok(projection_columns) => {
+                                if projection_columns.len() > 0 {
+                                    Ok(Some(
+                                        Projection {
+                                            columns: projection_columns
+                                                .iter()
+                                                .map(|rc| rc.deref())
+                                                .flatten()
+                                                .map(|source| source.clone())
+                                                .collect(),
+                                        }
+                                        .into(),
+                                    ))
+                                } else {
+                                    Ok(None)
+                                }
+                            }
+                            Err(err) => Err(err.into()),
+                        }
+                    }
+                    None => Ok(None),
+                };
+
+                match (table, columns_written, returning) {
+                    (Ok(into_table), Ok(columns_written), Ok(returning)) => {
+                        state.add_annotation(
+                            statement,
+                            Provenance::Insert(
+                                InsertProvenance {
+                                    into_table,
+                                    columns_written,
+                                    returning,
+                                }
+                                .into(),
+                            ),
+                        );
+                        Ok(state)
+                    }
+                    (table, columns_written, returning) => {
+                        match table.and(columns_written).and(returning) {
+                            Ok(_) => Ok(state),
+                            Err(err) => Err((err.into(), state)),
+                        }
+                    }
+                }
+            }
+            // Statement::Update {
+            //     table,
+            //     assignments,
+            //     from,
+            //     selection,
+            //     returning,
+            // } => todo!(),
+            // Statement::Delete(Delete {
+            //     tables,
+            //     from,
+            //     using,
+            //     selection,
+            //     returning,
+            //     ..
+            // }) => todo!(),
+            _ => Ok(state),
+        };
+
+        match result {
+            Ok(state) => flow::cont(state),
+            Err((err, state)) => flow::error(err.into(), state),
+        }
+    }
+
     fn annotate_set_expr(
         set_expr: &'ast SetExpr,
         mut state: State,
-    ) -> VisitorControlFlow<'ast, State, ResolutionError>
-    where
-        State: LexicalScopeOps<'ast>
-            + Annotates<'ast, Query, ProjectionAnnotation>
-            + Annotates<'ast, SetExpr, ProjectionAnnotation>
-            + Annotates<'ast, Select, ProjectionAnnotation>,
-    {
+    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
         match set_expr {
             SetExpr::Select(select) => match state.expect_annotation(select.deref()) {
                 // Simply clone the annotation from the SetExpr to the Query.
-                Ok(projection_annotation) => {
-                    state.add_annotation(set_expr, projection_annotation);
+                Ok(projection) => {
+                    state.add_annotation(set_expr, projection);
                     flow::cont(state)
                 }
                 Err(err) => flow::error(err.into(), state),
             },
             SetExpr::Query(query) => match state.expect_annotation(query.deref()) {
                 // Simply clone the annotation from the SetExpr to the Query.
-                Ok(projection_annotation) => {
-                    state.add_annotation(set_expr, projection_annotation);
+                Ok(projection) => {
+                    state.add_annotation(set_expr, projection);
                     flow::cont(state)
                 }
                 Err(err) => flow::error(err.into(), state),
@@ -700,39 +845,27 @@ where
                     .and_then(|left| Ok((left, state.expect_annotation(right.deref())?)));
 
                 match result {
-                    Ok((left_annotation, right_annotation)) => {
-                        if let (Some(left_projection), Some(right_projection)) =
-                            (left_annotation.projection(), right_annotation.projection())
-                        {
-                            let merged_columns = left_projection
-                                .columns
-                                .iter()
-                                .zip(right_projection.columns.clone())
-                                .map(|((left_source, left_ident), (right_source, _))| {
-                                    (
-                                        SourceAnnotation::merge(left_source, &right_source),
-                                        left_ident.clone(),
-                                    )
-                                })
-                                .collect::<Vec<_>>();
+                    Ok((left_projection, right_projection)) => {
+                        let merged_columns = left_projection
+                            .columns
+                            .iter()
+                            .zip(right_projection.columns.clone())
+                            .map(|(left, right)| {
+                                Rc::new(ProjectionColumn::new(
+                                    Source::merge(&left.source, &right.source),
+                                    left.alias.clone(),
+                                ))
+                            })
+                            .collect::<Vec<_>>();
 
-                            state.add_annotation(
-                                set_expr,
-                                ProjectionAnnotation::Query(Projection {
-                                    columns: merged_columns,
-                                }),
-                            );
+                        state.add_annotation(
+                            set_expr,
+                            Projection {
+                                columns: merged_columns,
+                            },
+                        );
 
-                            flow::cont(state)
-                        } else {
-                            flow::error(
-                                ResolutionError::IncompatibleOperandsForSetOperation(
-                                    left.clone(),
-                                    right.clone(),
-                                ),
-                                state,
-                            )
-                        }
+                        flow::cont(state)
                     }
                     Err(err) => flow::error(err.into(), state),
                 }
@@ -746,25 +879,24 @@ where
 
                 let projection_columns = (0..number_of_columns)
                     .map(|_| {
-                        (
-                            Rc::new(SourceAnnotation::single(
-                                SourceAnnotationItem::ColumnOfValues,
-                            )),
+                        Rc::new(ProjectionColumn::new(
+                            Rc::new(Source::single(SourceItem::ColumnOfValues)),
                             None,
-                        )
+                        ))
                     })
                     .collect::<Vec<_>>();
 
                 state.add_annotation(
                     set_expr,
-                    ProjectionAnnotation::Query(Projection {
+                    Projection {
                         columns: projection_columns,
-                    }),
+                    },
                 );
 
                 flow::cont(state)
             }
             SetExpr::Insert(_statement) => {
+                // TODO!
                 // if let Statement::Insert(Insert {
                 //     columns, source, returning, ..
                 // }) = statement

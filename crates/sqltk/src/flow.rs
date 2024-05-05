@@ -3,10 +3,7 @@
 use super::*;
 
 /// Shorthand for returning a  `VisitorControlFlow::Continue(state)`
-pub fn cont<'ast, State, E>(state: State) -> VisitorControlFlow<'ast, State, E>
-where
-    E: Error + Debug,
-{
+pub fn cont<'ast, State, E>(state: State) -> VisitorControlFlow<'ast, State, E> {
     VisitorControlFlow::Continue(state)
 }
 
@@ -45,7 +42,7 @@ where
 }
 
 /// Shorthand for returning a
-/// `VisitorControlFlow::Break(Break::Err(Box::new(error), state))`
+/// `VisitorControlFlow::Break(Break::Err(error))`
 pub fn error<'ast, State, E: 'ast>(error: E, state: State) -> VisitorControlFlow<'ast, State, E>
 where
     E: Error + Debug,

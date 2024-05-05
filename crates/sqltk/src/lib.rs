@@ -84,10 +84,7 @@ use std::{error::Error, ops::ControlFlow};
 /// Visitors are parameterised by a `State` and an error `E`. If unspecified,
 /// `E` is [`Infallible`] which means an error cannot be returned by `enter` or
 /// `exit`.
-pub trait Visitor<'ast, State, E = Infallible>
-where
-    E: Error + Debug,
-{
+pub trait Visitor<'ast, State, E = Infallible> {
     /// Called when node is entered.
     ///
     /// `node` is a reference to any `sqlparser` AST node type.
@@ -96,10 +93,12 @@ where
     /// mutated and returned to the caller in the [`VisitorControlFlow`] value,
     /// but the implementation is free to drop the original state and return a
     /// new value should it wish to do so.
-    fn enter<N>(&self, node: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E>
+    fn enter<N: 'static>(&self, _node: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E>
     where
-        N: 'static + Visitable<'ast>,
-        &'ast N: Into<Node<'ast>>;
+        &'ast N: Into<Node<'ast>>,
+    {
+        flow::cont(state)
+    }
 
     /// Called when node is exited.
     ///
@@ -109,17 +108,37 @@ where
     /// mutated and returned to the caller in the [`VisitorControlFlow`] value,
     /// but the implementation is free to drop the original state and return a
     /// new value should it wish to do so.
-    fn exit<N>(&self, node: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E>
+    fn exit<N: 'static>(&self, _node: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E>
     where
-        N: 'static + Visitable<'ast>,
-        &'ast N: Into<Node<'ast>>;
+        &'ast N: Into<Node<'ast>>,
+    {
+        flow::cont(state)
+    }
+}
+
+/// Trait for types that can visit one specific type of `sqlparser` AST node.
+///
+/// A "visit" of a single AST node is a call to `enter` followed some time later
+/// with a call to `exit` if no error was returned by `enter`.
+///
+/// `SpecializedVisitor` is parameterised by a `State` and an error `E`. If unspecified,
+/// `E` is [`Infallible`] which means an error cannot be returned by `enter` or
+/// `exit`.
+pub trait SpecializedVisitor<'ast, N, State, E = Infallible> {
+    fn enter(&self, _: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E> {
+        flow::cont(state)
+    }
+
+    fn exit(&self, _: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E> {
+        flow::cont(state)
+    }
 }
 
 /// Trait for types that can be visited by a [`Visitor`].
 /// This trait is implemented for all AST nodes defined by `sqlparser`.
 pub trait Visitable<'ast>
 where
-    Self: 'static + Sized + Debug,
+    Self: 'static + Sized,
 {
     /// Entry point to begin AST traversal with a [`Visitor`].
     ///
@@ -188,11 +207,10 @@ where
     ) -> impl Visitor<'ast, State, E>
     where
         State: 'ast,
-        E: Error + Debug,
         FnEnter: Fn(&'ast Self, State) -> VisitorControlFlow<'ast, State, E>,
         FnExit: Fn(&'ast Self, State) -> VisitorControlFlow<'ast, State, E>,
     {
-        DowncastDispatcher::<'ast, Self, _, _, _, _>::new(enter_fn, exit_fn)
+        DowncastDispatcher::<'ast, Self, _, _, _>::new(enter_fn, exit_fn)
     }
 }
 
@@ -201,10 +219,7 @@ where
 ///
 /// All variants propagate the `State` back up the call stack.
 #[derive(Debug)]
-pub enum Break<State, E>
-where
-    E: Error + Debug,
-{
+pub enum Break<State, E> {
     /// Do not visit child nodes of the current node and resume traversal
     /// from the next sibling of the current node. This is useful to save CPU
     /// cycles when an exhaustive traversal of an AST is not required.
@@ -221,7 +236,6 @@ where
 
 impl<'ast, State, E> PartialEq for Break<State, E>
 where
-    E: Error + Debug,
     State: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -234,12 +248,7 @@ where
     }
 }
 
-impl<State, E> Eq for Break<State, E>
-where
-    E: Error + Debug,
-    State: Eq,
-{
-}
+impl<State, E> Eq for Break<State, E> where State: Eq {}
 
 /// [`ControlFlow`] type alias for values returned by [`Visitor::enter`] &
 /// [`Visitor::exit`].
@@ -374,7 +383,7 @@ pub mod test {
 
     #[test]
     fn visitor_composition_with_visitor_stack() {
-        #[derive(Default)]
+        #[derive(Default, Debug)]
         struct MyState {
             enter_count: usize,
             exit_count: usize,

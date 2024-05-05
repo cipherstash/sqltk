@@ -1,15 +1,18 @@
 //! Types for representing and maintaining a lexical scope during AST traversal.
+//!
 
 use crate::{
-    model::source_annotation::{NamedRelation, SourceAnnotation},
-    projection_annotation::Projection,
-    resolution_error::{InvariantFailedError, ResolutionError},
+    model::SqlIdent,
+    model::{InvariantFailedError, ResolutionError},
+    model::{NamedRelation, Source},
+    model::{Projection, ProjectionColumn},
 };
-use sqlparser::ast::Ident;
-use unicase::UniCase;
-
 use core::ops::{Deref, DerefMut};
-use std::{mem, rc::Rc};
+use std::{
+    mem,
+    rc::Rc,
+    slice::{self},
+};
 
 /// A stack of [`Scope`] structs.
 ///
@@ -74,14 +77,18 @@ impl ScopeStack {
 /// A lexical scope.
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub struct Scope {
-    bindings: Vec<NamedRelation>,
+    bindings: Vec<Rc<NamedRelation>>,
     parent: Option<Box<Scope>>,
     depth: u32,
 }
 
 impl Scope {
     /// Expand usage of a wildcard into the actual concrete table-columns it stands for.
-    pub fn resolve_wildcard(&self) -> Result<Projection, ResolutionError> {
+    // TODO: this fn is building the Projection on demand but returning it in an
+    // Rc which is odd, but just for consistency.
+    // However it does seem to hint that Projection should be an enum with a
+    // variant for representing concatenated sub-projections.
+    pub fn resolve_wildcard(&self) -> Result<Rc<Projection>, ResolutionError> {
         if self.bindings.is_empty() {
             match &self.parent {
                 Some(parent) => parent.resolve_wildcard(),
@@ -90,73 +97,49 @@ impl Scope {
                 )),
             }
         } else {
-            Ok(self
+            let projection: Projection = self
                 .bindings
                 .iter()
                 .flat_map(|relation| relation.projection.columns.clone())
-                .collect())
+                .collect();
+
+            Ok(Rc::new(projection))
         }
     }
 
     /// Expand usage of a qualified wildcard into the actual concrete table-columns it stands for.
     pub fn resolve_qualified_wildcard(
         &self,
-        idents: &[Ident],
-    ) -> Result<Projection, ResolutionError> {
+        idents: &[SqlIdent],
+    ) -> Result<Rc<Projection>, ResolutionError> {
         if idents.len() > 1 {
             return Err(ResolutionError::UnsupportedCompoundIdentifierLength(
-                idents.into(),
+                idents.iter().map(|id| id.to_string()).collect::<Vec<_>>(),
             ));
         }
-        if self.bindings.is_empty() {
-            match &self.parent {
-                Some(parent) => return parent.resolve_qualified_wildcard(idents),
-                None => {
-                    return Err(ResolutionError::InvariantFailed(
-                        InvariantFailedError::EmptyScope,
-                    ))
-                }
-            }
-        }
-        let first_ident = idents.first().unwrap().to_string();
-        let case_insensitive_ident = UniCase::new(first_ident.clone());
-        let resolved: Option<Projection> = self.bindings.iter().find_map(|relation| {
-            if relation.name == case_insensitive_ident {
-                Some(relation.projection.clone())
-            } else {
-                None
-            }
-        });
 
-        resolved.ok_or(ResolutionError::NoSuchIdentifier(first_ident))
+        match SqlIdent::try_find_unique(&idents[0], &mut self.bindings.iter().cloned()) {
+            Ok(Some(relation)) => Ok(relation.projection.clone()),
+            Ok(None) => match &self.parent {
+                Some(parent) => parent.resolve_qualified_wildcard(idents),
+                None => Err(ResolutionError::NoSuchRelation(idents[0].to_string())),
+            },
+            Err(err) => Err(err.into()),
+        }
     }
 
-    /// Resolves usage of an identifier.
-    pub fn resolve_ident(
-        &self,
-        column_name: &Ident,
-    ) -> Result<Rc<SourceAnnotation>, ResolutionError> {
-        let case_insensitive_ident = UniCase::new(column_name.to_string());
-        self.bindings
-            .iter()
-            .find_map(|relation| {
-                relation
-                    .projection
-                    .columns
-                    .iter()
-                    .find_map(|(source_annotation, column)| {
-                        if Some(true) == column.as_ref().map(|c| c == &case_insensitive_ident) {
-                            Some(source_annotation.clone())
-                        } else {
-                            None
-                        }
-                    })
-            })
-            .or_else(|| match &self.parent {
-                Some(parent) => parent.resolve_ident(column_name).ok(),
-                None => None,
-            })
-            .ok_or(ResolutionError::NoSuchIdentifier(column_name.to_string()))
+    /// Uniquely resolves an identifier against all relations that are in scope.
+    pub fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<Source>, ResolutionError> {
+        let mut bindings_iter = AllColumnsIterator::new(self.bindings.iter());
+
+        match SqlIdent::try_find_unique(ident, &mut bindings_iter) {
+            Ok(Some(projection_column)) => Ok(projection_column.source.clone()),
+            Ok(None) => match &self.parent {
+                Some(parent) => parent.resolve_ident(ident),
+                None => Err(ResolutionError::NoSuchIdentifier(ident.to_string())),
+            },
+            Err(err) => Err(err.into()),
+        }
     }
 
     /// Resolves usage of a compound identifier.
@@ -165,8 +148,8 @@ impl Scope {
     /// and resolution will fail if the identifier has more than two parts.
     pub fn resolve_compound_ident(
         &self,
-        idents: &[Ident],
-    ) -> Result<Rc<SourceAnnotation>, ResolutionError> {
+        idents: &[SqlIdent],
+    ) -> Result<Rc<Source>, ResolutionError> {
         // TODO: deal with multiple schemas (idents.len() > 2). Currently
         // defaulting implicitly to the public schema within a database.
         // TODO: change type from Vec (which is unbounded) to an enum with a
@@ -179,78 +162,176 @@ impl Scope {
                 InvariantFailedError::MaxCompoundIdentLengthExceeded(idents.len() as u8),
             ));
         }
-        let first_part = UniCase::new(idents[0].to_string());
-        let second_part = UniCase::new(idents[1].to_string());
-
-        self.bindings
-            .iter()
-            .find_map(|relation| {
-                if relation.name == first_part {
-                    Some(relation.projection.clone())
-                } else {
-                    None
+        match SqlIdent::try_find_unique(&idents[0], &mut self.bindings.iter().cloned()) {
+            Ok(Some(named_relation)) => {
+                match SqlIdent::find_unique(
+                    &idents[1],
+                    &mut named_relation.projection.columns.iter().cloned(),
+                ) {
+                    Ok(projection_column) => Ok(projection_column.source.clone()),
+                    Err(err) => Err(err.into()),
                 }
-            })
-            .and_then(|projection| {
-                projection
-                    .columns
-                    .iter()
-                    .find_map(|(source_annotation, column)| {
-                        if Some(true) == column.as_ref().map(|c| c == &second_part) {
-                            Some(source_annotation.clone())
-                        } else {
-                            None
-                        }
-                    })
-            })
-            .or_else(|| match &self.parent {
-                Some(parent) => parent.resolve_compound_ident(idents).ok(),
-                None => None,
-            })
-            .ok_or(ResolutionError::NoSuchCompoundIdentifier(format!(
-                "{}.{}",
-                idents[0], idents[1]
-            )))
-            .inspect_err(|_| {
-                #[cfg(test)]
-                self.dump()
-            })
+            }
+            Ok(None) => match &self.parent {
+                Some(parent) => parent.resolve_compound_ident(idents),
+                None => Err(ResolutionError::NoSuchCompoundIdentifier(format!(
+                    "{}.{}",
+                    idents[0], idents[1]
+                ))),
+            },
+            Err(err) => Err(err.into()),
+        }
+        .inspect_err(|_| {
+            #[cfg(test)]
+            self.dump()
+        })
     }
 
     /// Add a table/view/subquery to the current scope.
     pub fn add_relation(
         &mut self,
-        relation: NamedRelation,
-    ) -> Result<NamedRelation, ResolutionError> {
+        relation: Rc<NamedRelation>,
+    ) -> Result<Rc<NamedRelation>, ResolutionError> {
         self.bindings.push(relation.clone());
 
         #[cfg(test)]
         self.dump();
 
-        Ok(relation.clone())
+        Ok(relation)
     }
 
-    pub fn resolve_relation(
-        &self,
-        name: &UniCase<String>,
-    ) -> Result<NamedRelation, ResolutionError> {
-        self.bindings
-            .iter()
-            .find(|binding| &binding.name == name)
-            .map(|relation| relation.clone())
-            .ok_or(ResolutionError::NoSuchRelation(name.to_string()))
+    pub fn resolve_relation(&self, ident: &SqlIdent) -> Result<Rc<NamedRelation>, ResolutionError> {
+        match SqlIdent::find_unique(ident, &mut self.bindings.iter().cloned()) {
+            Ok(found) => Ok(found.clone()),
+            Err(err) => match &self.parent {
+                Some(parent) => parent.resolve_relation(ident),
+                None => Err(ResolutionError::from(err)),
+            },
+        }
     }
 
     #[cfg(test)]
-    fn dump(&self) {
-        eprintln!(
-            "SCOPE {}: {}",
-            self.depth,
-            test_utils::OneLine(&self.bindings)
-        );
-        if let Some(parent) = &self.parent {
-            parent.dump();
+    pub fn dump(&self) {
+        // eprintln!(
+        //     "SCOPE {}: {}",
+        //     self.depth,
+        //     test_utils::OneLine(&self.bindings)
+        // );
+        // if let Some(parent) = &self.parent {
+        //     parent.dump();
+        // }
+    }
+}
+
+struct AllColumnsIterator<'a> {
+    relations: slice::Iter<'a, Rc<NamedRelation>>,
+    columns: Option<slice::Iter<'a, Rc<ProjectionColumn>>>,
+    done: bool,
+}
+
+impl<'a> AllColumnsIterator<'a> {
+    fn new(relations: slice::Iter<'a, Rc<NamedRelation>>) -> Self {
+        Self {
+            relations,
+            columns: None,
+            done: false,
         }
+    }
+}
+
+impl<'a> Iterator for AllColumnsIterator<'a> {
+    type Item = Rc<ProjectionColumn>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.done {
+            match self.columns.as_mut().and_then(|iter| iter.next()) {
+                Some(projection_column) => Some(projection_column.clone()),
+                None => {
+                    self.columns = self
+                        .relations
+                        .next()
+                        .map(|named_relation| named_relation.projection.columns.iter());
+                    if self.columns.is_some() {
+                        self.next()
+                    } else {
+                        self.done = true;
+                        None
+                    }
+                }
+            }
+        } else {
+            None
+        }
+    }
+}
+#[cfg(test)]
+mod test {
+    use crate::{
+        model::{CanonicalIdent, Column, SqlIdent, Table},
+        model::{SourceItem, TableColumn},
+    };
+
+    use super::*;
+    use test_case::test_case;
+
+    fn stack(frames: &[&[NamedRelation]]) -> ScopeStack {
+        let mut stack = ScopeStack::default();
+
+        for frame in frames {
+            for relation in *frame {
+                stack.top.add_relation(Rc::new(relation.clone())).unwrap();
+            }
+            stack.push()
+        }
+
+        stack
+    }
+
+    fn assert_ok(result: Result<Rc<NamedRelation>, ResolutionError>) {
+        match result {
+            Ok(_) => (),
+            Err(err) => panic!("ok_ok failed! {:#?}", err),
+        }
+    }
+
+    fn relation(name: &str, columns: &[&str]) -> NamedRelation {
+        let name = Rc::new(CanonicalIdent::from(name));
+        let columns = columns
+            .iter()
+            .map(|c| Rc::new(CanonicalIdent::from(*c)))
+            .map(|c| Rc::new(Column { name: c }))
+            .collect::<Vec<_>>();
+        let table = Rc::new(Table {
+            name: Rc::clone(&name),
+            columns,
+            primary_key: Vec::default(),
+        });
+        NamedRelation {
+            name: Rc::new(SqlIdent::Canonical(name.deref().clone())),
+            projection: Projection {
+                columns: Vec::from_iter(table.columns.iter().map(|column| {
+                    ProjectionColumn::new(
+                        Rc::new(Source::single(SourceItem::TableColumn(TableColumn {
+                            table: Rc::clone(&table),
+                            column: Rc::clone(&column),
+                        }))),
+                        Some(Rc::new(SqlIdent::Canonical(
+                            column.name.deref().clone().into(),
+                        ))),
+                    )
+                    .into()
+                })),
+            }
+            .into(),
+        }
+    }
+
+    #[test_case(stack(&[&[relation("users", &["id"])]]), SqlIdent::Unquoted("users".into()), &assert_ok)]
+    fn resolve_relation<F>(stack: ScopeStack, ident: SqlIdent, assert_pass: F)
+    where
+        F: Fn(Result<Rc<NamedRelation>, ResolutionError>) -> (),
+    {
+        assert_pass(stack.resolve_relation(&ident))
     }
 }
 
@@ -261,7 +342,7 @@ mod test_utils {
         ops::Deref,
     };
 
-    use crate::source_annotation::{NamedRelation, SourceAnnotationItem, TableColumn};
+    use crate::model::{NamedRelation, SourceItem, TableColumn};
 
     pub(super) struct OneLine<'a>(pub &'a Vec<NamedRelation>);
 
@@ -278,36 +359,32 @@ mod test_utils {
                             nr.projection
                                 .columns
                                 .iter()
-                                .map(|(source, name)| {
-                                    let source_items = source
+                                .map(|projection_column| {
+                                    let source_items = projection_column
+                                        .source
                                         .items
                                         .iter()
                                         .map(|item| match item.deref() {
-                                            SourceAnnotationItem::TableColumn(TableColumn {
+                                            SourceItem::TableColumn(TableColumn {
                                                 table,
                                                 column,
                                             }) => {
                                                 format!("C({}.{})", table, column)
                                             }
-                                            SourceAnnotationItem::Value(v) => {
+                                            SourceItem::Value(v) => {
                                                 format!("Value({})", v)
                                             }
-                                            SourceAnnotationItem::ColumnOfValues => {
+                                            SourceItem::ColumnOfValues => {
                                                 format!("ColOfValues")
                                             }
-                                            SourceAnnotationItem::TypedString(
-                                                data_type,
-                                                string,
-                                            ) => {
+                                            SourceItem::TypedString(data_type, string) => {
                                                 format!("TypedString({},{})", data_type, string)
                                             }
-                                            SourceAnnotationItem::IntroducedString(
-                                                string,
-                                                value,
-                                            ) => {
+                                            SourceItem::IntroducedString(string, value) => {
                                                 format!("IntroducedString({},{})", string, value)
                                             }
-                                            SourceAnnotationItem::FunctionCall(name) => {
+                                            // TODO: print the args
+                                            SourceItem::FunctionCall { ident: name, .. } => {
                                                 format!("FunctionCall({})", name)
                                             }
                                         })
@@ -316,7 +393,9 @@ mod test_utils {
                                     format!(
                                         "({}){}",
                                         source_items,
-                                        name.as_ref()
+                                        projection_column
+                                            .alias
+                                            .as_ref()
                                             .map(|name| format!("@{}", name))
                                             .unwrap_or(String::from(""))
                                     )

@@ -1,8 +1,8 @@
 use core::marker::PhantomData;
-use std::error::Error;
-use std::fmt::Debug;
+use std::fmt::{self, Debug, Formatter};
+use std::{any::type_name, error::Error};
 
-use crate::{flow, Break, Node, Visitable, Visitor, VisitorControlFlow};
+use crate::{flow, Break, Node, Visitor, VisitorControlFlow};
 
 include!(concat!(
     env!("OUT_DIR"),
@@ -20,44 +20,47 @@ include!(concat!(
 /// visitors in the order they were pushed onto the stack.
 ///
 /// For [`Visitor::exit`] the order is reversed.
-pub struct VisitorStack<'ast, State, E>
-where
-    State: 'ast,
-    E: 'static + Error + Debug,
-{
+pub struct VisitorStack<'ast, State, E> {
     visitors: Vec<Box<dyn ObjectSafeVisitor<'ast, State, E> + 'ast>>,
 }
 
-impl<'ast, State, E> Default for VisitorStack<'ast, State, E>
-where
-    State: 'ast,
-    E: 'static + Error + Debug,
-{
+impl<'ast, State, E> Debug for VisitorStack<'ast, State, E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let visitor_names: Vec<String> = self.visitors.iter().map(|v| v.inner_visitor_type_name() ).collect();
+        f.debug_struct(type_name::<Self>())
+            .field("visitors", &visitor_names)
+            .finish()
+    }
+}
+
+impl<'ast, State, E> Default for VisitorStack<'ast, State, E> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'ast, State, E> VisitorStack<'ast, State, E>
-where
-    State: 'ast,
-    E: 'static + Error + Debug,
-{
+impl<'ast, State, E> VisitorStack<'ast, State, E> {
     /// Creates a new empty `VisitorStack`.
     ///
     /// This allocates capacity for 16 visitors which will grow on demand. A
     /// [`Vec`] is used for internal storage.
     pub fn new() -> Self {
         Self {
-            visitors: Vec::with_capacity(16),
+            visitors: Vec::with_capacity(32),
         }
     }
+}
 
+impl<'ast, State, E> VisitorStack<'ast, State, E>
+where
+    E: 'ast + Error,
+    State: 'ast,
+{
     /// Pushes a new [`Visitor`] onto this `VisitorStack`.
     pub fn push<V, VE>(&mut self, visitor: V)
     where
         V: 'ast + Visitor<'ast, State, VE>,
-        VE: 'ast + Error + Debug,
+        VE: 'ast + Error,
         ConvertFrom<VisitorControlFlow<'ast, State, VE>>:
             Into<ConvertInto<VisitorControlFlow<'ast, State, E>>>,
     {
@@ -79,8 +82,7 @@ impl<T> ConvertInto<T> {
 impl<'ast, State, EFrom, EInto> From<ConvertFrom<VisitorControlFlow<'ast, State, EFrom>>>
     for ConvertInto<VisitorControlFlow<'ast, State, EInto>>
 where
-    EFrom: Error + Into<EInto>,
-    EInto: Error,
+    EFrom: Into<EInto>,
 {
     fn from(value: ConvertFrom<VisitorControlFlow<'ast, State, EFrom>>) -> Self {
         match value.0 {
@@ -100,13 +102,9 @@ where
     }
 }
 
-impl<'ast, State, E> Visitor<'ast, State, E> for VisitorStack<'ast, State, E>
-where
-    E: Error + Debug,
-{
-    fn enter<N>(&self, node: &'ast N, mut state: State) -> VisitorControlFlow<'ast, State, E>
+impl<'ast, State, E> Visitor<'ast, State, E> for VisitorStack<'ast, State, E> {
+    fn enter<N: 'static>(&self, node: &'ast N, mut state: State) -> VisitorControlFlow<'ast, State, E>
     where
-        N: 'static + Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,
     {
         for visitor in self.visitors.iter() {
@@ -115,9 +113,8 @@ where
         flow::cont(state)
     }
 
-    fn exit<N>(&self, node: &'ast N, mut state: State) -> VisitorControlFlow<'ast, State, E>
+    fn exit<N: 'static>(&self, node: &'ast N, mut state: State) -> VisitorControlFlow<'ast, State, E>
     where
-        N: 'static + Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,
     {
         for visitor in self.visitors.iter().rev() {
@@ -130,9 +127,6 @@ where
 /// A [`Visitor`] implementation that converts between error types.
 struct ErrorConvertingVisitor<'ast, State, E, V, VE>
 where
-    E: Error + Debug,
-    VE: Error + Debug,
-    V: Visitor<'ast, State, VE>,
     ConvertFrom<VisitorControlFlow<'ast, State, VE>>:
         Into<ConvertInto<VisitorControlFlow<'ast, State, E>>>,
 {
@@ -142,9 +136,8 @@ where
 
 impl<'ast, State, E, V, VE> ErrorConvertingVisitor<'ast, State, E, V, VE>
 where
-    E: Error + Debug,
-    VE: Error + Debug,
-    V: Visitor<'ast, State, VE>,
+    E: Error,
+    VE: Error,
     ConvertFrom<VisitorControlFlow<'ast, State, VE>>:
         Into<ConvertInto<VisitorControlFlow<'ast, State, E>>>,
 {
@@ -160,8 +153,8 @@ impl<'ast, State, E, V, VE> ObjectSafeVisitor<'ast, State, E>
     for ErrorConvertingVisitor<'ast, State, E, V, VE>
 where
     V: Visitor<'ast, State, VE>,
-    E: Error + Debug,
-    VE: Error + Debug,
+    E: Error,
+    VE: Error,
     ConvertFrom<VisitorControlFlow<'ast, State, VE>>:
         Into<ConvertInto<VisitorControlFlow<'ast, State, E>>>,
 {
@@ -182,15 +175,16 @@ where
         let result = dispatch_node!(node, self.visitor, exit, state);
         ConvertFrom(result).into().into_inner()
     }
+
+    fn inner_visitor_type_name(&self) -> String {
+        type_name::<V>().into()
+    }
 }
 
 /// Variation of the [`Visitor`] trait where the node is passed as an enum
 /// instead of as a generically typed reference. This trait is therefore object
 /// safe.
-trait ObjectSafeVisitor<'ast, State, E>
-where
-    E: Error + Debug,
-{
+trait ObjectSafeVisitor<'ast, State, E> {
     fn object_safe_enter(
         &self,
         node: Node<'ast>,
@@ -202,6 +196,17 @@ where
         node: Node<'ast>,
         state: State,
     ) -> VisitorControlFlow<'ast, State, E>;
+
+    fn inner_visitor_type_name(&self) -> String;
+}
+
+impl<'ast, State, E> Debug for dyn ObjectSafeVisitor<'ast, State, E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let type_name = self.inner_visitor_type_name();
+        f.debug_struct("dyn ObjectSafeVisitor")
+            .field("inner_visitor", &type_name)
+            .finish()
+    }
 }
 
 #[cfg(test)]

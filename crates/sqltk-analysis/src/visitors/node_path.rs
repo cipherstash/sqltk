@@ -10,7 +10,7 @@ use sqltk::{flow, Visitable, Visitor};
 
 /// Operations for manipulating and retreiving the current node path.
 pub trait NodePathOps<'ast> {
-    fn push_path_entry<N: Visitable<'ast>>(&mut self, node: &'ast N)
+    fn push_path_entry<N>(&mut self, node: &'ast N)
     where
         &'ast N: Into<Node<'ast>>;
 
@@ -96,22 +96,24 @@ impl<'ast, State> Visitor<'ast, State, Infallible> for NodePathVisitor
 where
     State: NodePathOps<'ast>,
 {
-    fn enter<N>(
+    fn enter<N: 'static>(
         &self,
         node: &'ast N,
         mut state: State,
     ) -> VisitorControlFlow<'ast, State, Infallible>
     where
-        N: 'static + Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,
     {
         state.push_path_entry(node);
         flow::cont(state)
     }
 
-    fn exit<N>(&self, _: &'ast N, mut state: State) -> VisitorControlFlow<'ast, State, Infallible>
+    fn exit<N: 'static>(
+        &self,
+        _: &'ast N,
+        mut state: State,
+    ) -> VisitorControlFlow<'ast, State, Infallible>
     where
-        N: 'static + Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,
     {
         state.pop_path_entry();
@@ -123,18 +125,24 @@ impl<'ast, State> Visitor<'ast, State, Infallible> for LogFullNodePathVisitor
 where
     State: NodePathOps<'ast>,
 {
-    fn enter<N>(&self, _: &'ast N, state: State) -> VisitorControlFlow<'ast, State, Infallible>
+    fn enter<N: 'static>(
+        &self,
+        _: &'ast N,
+        state: State,
+    ) -> VisitorControlFlow<'ast, State, Infallible>
     where
-        N: 'static + Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,
     {
         eprintln!("ENTER: {}", state.get_node_path());
         flow::cont(state)
     }
 
-    fn exit<N>(&self, _: &'ast N, state: State) -> VisitorControlFlow<'ast, State, Infallible>
+    fn exit<N: 'static>(
+        &self,
+        _: &'ast N,
+        state: State,
+    ) -> VisitorControlFlow<'ast, State, Infallible>
     where
-        N: 'static + Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,
     {
         eprintln!("EXIT:  {}", state.get_node_path());
@@ -146,9 +154,12 @@ impl<'ast, State> Visitor<'ast, State, Infallible> for LogTopEntryVisitor
 where
     State: NodePathOps<'ast>,
 {
-    fn enter<N>(&self, _: &'ast N, state: State) -> VisitorControlFlow<'ast, State, Infallible>
+    fn enter<N: 'static>(
+        &self,
+        _: &'ast N,
+        state: State,
+    ) -> VisitorControlFlow<'ast, State, Infallible>
     where
-        N: 'static + Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,
     {
         if let Some(entry) = state.peek_path_entry() {
@@ -157,9 +168,12 @@ where
         flow::cont(state)
     }
 
-    fn exit<N>(&self, _: &'ast N, state: State) -> VisitorControlFlow<'ast, State, Infallible>
+    fn exit<N: 'static>(
+        &self,
+        _: &'ast N,
+        state: State,
+    ) -> VisitorControlFlow<'ast, State, Infallible>
     where
-        N: 'static + Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,
     {
         if let Some(entry) = state.peek_path_entry() {
@@ -170,11 +184,14 @@ where
 }
 
 impl<'ast> NodePathOps<'ast> for NodePath<'ast> {
-    fn push_path_entry<N: Visitable<'ast>>(&mut self, node: &'ast N)
+    fn push_path_entry<N>(&mut self, node: &'ast N)
     where
         &'ast N: Into<Node<'ast>>,
     {
-        self.entries.push(NodePathEntry { node: node.into() })
+        self.entries.push(NodePathEntry {
+            node: node.into(),
+            depth: self.entries.len() as usize,
+        })
     }
 
     fn pop_path_entry(&mut self) -> Option<NodePathEntry<'ast>> {
@@ -196,16 +213,20 @@ impl<'ast> NodePathOps<'ast> for NodePath<'ast> {
 /// and only provides custom formatting for a handful of [`Node`] variants.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NodePathEntry<'ast> {
+    pub depth: usize,
     pub node: Node<'ast>,
 }
 
 impl<'ast> NodePathEntry<'ast> {
-    pub fn new<N>(node: &'ast N) -> Self
+    pub fn new<N>(node: &'ast N, depth: usize) -> Self
     where
         N: Visitable<'ast>,
         &'ast N: Into<Node<'ast>>,
     {
-        Self { node: node.into() }
+        Self {
+            node: node.into(),
+            depth,
+        }
     }
 }
 
@@ -213,6 +234,7 @@ impl<'ast> Debug for NodePathEntry<'ast> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("NodePathEntry")
             .field("node", &self.node)
+            .field("depth", &self.depth)
             .finish()
     }
 }
