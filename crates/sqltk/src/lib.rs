@@ -74,7 +74,10 @@ pub use sqlparser;
 pub use bigdecimal;
 
 use core::{convert::Infallible, fmt::Debug};
-use std::{error::Error, ops::ControlFlow};
+use std::{
+    error::Error,
+    ops::{ControlFlow, Deref},
+};
 
 /// Trait for types that can visit any `sqlparser` AST node.
 ///
@@ -113,6 +116,26 @@ pub trait Visitor<'ast, State, E = Infallible> {
         &'ast N: Into<Node<'ast>>,
     {
         flow::cont(state)
+    }
+}
+
+impl<'ast, State, E, T, V> Visitor<'ast, State, E> for T
+where
+    V: Visitor<'ast, State, E>,
+    T: Deref<Target = V>,
+{
+    fn enter<N: 'static>(&self, node: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E>
+    where
+        &'ast N: Into<Node<'ast>>,
+    {
+        self.deref().enter(node, state)
+    }
+
+    fn exit<N: 'static>(&self, node: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E>
+    where
+        &'ast N: Into<Node<'ast>>,
+    {
+        self.deref().exit(node, state)
     }
 }
 

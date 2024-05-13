@@ -96,14 +96,18 @@ pub enum ResolutionError {
     UnsupportTableAliasVariant,
 }
 
+/// These errors should ideally be `unreachable!` assertions because they
+/// represent things that should not be possible. They are soft errors for
+/// now to account for the possibility that some SQL semantics have been
+/// misunderstood.
 #[derive(Debug, thiserror::Error, Eq, PartialEq, PartialOrd, Ord)]
 pub enum InvariantFailedError {
-    #[error("Could not resolve source for node: {}", _0)]
-    CouldNotResolveSource(String),
-
+    /// An attempt was made to resolve a column identifier but no tables or
+    /// relations were in lexical scope.
     #[error("The scope is empty")]
     EmptyScope,
 
+    /// Resolving compound identifiers of length > 3 is not yet supported.
     #[error("Max supported compound identifier length is 2, got: {}", _0)]
     MaxCompoundIdentLengthExceeded(u8),
 }

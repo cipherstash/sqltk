@@ -118,14 +118,6 @@ pub struct NamedRelation {
     pub projection: Rc<Projection>,
 }
 
-impl Named for NamedRelation {
-    type Name = SqlIdent;
-
-    fn name(&self) -> &Self::Name {
-        &self.name
-    }
-}
-
 impl Display for TableColumn {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("{}.{}", self.table, self.column))

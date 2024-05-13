@@ -10,21 +10,19 @@ use crate::{
     model::ScopeOps,
     model::SqlIdent,
     model::{NamedRelation, Source},
-    node_path::NodePathOps,
     SchemaOps,
 };
 
 #[derive(Default, Debug, Clone, PartialEq, PartialOrd, Ord, Eq)]
-pub struct PublishTableFactor;
+pub struct ImportFromTableFactor;
 
 impl<'ast, State: 'ast> SpecializedVisitor<'ast, TableFactor, State, ResolutionError>
-    for PublishTableFactor
+    for ImportFromTableFactor
 where
     State: ScopeOps<'ast>
         + Annotates<'ast, Expr, Source>
         + Annotates<'ast, SetExpr, Projection>
         + Annotates<'ast, Query, Projection>
-        + NodePathOps<'ast>
         + SchemaOps,
 {
     fn exit(

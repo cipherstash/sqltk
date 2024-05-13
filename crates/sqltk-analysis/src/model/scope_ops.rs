@@ -1,10 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    model::projection_annotation::Projection,
-    model::resolution_error::ResolutionError,
-    model::schema::SqlIdent,
-    model::source_annotation::{NamedRelation, Source},
+    model::{projection_annotation::Projection, resolution_error::ResolutionError, schema::SqlIdent, source_annotation::{NamedRelation, Source}},
+    TableColumn,
 };
 
 /// Operations for manipulating lexical scope and resolving identifiers that are in-scope.
@@ -32,6 +30,7 @@ pub trait ScopeOps<'ast> {
     fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<Source>, ResolutionError>;
 
     /// Resolves a compound identifier within the current scope.
+    /// FIXME: this resolves a compound identifier expression and should be renamed
     fn resolve_compound_ident(&self, ident: &[SqlIdent]) -> Result<Rc<Source>, ResolutionError>;
 
     /// Expands a wildcard within the current scope.

@@ -10,20 +10,19 @@ use crate::{
     model::ScopeOps,
     model::{CanonicalIdent, SqlIdent},
     model::{NamedRelation, Source},
-    node_path::NodePathOps,
     SchemaOps,
 };
 
 #[derive(Default, Debug, Clone)]
-pub struct PublishInsert;
+pub struct ImportFromInsert;
 
-impl<'ast, State: 'ast> SpecializedVisitor<'ast, Insert, State, ResolutionError> for PublishInsert
+impl<'ast, State: 'ast> SpecializedVisitor<'ast, Insert, State, ResolutionError>
+    for ImportFromInsert
 where
     State: ScopeOps<'ast>
         + Annotates<'ast, Expr, Source>
         + Annotates<'ast, SetExpr, Projection>
         + Annotates<'ast, Query, Projection>
-        + NodePathOps<'ast>
         + SchemaOps,
 {
     // Most nodes that bring relations into scope use on_exit but in

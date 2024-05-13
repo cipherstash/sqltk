@@ -11,9 +11,12 @@ use crate::model::{CanonicalIdent, SqlIdent};
 use crate::model::{ColumnWritten, InsertProvenance, Provenance, SelectProvenance};
 use crate::model::{Projection, ProjectionColumn};
 use crate::model::{Source, SourceItem};
-use crate::node_path::NodePathOps;
+use crate::InvariantFailedError;
 use crate::SchemaOps;
+use crate::UpdateProvenance;
 
+use sqlparser::ast::Assignment;
+use sqlparser::ast::TableFactor;
 use sqltk::prelude::{Ident, Query};
 use sqltk::{flow, VisitorControlFlow};
 use sqltk::{Visitable, Visitor};
@@ -36,7 +39,6 @@ where
         + Annotates<'ast, SetExpr, Projection>
         + Annotates<'ast, Select, Projection>
         + Annotates<'ast, Statement, Provenance>
-        + NodePathOps<'ast>
         + SchemaOps,
 {
     pub fn annotate_expr_with_source() -> impl Visitor<'ast, State, ResolutionError> {
@@ -780,9 +782,10 @@ where
             //     table,
             //     assignments,
             //     from,
-            //     selection,
             //     returning,
-            // } => todo!(),
+            //     ..
+            // } => {
+            // }
             // Statement::Delete(Delete {
             //     tables,
             //     from,

@@ -37,14 +37,6 @@ impl ProjectionColumn {
     }
 }
 
-impl Named for ProjectionColumn {
-    type Name = Option<Rc<SqlIdent>>;
-
-    fn name(&self) -> &Self::Name {
-        &self.alias
-    }
-}
-
 impl From<&Rc<Table>> for Projection {
     fn from(table: &Rc<Table>) -> Self {
         Projection {

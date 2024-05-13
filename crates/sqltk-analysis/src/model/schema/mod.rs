@@ -203,29 +203,3 @@ macro_rules! make_schema {
         }
     };
 }
-
-// let foo = make_schema!(public, )
-
-impl Named for Schema {
-    type Name = CanonicalIdent;
-
-    fn name(&self) -> &Self::Name {
-        &self.name
-    }
-}
-
-impl Named for Table {
-    type Name = CanonicalIdent;
-
-    fn name(&self) -> &Self::Name {
-        &self.name
-    }
-}
-
-impl Named for Column {
-    type Name = CanonicalIdent;
-
-    fn name(&self) -> &Self::Name {
-        &self.name
-    }
-}

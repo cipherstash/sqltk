@@ -2,10 +2,8 @@
 //!
 
 use crate::{
-    model::SqlIdent,
-    model::{InvariantFailedError, ResolutionError},
-    model::{NamedRelation, Source},
-    model::{Projection, ProjectionColumn},
+    model::{InvariantFailedError, NamedRelation, Projection, ProjectionColumn, ResolutionError, Source, SqlIdent},
+    TableColumn,
 };
 use core::ops::{Deref, DerefMut};
 use std::{
@@ -332,81 +330,5 @@ mod test {
         F: Fn(Result<Rc<NamedRelation>, ResolutionError>) -> (),
     {
         assert_pass(stack.resolve_relation(&ident))
-    }
-}
-
-#[cfg(test)]
-mod test_utils {
-    use std::{
-        fmt::{self, Display, Formatter},
-        ops::Deref,
-    };
-
-    use crate::model::{NamedRelation, SourceItem, TableColumn};
-
-    pub(super) struct OneLine<'a>(pub &'a Vec<NamedRelation>);
-
-    impl<'a> Display for OneLine<'a> {
-        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-            f.write_str(
-                &self
-                    .0
-                    .iter()
-                    .map(|nr| {
-                        format!(
-                            "{}:[{}]",
-                            &nr.name,
-                            nr.projection
-                                .columns
-                                .iter()
-                                .map(|projection_column| {
-                                    let source_items = projection_column
-                                        .source
-                                        .items
-                                        .iter()
-                                        .map(|item| match item.deref() {
-                                            SourceItem::TableColumn(TableColumn {
-                                                table,
-                                                column,
-                                            }) => {
-                                                format!("C({}.{})", table, column)
-                                            }
-                                            SourceItem::Value(v) => {
-                                                format!("Value({})", v)
-                                            }
-                                            SourceItem::ColumnOfValues => {
-                                                format!("ColOfValues")
-                                            }
-                                            SourceItem::TypedString(data_type, string) => {
-                                                format!("TypedString({},{})", data_type, string)
-                                            }
-                                            SourceItem::IntroducedString(string, value) => {
-                                                format!("IntroducedString({},{})", string, value)
-                                            }
-                                            // TODO: print the args
-                                            SourceItem::FunctionCall { ident: name, .. } => {
-                                                format!("FunctionCall({})", name)
-                                            }
-                                        })
-                                        .collect::<Vec<_>>()
-                                        .join(" + ");
-                                    format!(
-                                        "({}){}",
-                                        source_items,
-                                        projection_column
-                                            .alias
-                                            .as_ref()
-                                            .map(|name| format!("@{}", name))
-                                            .unwrap_or(String::from(""))
-                                    )
-                                })
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", "),
-            )
-        }
     }
 }

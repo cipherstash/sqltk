@@ -3,21 +3,12 @@
 use sqltk::prelude::*;
 
 use crate::{
-    annotate_sources::AnnotateSource,
-    model::Annotates,
-    model::Provenance,
-    model::ResolutionError,
-    model::ScopeOps,
-    model::Source,
-    model::{Projection, ProjectionColumn},
-    node_path::{NodePath, NodePathOps},
-    publish_relations::PublishRelationsIntoScope,
-    update_stack::UpdateStack,
-    SchemaOps,
+    annotate_sources::AnnotateSource, model::Provenance, model::ResolutionError,
+    import_relations::ImportIdentifiers, update_stack::UpdateStack,
 };
 
+use std::convert::Infallible;
 use std::fmt::Debug;
-use std::{convert::Infallible, rc::Rc};
 use thiserror::Error;
 
 mod state;
@@ -28,92 +19,21 @@ pub use state::*;
 #[derive(Debug, Deref)]
 pub struct ProvenanceAnalyzer<'ast, State: 'ast>
 where
-    State: Debug
-        + ScopeOps<'ast>
-        + Annotates<'ast, Expr, Source>
-        + Annotates<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
-        + Annotates<'ast, Expr, Projection>
-        + Annotates<'ast, Query, Projection>
-        + Annotates<'ast, SetExpr, Projection>
-        + Annotates<'ast, Select, Projection>
-        + Annotates<'ast, Statement, Provenance>
-        + SchemaOps
-        + NodePathOps<'ast>,
+    State: Debug + ProvenanceStateBounds<'ast>,
 {
     stack: VisitorStack<'ast, State, ProvenanceError>,
 }
 
-impl<'ast, State> Visitor<'ast, State, ProvenanceError> for ProvenanceAnalyzer<'ast, State>
-where
-    State: Debug
-        + ScopeOps<'ast>
-        + Annotates<'ast, Expr, Source>
-        + Annotates<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
-        + Annotates<'ast, Expr, Projection>
-        + Annotates<'ast, Query, Projection>
-        + Annotates<'ast, SetExpr, Projection>
-        + Annotates<'ast, Select, Projection>
-        + Annotates<'ast, Statement, Provenance>
-        + SchemaOps
-        + NodePathOps<'ast>,
-{
-    fn enter<N: 'static>(
-        &self,
-        node: &'ast N,
-        state: State,
-    ) -> VisitorControlFlow<'ast, State, ProvenanceError>
-    where
-        &'ast N: Into<Node<'ast>>,
-    {
-        self.stack.enter(node, state)
-    }
-
-    fn exit<N: 'static>(
-        &self,
-        node: &'ast N,
-        state: State,
-    ) -> VisitorControlFlow<'ast, State, ProvenanceError>
-    where
-        &'ast N: Into<Node<'ast>>,
-    {
-        self.stack.exit(node, state)
-    }
-}
-
 impl<'ast, State: 'ast> ProvenanceAnalyzer<'ast, State>
 where
-    State: Debug
-        + ScopeOps<'ast>
-        + Annotates<'ast, Expr, Source>
-        + Annotates<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
-        + Annotates<'ast, Expr, Projection>
-        + Annotates<'ast, Query, Projection>
-        + Annotates<'ast, SetExpr, Projection>
-        + Annotates<'ast, Select, Projection>
-        + Annotates<'ast, Statement, Provenance>
-        + SchemaOps
-        + NodePathOps<'ast>,
+    State: Debug + ProvenanceStateBounds<'ast>,
 {
     pub fn new() -> Self {
         let mut stack = VisitorStack::<State, ProvenanceError>::new();
-        stack.push(NodePath::track());
-
-        // NOTE: uncomment the two lines below for (very noisy) debugging.
-        // #[cfg(test)]
-        // stack.push(NodePath::log_top_entry());
-
-        #[cfg(test)]
-        stack.push(AnyNode::on_enter(|_, state: State| {
-            if let Some(entry) = state.peek_path_entry() {
-                eprintln!("{:indent$}ENTER: {}", "", entry, indent = entry.depth);
-                // state.dump_scope();
-            }
-            flow::infallible::cont(state)
-        }));
 
         stack.push(UpdateStack);
 
-        stack.push(PublishRelationsIntoScope::new());
+        stack.push(ImportIdentifiers::new());
 
         stack.push(AnnotateSource::annotate_expr_with_source());
         stack.push(AnnotateSource::annotate_set_expr_with_projection());
@@ -121,15 +41,6 @@ where
         stack.push(AnnotateSource::annotate_query_with_projection());
         stack.push(AnnotateSource::annotate_select_item_with_source());
         stack.push(AnnotateSource::annotate_statement_with_projection());
-
-        #[cfg(test)]
-        stack.push(AnyNode::on_exit(|_, state: State| {
-            if let Some(entry) = state.peek_path_entry() {
-                eprintln!("{:indent$}EXIT: {}", "", entry, indent = entry.depth);
-                // state.dump_scope();
-            }
-            flow::infallible::cont(state)
-        }));
 
         Self { stack }
     }

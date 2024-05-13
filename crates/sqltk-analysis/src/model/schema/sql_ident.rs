@@ -258,16 +258,51 @@ pub trait Named {
     fn name(&self) -> &Self::Name;
 }
 
-impl<T: Named> Named for &Rc<T>
-where
-    <T as Named>::Name: PartialEq<SqlIdent>,
+macro_rules! impl_named {
+    ($ty:ty, $field:ident, $id_ty:ty) => {
+        impl Named for $ty {
+            type Name = $id_ty;
+
+            fn name(&self) -> &Self::Name {
+                &self.$field
+            }
+        }
+    };
+}
+
+use crate::NamedRelation;
+use crate::Schema;
+use crate::Table;
+use crate::Column;
+use crate::ProjectionColumn;
+
+impl_named!(Schema, name, CanonicalIdent);
+impl_named!(Table, name, CanonicalIdent);
+impl_named!(Column, name, CanonicalIdent);
+impl_named!(NamedRelation, name, SqlIdent);
+impl_named!(ProjectionColumn, alias, Option<Rc<SqlIdent>>);
+
+impl<'a, Other: 'a + Named, T> Named for &'a T where Self: Deref<Target = Other>
+// where
+//     <T as Named>::Name: PartialEq<SqlIdent>,
 {
-    type Name = <T as Named>::Name;
+    type Name = <Other as Named>::Name;
 
     fn name(&self) -> &Self::Name {
-        (**self).name()
+        self.deref().name()
     }
 }
+
+// impl<T: Named> Named for &Rc<T>
+// where
+//     <T as Named>::Name: PartialEq<SqlIdent>,
+// {
+//     type Name = <T as Named>::Name;
+
+//     fn name(&self) -> &Self::Name {
+//         (**self).name()
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

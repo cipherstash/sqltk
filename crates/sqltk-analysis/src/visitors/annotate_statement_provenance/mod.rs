@@ -1,70 +1,28 @@
 //! Traits and types used used to annotate [`Expr`] nodes with their sources.
 
-use crate::model::Annotates;
+use crate::model::Projection;
 use crate::model::ResolutionError;
-use crate::model::ScopeOps;
-use crate::model::Source;
 use crate::model::{CanonicalIdent, SqlIdent};
 use crate::model::{ColumnWritten, InsertProvenance, Provenance, SelectProvenance};
-use crate::model::{Projection, ProjectionColumn};
-use crate::node_path::NodePathOps;
-use crate::SchemaOps;
+use crate::ProvenanceStateBounds;
 
-use sqltk::prelude::{Ident, Query};
-use sqltk::{flow, generalise, Node, VisitorControlFlow, VisitorStack};
-use sqltk::{Visitable, Visitor};
+use sqltk::Visitor;
+use sqltk::{flow, VisitorControlFlow, VisitorStack};
 
-use sqlparser::ast::{Expr, Insert, Select, SelectItem, SetExpr, Statement};
+use sqlparser::ast::{Insert, Statement};
 
 use std::any::Any;
-use std::fmt::Debug;
 use std::ops::Deref;
 use std::rc::Rc;
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct AnnotateProvenance<'ast, State> {
     stack: VisitorStack<'ast, State, ResolutionError>,
 }
 
-impl<'ast, State: Debug> AnnotateProvenance<'ast, State>
-where
-    State: 'ast
-        + Debug
-        + ScopeOps<'ast>
-        + Annotates<'ast, Expr, Source>
-        + Annotates<'ast, SelectItem, Vec<ProjectionColumn>>
-        + Annotates<'ast, Expr, Projection>
-        + Annotates<'ast, Query, Projection>
-        + Annotates<'ast, SetExpr, Projection>
-        + Annotates<'ast, Select, Projection>
-        + Annotates<'ast, Statement, Provenance>
-        + NodePathOps<'ast>
-        + SchemaOps,
-{
-    pub fn new() -> Self {
-        let mut stack = VisitorStack::<'ast, State, ResolutionError>::new();
-        // stack.push(generalise(AnnotateSelect));
-        // stack.push(generalise(AnnotateInsert));
-        // stack.push(generalise(AnnotateUpdate));
-        // stack.push(generalise(AnnotateDelete));
-        Self { stack }
-    }
-}
-
 impl<'ast, State> Visitor<'ast, State, ResolutionError> for AnnotateProvenance<'ast, State>
 where
-    State: 'ast
-        + Debug
-        + ScopeOps<'ast>
-        + Annotates<'ast, Expr, Source>
-        + Annotates<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
-        + Annotates<'ast, Expr, Projection>
-        + Annotates<'ast, Query, Projection>
-        + Annotates<'ast, SetExpr, Projection>
-        + Annotates<'ast, Select, Projection>
-        + Annotates<'ast, Statement, Provenance>
-        + NodePathOps<'ast>
-        + SchemaOps,
+    State: 'ast + ProvenanceStateBounds<'ast>,
 {
     fn exit<N: 'static>(
         &self,
@@ -105,18 +63,7 @@ fn annotate_insert<'ast, State>(
     statement: &'ast Statement,
 ) -> VisitorControlFlow<'ast, State, ResolutionError>
 where
-    State: 'ast
-        + Debug
-        + ScopeOps<'ast>
-        + Annotates<'ast, Expr, Source>
-        + Annotates<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
-        + Annotates<'ast, Expr, Projection>
-        + Annotates<'ast, Query, Projection>
-        + Annotates<'ast, SetExpr, Projection>
-        + Annotates<'ast, Select, Projection>
-        + Annotates<'ast, Statement, Provenance>
-        + NodePathOps<'ast>
-        + SchemaOps,
+    State: 'ast + ProvenanceStateBounds<'ast>,
 {
     let Insert {
         table_name,
@@ -161,7 +108,7 @@ where
             match select_items
                 .iter()
                 .map(|item| state.expect_annotation(item))
-                .collect::<Result<Vec<Rc<Vec<Rc<ProjectionColumn>>>>, _>>()
+                .collect::<Result<Vec<_>, _>>()
             {
                 Ok(projection_columns) => {
                     if projection_columns.len() > 0 {

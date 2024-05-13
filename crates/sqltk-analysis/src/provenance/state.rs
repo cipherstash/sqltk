@@ -3,18 +3,13 @@
 use core::fmt::Debug;
 
 use sqlparser::ast::{Expr, Query, SelectItem, SetExpr, Statement};
-use sqltk::prelude::{Node, Select};
+use sqltk::prelude::Select;
 use std::{rc::Rc, sync::Arc};
 
 use crate::{
-    model::ScopeStack,
-    model::SqlIdent,
-    model::{Annotates, ExpectedAnnotationError},
-    model::{AnnotationStore, NamedRelation, ResolutionError, Schema, ScopeOps, Source},
-    model::{Projection, ProjectionColumn},
-    node_path::{NodePath, NodePathEntry, NodePathOps},
+    model::{Annotates, AnnotationStore, ExpectedAnnotationError, NamedRelation, Projection, ProjectionColumn, ResolutionError, Schema, ScopeOps, ScopeStack, Source, SqlIdent},
     provenance::Provenance,
-    schema_api::SchemaOps,
+    schema_api::SchemaOps, TableColumn,
 };
 
 /// State that is tracked during AST traversal for provenance analysis.
@@ -24,12 +19,27 @@ pub struct ProvenanceState<'ast> {
     inner: Box<InnerState<'ast>>,
 }
 
+pub trait ProvenanceStateBounds<'ast>
+where
+    Self: ScopeOps<'ast>
+        + Annotates<'ast, Expr, Source>
+        + Annotates<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + Annotates<'ast, Expr, Projection>
+        + Annotates<'ast, Query, Projection>
+        + Annotates<'ast, SetExpr, Projection>
+        + Annotates<'ast, Select, Projection>
+        + Annotates<'ast, Statement, Provenance>
+        + SchemaOps
+        + Debug,
+{
+}
+
+impl<'ast> ProvenanceStateBounds<'ast> for ProvenanceState<'ast> {}
+
 #[derive(Debug)]
 pub struct InnerState<'ast> {
     /// The known database schema.
     schema: Arc<Schema>,
-    /// The path through the AST for the current node being visited.
-    node_path: NodePath<'ast>,
     /// The current lexical scope.
     scope: ScopeStack,
 
@@ -46,7 +56,6 @@ impl<'ast> InnerState<'ast> {
     fn new(schema: impl Into<Arc<Schema>>) -> Self {
         Self {
             schema: schema.into(),
-            node_path: Default::default(),
             scope: Default::default(),
             expr_sources: Default::default(),
             select_item_projection_columns: Default::default(),
@@ -166,26 +175,5 @@ impl<'ast> ScopeOps<'ast> for ProvenanceState<'ast> {
     #[cfg(test)]
     fn dump_scope(&self) {
         self.inner.scope.dump()
-    }
-}
-
-impl<'ast> NodePathOps<'ast> for ProvenanceState<'ast> {
-    fn push_path_entry<N>(&mut self, node: &'ast N)
-    where
-        &'ast N: Into<Node<'ast>>,
-    {
-        self.inner.node_path.push_path_entry(node)
-    }
-
-    fn pop_path_entry(&mut self) -> Option<NodePathEntry<'ast>> {
-        self.inner.node_path.pop_path_entry()
-    }
-
-    fn peek_path_entry(&self) -> Option<&NodePathEntry<'ast>> {
-        self.inner.node_path.peek_path_entry()
-    }
-
-    fn get_node_path(&self) -> &NodePath<'ast> {
-        &self.inner.node_path
     }
 }
