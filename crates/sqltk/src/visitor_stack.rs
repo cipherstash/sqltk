@@ -26,7 +26,11 @@ pub struct VisitorStack<'ast, State, E> {
 
 impl<'ast, State, E> Debug for VisitorStack<'ast, State, E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let visitor_names: Vec<String> = self.visitors.iter().map(|v| v.inner_visitor_type_name() ).collect();
+        let visitor_names: Vec<String> = self
+            .visitors
+            .iter()
+            .map(|v| v.inner_visitor_type_name())
+            .collect();
         f.debug_struct(type_name::<Self>())
             .field("visitors", &visitor_names)
             .finish()
@@ -103,7 +107,11 @@ where
 }
 
 impl<'ast, State, E> Visitor<'ast, State, E> for VisitorStack<'ast, State, E> {
-    fn enter<N: 'static>(&self, node: &'ast N, mut state: State) -> VisitorControlFlow<'ast, State, E>
+    fn enter<N: 'static>(
+        &self,
+        node: &'ast N,
+        mut state: State,
+    ) -> VisitorControlFlow<'ast, State, E>
     where
         &'ast N: Into<Node<'ast>>,
     {
@@ -113,7 +121,11 @@ impl<'ast, State, E> Visitor<'ast, State, E> for VisitorStack<'ast, State, E> {
         flow::cont(state)
     }
 
-    fn exit<N: 'static>(&self, node: &'ast N, mut state: State) -> VisitorControlFlow<'ast, State, E>
+    fn exit<N: 'static>(
+        &self,
+        node: &'ast N,
+        mut state: State,
+    ) -> VisitorControlFlow<'ast, State, E>
     where
         &'ast N: Into<Node<'ast>>,
     {

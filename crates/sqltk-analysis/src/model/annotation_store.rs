@@ -56,7 +56,7 @@ impl<'ast, N, V> AnnotationStore<'ast, N, V> {
 impl<'ast, N, V> Default for AnnotationStore<'ast, N, V> {
     fn default() -> Self {
         Self {
-            storage: HashMap::default()
+            storage: HashMap::default(),
         }
     }
 }
@@ -92,7 +92,8 @@ where
             panic!("Already an existing {:#?} on node {:#?}", existing, node)
         }
 
-        self.storage.get(&key)
+        self.storage
+            .get(&key)
             .expect("to get the entry that was just added")
             .clone()
     }

@@ -19,7 +19,10 @@ pub trait ScopeOps<'ast> {
     fn pop_scope(&mut self);
 
     /// Puts a table/view/subquery projection into scope.
-    fn add_relation(&mut self, relation: Rc<NamedRelation>) -> Result<Rc<NamedRelation>, ResolutionError>;
+    fn add_relation(
+        &mut self,
+        relation: Rc<NamedRelation>,
+    ) -> Result<Rc<NamedRelation>, ResolutionError>;
 
     /// Resolves a relation that is either in-scope (such as an aliased subquery or CTE)
     /// falling back to the database schema.
@@ -29,17 +32,16 @@ pub trait ScopeOps<'ast> {
     fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<Source>, ResolutionError>;
 
     /// Resolves a compound identifier within the current scope.
-    fn resolve_compound_ident(
-        &self,
-        ident: &[SqlIdent],
-    ) -> Result<Rc<Source>, ResolutionError>;
+    fn resolve_compound_ident(&self, ident: &[SqlIdent]) -> Result<Rc<Source>, ResolutionError>;
 
     /// Expands a wildcard within the current scope.
     fn resolve_wildcard(&self) -> Result<Rc<Projection>, ResolutionError>;
 
     /// Expands a qualified wildcard within the current scope.
-    fn resolve_qualified_wildcard(&self, ident: &[SqlIdent])
-        -> Result<Rc<Projection>, ResolutionError>;
+    fn resolve_qualified_wildcard(
+        &self,
+        ident: &[SqlIdent],
+    ) -> Result<Rc<Projection>, ResolutionError>;
 
     #[cfg(test)]
     fn dump_scope(&self);

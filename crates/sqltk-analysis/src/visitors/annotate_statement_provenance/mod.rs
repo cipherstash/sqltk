@@ -1,13 +1,13 @@
 //! Traits and types used used to annotate [`Expr`] nodes with their sources.
 
 use crate::model::Annotates;
-use crate::model::{ColumnWritten, InsertProvenance, Provenance, SelectProvenance};
-use crate::node_path::NodePathOps;
-use crate::model::{Projection, ProjectionColumn};
 use crate::model::ResolutionError;
-use crate::model::{CanonicalIdent, SqlIdent};
 use crate::model::ScopeOps;
 use crate::model::Source;
+use crate::model::{CanonicalIdent, SqlIdent};
+use crate::model::{ColumnWritten, InsertProvenance, Provenance, SelectProvenance};
+use crate::model::{Projection, ProjectionColumn};
+use crate::node_path::NodePathOps;
 use crate::SchemaOps;
 
 use sqltk::prelude::{Ident, Query};

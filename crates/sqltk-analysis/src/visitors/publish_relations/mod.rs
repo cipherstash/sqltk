@@ -15,9 +15,8 @@ use sqltk::{
 };
 
 use crate::{
-    model::Annotates, node_path::NodePathOps, model::Projection,
-    model::ResolutionError, model::ScopeOps, model::Source,
-    SchemaOps,
+    model::Annotates, model::Projection, model::ResolutionError, model::ScopeOps, model::Source,
+    node_path::NodePathOps, SchemaOps,
 };
 
 #[derive(Default, Debug)]

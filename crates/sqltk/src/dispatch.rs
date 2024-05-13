@@ -6,7 +6,7 @@ use crate::{flow, Node, SpecializedVisitor, Visitor, VisitorControlFlow};
 pub fn generalise<'ast, V, N: 'static, State, E>(visitor: V) -> impl Visitor<'ast, State, E>
 where
     E: Error + Debug,
-    V: SpecializedVisitor<'ast, N, State, E>
+    V: SpecializedVisitor<'ast, N, State, E>,
 {
     GeneralVisitor {
         inner: visitor,
@@ -23,11 +23,12 @@ pub struct GeneralVisitor<'ast, TargetNode, State, E, V> {
     _error: PhantomData<E>,
 }
 
-impl<'ast, TargetNode, State, E, V> Visitor<'ast, State, E> for GeneralVisitor<'ast, TargetNode, State, E, V>
+impl<'ast, TargetNode, State, E, V> Visitor<'ast, State, E>
+    for GeneralVisitor<'ast, TargetNode, State, E, V>
 where
     TargetNode: 'static,
     E: Error + Debug,
-    V: SpecializedVisitor<'ast, TargetNode, State, E>
+    V: SpecializedVisitor<'ast, TargetNode, State, E>,
 {
     fn enter<N: 'static>(&self, node: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E> {
         if let Some(target) = (node as &dyn Any).downcast_ref::<TargetNode>() {
@@ -58,7 +59,8 @@ pub struct DowncastDispatcher<'ast, DowncastTo, State, FnEnter, FnExit> {
 }
 
 impl<'ast, DowncastTo, State, FnEnter, FnExit>
-    DowncastDispatcher<'ast, DowncastTo, State, FnEnter, FnExit> {
+    DowncastDispatcher<'ast, DowncastTo, State, FnEnter, FnExit>
+{
     pub fn new(enter_fn: FnEnter, exit_fn: FnExit) -> Self {
         Self {
             enter_fn,
@@ -75,22 +77,14 @@ where
     FnEnter: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State, E>,
     FnExit: Fn(&'ast DowncastTo, State) -> VisitorControlFlow<'ast, State, E>,
 {
-    fn enter<N: 'static>(
-        &self,
-        node: &'ast N,
-        state: State,
-    ) -> VisitorControlFlow<'ast, State, E> {
+    fn enter<N: 'static>(&self, node: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E> {
         match (node as &dyn Any).downcast_ref::<DowncastTo>() {
             Some(node) => (self.enter_fn)(node, state),
             None => flow::cont(state),
         }
     }
 
-    fn exit<N: 'static>(
-        &self,
-        node: &'ast N,
-        state: State,
-    ) -> VisitorControlFlow<'ast, State, E> {
+    fn exit<N: 'static>(&self, node: &'ast N, state: State) -> VisitorControlFlow<'ast, State, E> {
         match (node as &dyn Any).downcast_ref::<DowncastTo>() {
             Some(node) => (self.exit_fn)(node, state),
             None => flow::cont(state),
@@ -143,7 +137,8 @@ pub mod AnyNode {
         AnyNodeDispatcher::<'ast, State, _, _>::new(enter_fn, exit_fn)
     }
 
-    fn ignore<'ast, State: 'ast, E>() -> impl Fn(Node, State) -> VisitorControlFlow<'ast, State, E> {
+    fn ignore<'ast, State: 'ast, E>() -> impl Fn(Node, State) -> VisitorControlFlow<'ast, State, E>
+    {
         |_: Node, state: State| flow::cont(state)
     }
 }

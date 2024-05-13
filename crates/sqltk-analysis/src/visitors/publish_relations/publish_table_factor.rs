@@ -54,10 +54,13 @@ where
                         .map_err(&ResolutionError::from)
                         .and_then(|table| {
                             record_as.and_then(|record_as| {
-                                state.add_relation(NamedRelation {
-                                    name: record_as.into(),
-                                    projection: Rc::new(Projection::from(&table)),
-                                }.into())
+                                state.add_relation(
+                                    NamedRelation {
+                                        name: record_as.into(),
+                                        projection: Rc::new(Projection::from(&table)),
+                                    }
+                                    .into(),
+                                )
                             })
                         })
                 });
@@ -79,10 +82,13 @@ where
                     projection
                         .map(|projection| projection.deref().clone())
                         .map(|projection| {
-                            state.add_relation(NamedRelation {
-                                name: Rc::new(SqlIdent::from(&alias.name)),
-                                projection: projection.into(),
-                            }.into())
+                            state.add_relation(
+                                NamedRelation {
+                                    name: Rc::new(SqlIdent::from(&alias.name)),
+                                    projection: projection.into(),
+                                }
+                                .into(),
+                            )
                         });
 
                 match result {

@@ -7,17 +7,17 @@ use crate::{
     model::Annotates,
     model::Provenance,
     model::ResolutionError,
-    node_path::{NodePath, NodePathOps},
-    model::{Projection, ProjectionColumn},
-    publish_relations::PublishRelationsIntoScope,
     model::ScopeOps,
     model::Source,
+    model::{Projection, ProjectionColumn},
+    node_path::{NodePath, NodePathOps},
+    publish_relations::PublishRelationsIntoScope,
     update_stack::UpdateStack,
     SchemaOps,
 };
 
-use std::{convert::Infallible, rc::Rc};
 use std::fmt::Debug;
+use std::{convert::Infallible, rc::Rc};
 use thiserror::Error;
 
 mod state;
@@ -161,10 +161,10 @@ mod tests {
     use crate::{
         make_schema,
         model::Annotates,
-        model::{InsertProvenance, SelectProvenance},
-        model::{Projection, ProjectionColumn},
         model::Provenance,
         model::{CanonicalIdent, SqlIdent, Table},
+        model::{InsertProvenance, SelectProvenance},
+        model::{Projection, ProjectionColumn},
         model::{Source, SourceItem, TableColumn},
         ProvenanceAnalyzer,
     };
@@ -190,7 +190,9 @@ mod tests {
             }
         };
 
-        let user_id_column = schema.resolve_table_column(&SqlIdent::unquoted("users"), &SqlIdent::unquoted("id")).unwrap();
+        let user_id_column = schema
+            .resolve_table_column(&SqlIdent::unquoted("users"), &SqlIdent::unquoted("id"))
+            .unwrap();
 
         let statements = parse_sql("select id from users;");
 
@@ -206,7 +208,9 @@ mod tests {
                         projection.deref(),
                         &Projection {
                             columns: vec![ProjectionColumn {
-                                source: Source::single(SourceItem::TableColumn(user_id_column.clone()))
+                                source: Source::single(SourceItem::TableColumn(
+                                    user_id_column.clone()
+                                ))
                                 .into(),
                                 alias: Some(SqlIdent::canonical("id").into())
                             }
@@ -316,9 +320,21 @@ mod tests {
             }
         };
 
-        let user_id_column = schema.resolve_table_column(&SqlIdent::unquoted("users"), &SqlIdent::unquoted("id")).unwrap();
-        let todo_list_items_id_column = schema.resolve_table_column(&SqlIdent::unquoted("todo_list_items"), &SqlIdent::unquoted("id")).unwrap();
-        let todo_list_items_description_column = schema.resolve_table_column(&SqlIdent::unquoted("todo_list_items"), &SqlIdent::unquoted("description")).unwrap();
+        let user_id_column = schema
+            .resolve_table_column(&SqlIdent::unquoted("users"), &SqlIdent::unquoted("id"))
+            .unwrap();
+        let todo_list_items_id_column = schema
+            .resolve_table_column(
+                &SqlIdent::unquoted("todo_list_items"),
+                &SqlIdent::unquoted("id"),
+            )
+            .unwrap();
+        let todo_list_items_description_column = schema
+            .resolve_table_column(
+                &SqlIdent::unquoted("todo_list_items"),
+                &SqlIdent::unquoted("description"),
+            )
+            .unwrap();
 
         let statements = parse_sql(
             r#"
@@ -351,17 +367,23 @@ mod tests {
 
                     assert_eq!(
                         &projection.columns[0].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(user_id_column.clone())))
+                        &Rc::new(Source::single(SourceItem::TableColumn(
+                            user_id_column.clone()
+                        )))
                     );
 
                     assert_eq!(
                         &projection.columns[1].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(todo_list_items_id_column.clone())))
+                        &Rc::new(Source::single(SourceItem::TableColumn(
+                            todo_list_items_id_column.clone()
+                        )))
                     );
 
                     assert_eq!(
                         &projection.columns[2].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(todo_list_items_description_column.clone())))
+                        &Rc::new(Source::single(SourceItem::TableColumn(
+                            todo_list_items_description_column.clone()
+                        )))
                     );
                 }
                 Ok(_) => {
@@ -390,10 +412,18 @@ mod tests {
             }
         };
 
-        let films_id_column = schema.resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("id")).unwrap();
-        let films_title_column = schema.resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("title")).unwrap();
-        let films_length_column = schema.resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("length")).unwrap();
-        let films_rating_column = schema.resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("rating")).unwrap();
+        let films_id_column = schema
+            .resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("id"))
+            .unwrap();
+        let films_title_column = schema
+            .resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("title"))
+            .unwrap();
+        let films_length_column = schema
+            .resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("length"))
+            .unwrap();
+        let films_rating_column = schema
+            .resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("rating"))
+            .unwrap();
 
         let statements = parse_sql(
             r#"
@@ -419,22 +449,30 @@ mod tests {
 
                     assert_eq!(
                         &projection.columns[0].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(films_id_column.clone())))
+                        &Rc::new(Source::single(SourceItem::TableColumn(
+                            films_id_column.clone()
+                        )))
                     );
 
                     assert_eq!(
                         &projection.columns[1].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(films_title_column.clone())))
+                        &Rc::new(Source::single(SourceItem::TableColumn(
+                            films_title_column.clone()
+                        )))
                     );
 
                     assert_eq!(
                         &projection.columns[2].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(films_length_column.clone())))
+                        &Rc::new(Source::single(SourceItem::TableColumn(
+                            films_length_column.clone()
+                        )))
                     );
 
                     assert_eq!(
                         &projection.columns[3].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(films_rating_column.clone())))
+                        &Rc::new(Source::single(SourceItem::TableColumn(
+                            films_rating_column.clone()
+                        )))
                     );
                 }
                 Ok(_) => {
@@ -515,7 +553,9 @@ mod tests {
         "#,
         );
 
-        let films_id_column = schema.resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("id")).unwrap();
+        let films_id_column = schema
+            .resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("id"))
+            .unwrap();
 
         let state = ProvenanceState::new(schema);
 
@@ -561,7 +601,9 @@ mod tests {
 
                         assert_eq!(
                             &projection.columns[0].source,
-                            &Rc::new(Source::single(SourceItem::TableColumn(films_id_column.clone())))
+                            &Rc::new(Source::single(SourceItem::TableColumn(
+                                films_id_column.clone()
+                            )))
                         );
                     } else {
                         assert!(false, "expected Some(projection)")

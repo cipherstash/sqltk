@@ -21,7 +21,11 @@ impl<'ast, State> Visitor<'ast, State, Infallible> for UpdateStack
 where
     State: ScopeOps<'ast>,
 {
-    fn enter<N: 'static>(&self, node: &'ast N, mut state: State) -> VisitorControlFlow<'ast, State, Infallible>
+    fn enter<N: 'static>(
+        &self,
+        node: &'ast N,
+        mut state: State,
+    ) -> VisitorControlFlow<'ast, State, Infallible>
     where
         &'ast N: Into<Node<'ast>>,
     {
@@ -31,7 +35,11 @@ where
         flow::cont(state)
     }
 
-    fn exit<N: 'static>(&self, node: &'ast N, mut state: State) -> VisitorControlFlow<'ast, State, Infallible>
+    fn exit<N: 'static>(
+        &self,
+        node: &'ast N,
+        mut state: State,
+    ) -> VisitorControlFlow<'ast, State, Infallible>
     where
         &'ast N: Into<Node<'ast>>,
     {

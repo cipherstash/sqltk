@@ -3,8 +3,8 @@
 //! Column type information is unused currently.
 
 use core::fmt::Debug;
-use std::rc::Rc;
 use derive_more::Display;
+use std::rc::Rc;
 
 mod sql_ident;
 pub use sql_ident::*;
@@ -65,7 +65,11 @@ impl Schema {
         SqlIdent::find_unique(name, &mut self.tables.iter().cloned())
     }
 
-    pub fn resolve_table_column(&self, table: &SqlIdent, column: &SqlIdent) -> Result<TableColumn, FindUniqueMatchError> {
+    pub fn resolve_table_column(
+        &self,
+        table: &SqlIdent,
+        column: &SqlIdent,
+    ) -> Result<TableColumn, FindUniqueMatchError> {
         match SqlIdent::find_unique(&table, &mut self.tables.iter().cloned()) {
             Ok(table) => match table.get_column(&column) {
                 Ok(column) => Ok(TableColumn::new(Rc::clone(&table), Rc::clone(&column))),
@@ -202,27 +206,26 @@ macro_rules! make_schema {
 
 // let foo = make_schema!(public, )
 
-impl Identifiable for Schema {
-    type Identifier = CanonicalIdent;
+impl Named for Schema {
+    type Name = CanonicalIdent;
 
-    fn ident(&self) -> &Self::Identifier {
+    fn name(&self) -> &Self::Name {
         &self.name
     }
 }
 
-impl Identifiable for Table {
-    type Identifier = CanonicalIdent;
+impl Named for Table {
+    type Name = CanonicalIdent;
 
-    fn ident(&self) -> &Self::Identifier {
+    fn name(&self) -> &Self::Name {
         &self.name
     }
 }
 
-impl Identifiable for Column {
-    type Identifier = CanonicalIdent;
+impl Named for Column {
+    type Name = CanonicalIdent;
 
-    fn ident(&self) -> &Self::Identifier {
+    fn name(&self) -> &Self::Name {
         &self.name
     }
 }
-

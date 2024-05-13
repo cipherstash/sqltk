@@ -4,26 +4,17 @@ use core::fmt::Debug;
 
 use sqlparser::ast::{Expr, Query, SelectItem, SetExpr, Statement};
 use sqltk::prelude::{Node, Select};
-use std::{
-    rc::Rc,
-    sync::Arc,
-};
+use std::{rc::Rc, sync::Arc};
 
 use crate::{
-    model::{Annotates, ExpectedAnnotationError},
-    model::{
-        AnnotationStore,
-        ResolutionError,
-        Schema,
-        ScopeOps,
-        NamedRelation, Source,
-    },
-    node_path::{NodePath, NodePathEntry, NodePathOps},
-    model::{Projection, ProjectionColumn},
-    model::SqlIdent,
-    schema_api::SchemaOps,
     model::ScopeStack,
+    model::SqlIdent,
+    model::{Annotates, ExpectedAnnotationError},
+    model::{AnnotationStore, NamedRelation, ResolutionError, Schema, ScopeOps, Source},
+    model::{Projection, ProjectionColumn},
+    node_path::{NodePath, NodePathEntry, NodePathOps},
     provenance::Provenance,
+    schema_api::SchemaOps,
 };
 
 /// State that is tracked during AST traversal for provenance analysis.
@@ -76,10 +67,12 @@ impl<'ast> ProvenanceState<'ast> {
     }
 
     pub fn of(&self, statement: &'ast Statement) -> Option<Rc<Provenance>> {
-        self.inner.statement_provenances.get_annotation(statement).clone()
+        self.inner
+            .statement_provenances
+            .get_annotation(statement)
+            .clone()
     }
 }
-
 
 macro_rules! annotates {
     ($store:ident, $node:ty, $annotation:ty) => {
@@ -140,7 +133,10 @@ impl<'ast> ScopeOps<'ast> for ProvenanceState<'ast> {
         self.inner.scope.pop();
     }
 
-    fn add_relation(&mut self, relation: Rc<NamedRelation>) -> Result<Rc<NamedRelation>, ResolutionError> {
+    fn add_relation(
+        &mut self,
+        relation: Rc<NamedRelation>,
+    ) -> Result<Rc<NamedRelation>, ResolutionError> {
         self.inner.scope.add_relation(relation)
     }
 
@@ -152,10 +148,7 @@ impl<'ast> ScopeOps<'ast> for ProvenanceState<'ast> {
         self.inner.scope.resolve_ident(ident)
     }
 
-    fn resolve_compound_ident(
-        &self,
-        ident: &[SqlIdent],
-    ) -> Result<Rc<Source>, ResolutionError> {
+    fn resolve_compound_ident(&self, ident: &[SqlIdent]) -> Result<Rc<Source>, ResolutionError> {
         self.inner.scope.resolve_compound_ident(ident)
     }
 

@@ -4,14 +4,14 @@
 use core::fmt::Display;
 use std::fmt;
 
-use derive_new::new;
 use derive_more::IntoIterator;
+use derive_new::new;
 use sqlparser::ast::{DataType, Value};
 use std::collections::BTreeSet;
 use std::rc::Rc;
 
 use crate::model::Projection;
-use crate::model::{Column, Identifiable, SqlIdent, Table};
+use crate::model::{Column, Named, SqlIdent, Table};
 
 /// A `Source` records the provenance of a single `Expr` or `SelectItem` node.
 ///
@@ -95,8 +95,8 @@ pub enum SourceItem {
     /// A value produced by a function call.
     FunctionCall {
         ident: SqlIdent,
-        arg_sources: Vec<Rc<SourceItem>>
-    }
+        arg_sources: Vec<Rc<SourceItem>>,
+    },
 }
 
 impl From<SourceItem> for Rc<Source> {
@@ -118,10 +118,10 @@ pub struct NamedRelation {
     pub projection: Rc<Projection>,
 }
 
-impl Identifiable for NamedRelation {
-    type Identifier = SqlIdent;
+impl Named for NamedRelation {
+    type Name = SqlIdent;
 
-    fn ident(&self) -> &Self::Identifier {
+    fn name(&self) -> &Self::Name {
         &self.name
     }
 }

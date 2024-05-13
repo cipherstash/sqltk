@@ -148,12 +148,12 @@ impl SqlIdent {
         haystack: &mut I,
     ) -> Result<Option<Rc<T>>, AmbiguousMatchError>
     where
-        T: 'static + Identifiable + Debug,
+        T: 'static + Named + Debug,
         I: Iterator<Item = Rc<T>>,
     {
         match (
-            haystack.find(|item| item.ident().eq(needle)),
-            haystack.find(|item| item.ident().eq(needle)),
+            haystack.find(|item| item.name().eq(needle)),
+            haystack.find(|item| item.name().eq(needle)),
         ) {
             (Some(result), None) => Ok(Some(Rc::clone(&result))),
             (Some(_), Some(_)) => Err(AmbiguousMatchError(needle.clone())),
@@ -168,7 +168,7 @@ impl SqlIdent {
         haystack: &mut I,
     ) -> Result<Rc<T>, FindUniqueMatchError>
     where
-        T: 'static + Identifiable + Debug,
+        T: 'static + Named + Debug,
         I: Iterator<Item = Rc<T>>,
     {
         match Self::try_find_unique(needle, haystack) {
@@ -250,35 +250,22 @@ impl PartialEq<SqlIdent> for CanonicalIdent {
     }
 }
 
-pub(crate) struct IdentPartialEq<T>(T);
-
-impl<T, TOther> PartialEq<IdentPartialEq<TOther>> for IdentPartialEq<T>
-where
-    T: Identifiable,
-    TOther: Identifiable,
-    <T as Identifiable>::Identifier: PartialEq<<TOther as Identifiable>::Identifier>,
-{
-    fn eq(&self, other: &IdentPartialEq<TOther>) -> bool {
-        self.0.ident().eq(other.0.ident())
-    }
-}
-
 /// Trait for database entities (schemas, tables, columns etc) that can be
 /// uniquely identified via a `&str` with some parent context.
-pub trait Identifiable {
-    type Identifier: PartialEq<SqlIdent>;
+pub trait Named {
+    type Name: PartialEq<SqlIdent>;
 
-    fn ident(&self) -> &Self::Identifier;
+    fn name(&self) -> &Self::Name;
 }
 
-impl<T: Identifiable> Identifiable for &Rc<T>
+impl<T: Named> Named for &Rc<T>
 where
-    <T as Identifiable>::Identifier: PartialEq<SqlIdent>,
+    <T as Named>::Name: PartialEq<SqlIdent>,
 {
-    type Identifier = <T as Identifiable>::Identifier;
+    type Name = <T as Named>::Name;
 
-    fn ident(&self) -> &Self::Identifier {
-        (**self).ident()
+    fn name(&self) -> &Self::Name {
+        (**self).name()
     }
 }
 
@@ -319,10 +306,10 @@ mod tests {
     #[derive(Debug, PartialEq, Eq)]
     struct Item(CanonicalIdent);
 
-    impl Identifiable for Item {
-        type Identifier = CanonicalIdent;
+    impl Named for Item {
+        type Name = CanonicalIdent;
 
-        fn ident(&self) -> &Self::Identifier {
+        fn name(&self) -> &Self::Name {
             &self.0
         }
     }

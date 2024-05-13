@@ -1,7 +1,7 @@
 use std::{ops::Deref, rc::Rc};
 
 use crate::{
-    model::schema::{Identifiable, SqlIdent, Table},
+    model::schema::{Named, SqlIdent, Table},
     model::source_annotation::{Source, SourceItem, TableColumn},
 };
 
@@ -37,14 +37,13 @@ impl ProjectionColumn {
     }
 }
 
-impl Identifiable for ProjectionColumn {
-    type Identifier = Option<Rc<SqlIdent>>;
+impl Named for ProjectionColumn {
+    type Name = Option<Rc<SqlIdent>>;
 
-    fn ident(&self) -> &Self::Identifier {
+    fn name(&self) -> &Self::Name {
         &self.alias
     }
 }
-
 
 impl From<&Rc<Table>> for Projection {
     fn from(table: &Rc<Table>) -> Self {
