@@ -1,12 +1,16 @@
 use std::rc::Rc;
 
 use crate::{
-    model::{projection_annotation::Projection, resolution_error::ResolutionError, schema::SqlIdent, source_annotation::{NamedRelation, Source}},
-    TableColumn,
+    model::{
+        projection::Projection,
+        resolution_error::ResolutionError,
+        schema::SqlIdent,
+        source_annotation::{NamedRelation, Source},
+    },
 };
 
 /// Operations for manipulating lexical scope and resolving identifiers that are in-scope.
-pub trait ScopeOps<'ast> {
+pub trait ScopeOps {
     /// Resets the scope stack. This is called between every `Statement`.
     fn reset_scope(&mut self);
 

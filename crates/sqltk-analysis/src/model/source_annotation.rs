@@ -3,6 +3,7 @@
 
 use core::fmt::Display;
 use std::fmt;
+use std::ops::Deref;
 
 use derive_more::IntoIterator;
 use derive_new::new;
@@ -11,7 +12,7 @@ use std::collections::BTreeSet;
 use std::rc::Rc;
 
 use crate::model::Projection;
-use crate::model::{Column, Named, SqlIdent, Table};
+use crate::model::{Column, SqlIdent, Table};
 
 /// A `Source` records the provenance of a single `Expr` or `SelectItem` node.
 ///
@@ -75,6 +76,9 @@ pub enum SourceItem {
     /// Refers to a Table + Column
     TableColumn(TableColumn),
 
+    /// Refers to an entire projection of a sub-query
+    Projection(Rc<Projection>),
+
     /// A literal or a placeholder
     Value(Value),
 
@@ -116,6 +120,15 @@ pub struct TableColumn {
 pub struct NamedRelation {
     pub name: Rc<SqlIdent>,
     pub projection: Rc<Projection>,
+}
+
+impl From<Rc<Table>> for NamedRelation {
+    fn from(table: Rc<Table>) -> Self {
+        Self {
+            name: Rc::new(SqlIdent::Canonical(table.name.deref().clone())),
+            projection: Rc::new(Projection::from(&table))
+        }
+    }
 }
 
 impl Display for TableColumn {

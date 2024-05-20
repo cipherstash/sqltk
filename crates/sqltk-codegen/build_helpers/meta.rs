@@ -6,10 +6,9 @@ use std::hash::Hash;
 use std::ops::DerefMut;
 use std::{collections::HashSet, ops::Deref};
 
-use proc_macro2::Span;
 use quote::{quote, ToTokens};
+use syn::TypePath;
 use syn::{parse::Parse, ItemEnum, ItemStruct};
-use syn::{Ident, TypePath};
 
 #[derive(Clone)]
 pub struct SqlParserMeta {
@@ -17,9 +16,6 @@ pub struct SqlParserMeta {
     /// and enums plus primitive types & BigDecimal.  The [`TypePath`] is the
     /// *public* fully-qualified type name.
     main_nodes: HashMap<Syn<TypePath>, SqlParserTypeDef>,
-
-    /// Nodes that are wrapped in Vec, Option or Box.
-    container_nodes: HashSet<ContainerNode>,
 
     /// Primitives used by sqlparser (most Rust primitives + String + BigDecimal)
     primitive_nodes: HashSet<PrimitiveNode>,
@@ -47,13 +43,6 @@ impl SqlParserMetaQuery {
             .into_iter()
             .map(|(Syn(type_path), type_def)| (type_path, type_def))
             .collect()
-    }
-
-    pub fn container_nodes(&self) -> Vec<ContainerNode> {
-        let mut container_nodes: Vec<ContainerNode> =
-            self.meta.container_nodes.clone().into_iter().collect();
-        container_nodes.sort();
-        container_nodes
     }
 
     pub fn primitive_nodes(&self) -> Vec<PrimitiveNode> {
@@ -89,7 +78,6 @@ impl SqlParserMeta {
 
         Self {
             main_nodes,
-            container_nodes,
             primitive_nodes,
         }
     }
@@ -153,25 +141,6 @@ static ALL_PRIMITIVE_NODES: &[PrimitiveNode] = &[
 ];
 
 impl PrimitiveNode {
-    pub fn variant_ident(&self) -> Syn<Ident> {
-        let name = match self {
-            PrimitiveNode::BigDecimal => "BigDecimal",
-            PrimitiveNode::Bool => "Bool",
-            PrimitiveNode::Char => "Char",
-            PrimitiveNode::I16 => "I16",
-            PrimitiveNode::I32 => "I32",
-            PrimitiveNode::I64 => "I64",
-            PrimitiveNode::I8 => "I8",
-            PrimitiveNode::String => "String",
-            PrimitiveNode::U16 => "U16",
-            PrimitiveNode::U32 => "U32",
-            PrimitiveNode::U64 => "U64",
-            PrimitiveNode::U8 => "U8",
-        };
-
-        Syn(Ident::new(name, Span::call_site()))
-    }
-
     pub fn type_path(&self) -> Syn<TypePath> {
         let tokens = match self {
             Self::BigDecimal => quote!(bigdecimal::BigDecimal),

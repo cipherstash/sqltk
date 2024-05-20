@@ -1,5 +1,5 @@
 [package]
-name = "sqltk"
+name = "sqltk-core"
 resolver = "2"
 description = "Comprehensive & composable Visitor implementation for sqlparser to support sophisticated SQL analysis workloads"
 version = "0.1.0"
@@ -16,8 +16,22 @@ include = [
     "LICENSE.TXT",
 ]
 
+# [lib]
+# name = "sqltk"
+# path = "src/lib.rs"
+
 [dependencies]
-sqltk-core = { path = "../sqltk-core" }
-sqltk-derive = { path = "../sqltk-derive" }
 sqlparser = { workspace = true }
 bigdecimal = { workspace = true }
+thiserror = "1.0.56"
+derive_more = "0.99.17"
+indoc = "2.0.5"
+
+[build-dependencies]
+sqltk-codegen = { path = "../sqltk-codegen" }
+
+[package.metadata.release]
+# Instruct `cargo release` to not run `cargo publish` locally:
+# https://github.com/sunng87/cargo-release/blob/master/docs/reference.md#config-fields
+# See docs/releasing.md for details.
+publish = false

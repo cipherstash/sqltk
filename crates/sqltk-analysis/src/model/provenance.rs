@@ -1,9 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    model::projection_annotation::Projection,
-    model::schema::{CanonicalIdent, Table},
-    model::source_annotation::Source,
+    model::{projection::Projection, schema::{CanonicalIdent, Table}, source_annotation::Source},
+    ProjectionColumn,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
@@ -47,4 +46,10 @@ pub struct DeleteProvenance {
 pub struct ColumnWritten {
     pub column: Rc<CanonicalIdent>,
     pub data: Rc<Source>,
+}
+
+impl From<(Rc<CanonicalIdent>, Rc<ProjectionColumn>)> for ColumnWritten {
+    fn from(value: (Rc<CanonicalIdent>, Rc<ProjectionColumn>)) -> Self {
+        Self{ column: value.0, data: value.1.source.clone() }
+    }
 }

@@ -43,11 +43,11 @@ where
 
 /// Shorthand for returning a
 /// `VisitorControlFlow::Break(Break::Err(error))`
-pub fn error<'ast, State, E: 'ast>(error: E, state: State) -> VisitorControlFlow<'ast, State, E>
+pub fn error<'ast, State, E: 'ast>(error: E) -> VisitorControlFlow<'ast, State, E>
 where
     E: Error + Debug,
 {
-    VisitorControlFlow::Break(Break::Err(error, state))
+    VisitorControlFlow::Break(Break::Err(error))
 }
 
 /// Chains calls to [`Visitor::enter`] or [`Visitor::exit`]
@@ -78,8 +78,8 @@ where
     ErrInto: Error + Debug,
 {
     match flow {
-        VisitorControlFlow::Break(Break::Err(err_from, state)) => {
-            VisitorControlFlow::Break(Break::Err(err_from.into(), state))
+        VisitorControlFlow::Break(Break::Err(err_from)) => {
+            VisitorControlFlow::Break(Break::Err(err_from.into()))
         }
         VisitorControlFlow::Break(Break::SkipChildren(state)) => {
             VisitorControlFlow::Break(Break::SkipChildren(state))

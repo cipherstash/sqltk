@@ -1,0 +1,23 @@
+[package]
+name = "sqltk-derive"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+description = "Derive proc-macro for sqltk"
+authors = ["James Sadler <james@cipherstash.com>"]
+homepage = "https://github.com/cipherstash/sqltk"
+documentation = "https://docs.rs/sqltk/"
+keywords = ["ansi", "sql", "lexer", "parser", "visitor", "analyze", "analyse", "cipherstash", "derive", "macro"]
+repository = "https://github.com/cipherstash/sqltk"
+license = "Apache-2.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+sqltk-core = { path = "../sqltk-core" }
+proc-macro2 = "*"
+syn = "*"
+quote = "*"
+deluxe = "0.5.0"
+indoc = "2.0.5"

@@ -13,10 +13,6 @@ fn main() {
         &output_path("reachability-debug.txt"),
     );
 
-    codegen.generated_node_enum(&output_path("node_enum.rs"));
-
-    codegen.generate_node_enum_match_macro(&output_path("node_enum_match_macro.rs"));
-
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo:rerun-if-changed=Cargo.lock");

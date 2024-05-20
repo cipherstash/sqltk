@@ -3,7 +3,6 @@
 use core::{fmt::Debug, marker::PhantomData};
 use std::any::TypeId;
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
@@ -30,6 +29,7 @@ struct NodeKey<'ast, N: 'static>(&'ast N);
 
 impl<'ast, N: 'static> Hash for NodeKey<'ast, N> {
     fn hash<H: Hasher>(&self, state: &mut H) {
+        // TODO TypeId not needed anymore, remove it
         let ty = TypeId::of::<N>();
         let addr = self.0 as *const N as usize;
         ty.hash(state);
@@ -61,28 +61,24 @@ impl<'ast, N, V> Default for AnnotationStore<'ast, N, V> {
     }
 }
 
-pub trait Annotates<'ast, N, A> {
+// TODO: split this trait into Read & Write variants (Annotate/AnnotateMut?)
+pub trait Annotate<'ast, N, A> {
     /// Adds an annotation of type `A` for an AST node `self`.
     ///
     /// Panics if an annotation of type `A` is already present for `node`.
     fn add_annotation(&mut self, node: &'ast N, annotation: impl Into<Rc<A>>) -> Rc<A>;
 
-    /// Gets an annotation of type `Rc<A>` from `self` for a particular AST node
-    /// `node`. Returns `Some<Rc<A>>` if an annotation is present on the AST node
-    /// or `None` if it does not exist.
-    fn get_annotation(&self, node: &'ast N) -> Option<Rc<A>>;
-
-    /// Same as [`Annotates::get_annotation`], but returns a [`Result`] instead
+    /// Same as [`Annotate::get_annotation`], but returns a [`Result`] instead
     /// of an [`Option`].
     ///
     /// Use this method when specific annotations are expected to be present.
     fn expect_annotation(&self, node: &'ast N) -> Result<Rc<A>, ExpectedAnnotationError<A>>;
 }
 
-impl<'ast, N, A> Annotates<'ast, N, A> for AnnotationStore<'ast, N, A>
+impl<'ast, N, A> Annotate<'ast, N, A> for AnnotationStore<'ast, N, A>
 where
     A: Debug,
-    N: 'static + Clone + Debug + Display,
+    N: 'static + Clone + Debug,
 {
     fn add_annotation(&mut self, node: &'ast N, annotation: impl Into<Rc<A>>) -> Rc<A> {
         let annotation: Rc<A> = annotation.into();
@@ -98,14 +94,12 @@ where
             .clone()
     }
 
-    fn get_annotation(&self, node: &'ast N) -> Option<Rc<A>> {
-        let key = NodeKey(node);
-        self.storage.get(&key).cloned()
-    }
-
     fn expect_annotation(&self, node: &'ast N) -> Result<Rc<A>, ExpectedAnnotationError<A>> {
-        self.get_annotation(node)
-            .ok_or(ExpectedAnnotationError(node.to_string(), PhantomData))
+        let key = NodeKey(node);
+        self.storage
+            .get(&key)
+            .cloned()
+            .ok_or(ExpectedAnnotationError(format!("{:?}", node), PhantomData))
     }
 }
 

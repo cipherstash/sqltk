@@ -1,11 +1,11 @@
 [workspace]
 resolver = "2"
-members = [
-    "crates/*"
-]
+members = ["crates/*"]
 
 [workspace.dependencies]
-sqlparser = { version = "0.45.0", features = ["bigdecimal"], git = "https://github.com/cipherstash/sqlparser-rs", branch = "sync-upstream"}
+sqlparser = { version = "0.45.0", features = [
+    "bigdecimal",
+], git = "https://github.com/cipherstash/sqlparser-rs", branch = "sync-upstream" }
 bigdecimal = { version = "^0.4.2" }
 
 [profile.dev]

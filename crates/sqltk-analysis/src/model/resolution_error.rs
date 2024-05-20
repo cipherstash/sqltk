@@ -7,8 +7,8 @@ use std::rc::Rc;
 use sqlparser::ast::{Expr, Query, SetExpr};
 
 use crate::{
-    model::annotation_store::ExpectedAnnotationError,
-    model::projection_annotation::{Projection, ProjectionColumn},
+    model::annotate::ExpectedAnnotationError,
+    model::projection::{Projection, ProjectionColumn},
     model::schema::{AmbiguousMatchError, FindUniqueMatchError},
     model::source_annotation::Source,
     model::Provenance,
@@ -94,6 +94,15 @@ pub enum ResolutionError {
 
     #[error("Support for all SQL syntax is not yet complete")]
     UnsupportTableAliasVariant,
+
+    #[error("Invalid AST encountered. This can happen because sqlparser reuses AST types with one or more variants that cannot happen in particular parts of the SQL grammar")]
+    InvalidAstNode,
+
+    #[error("Too many tables in FROM clause of DELETE statement")]
+    TooManyTablesInDeleteFromClause,
+
+    #[error("Unsupported TableFactor variant in DELETE statement")]
+    UnsupportedTableFactorVariantInDelete,
 }
 
 /// These errors should ideally be `unreachable!` assertions because they

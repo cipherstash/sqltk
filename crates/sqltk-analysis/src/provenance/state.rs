@@ -7,9 +7,12 @@ use sqltk::prelude::Select;
 use std::{rc::Rc, sync::Arc};
 
 use crate::{
-    model::{Annotates, AnnotationStore, ExpectedAnnotationError, NamedRelation, Projection, ProjectionColumn, ResolutionError, Schema, ScopeOps, ScopeStack, Source, SqlIdent},
+    model::{
+        Annotate, AnnotationStore, ExpectedAnnotationError, NamedRelation, Projection,
+        ProjectionColumn, ResolutionError, Schema, ScopeOps, ScopeStack, Source, SqlIdent,
+    },
     provenance::Provenance,
-    schema_api::SchemaOps, TableColumn,
+    schema_api::SchemaOps,
 };
 
 /// State that is tracked during AST traversal for provenance analysis.
@@ -21,14 +24,15 @@ pub struct ProvenanceState<'ast> {
 
 pub trait ProvenanceStateBounds<'ast>
 where
-    Self: ScopeOps<'ast>
-        + Annotates<'ast, Expr, Source>
-        + Annotates<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
-        + Annotates<'ast, Expr, Projection>
-        + Annotates<'ast, Query, Projection>
-        + Annotates<'ast, SetExpr, Projection>
-        + Annotates<'ast, Select, Projection>
-        + Annotates<'ast, Statement, Provenance>
+    Self: ScopeOps
+        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + Annotate<'ast, Vec<SelectItem>, Projection>
+        + Annotate<'ast, Expr, Projection>
+        + Annotate<'ast, Query, Projection>
+        + Annotate<'ast, SetExpr, Projection>
+        + Annotate<'ast, Select, Projection>
+        + Annotate<'ast, Statement, Provenance>
         + SchemaOps
         + Debug,
 {
@@ -45,6 +49,7 @@ pub struct InnerState<'ast> {
 
     expr_sources: AnnotationStore<'ast, Expr, Source>,
     select_item_projection_columns: AnnotationStore<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>,
+    vec_of_select_item_projections: AnnotationStore<'ast, Vec<SelectItem>, Projection>,
     expr_projections: AnnotationStore<'ast, Expr, Projection>,
     query_projections: AnnotationStore<'ast, Query, Projection>,
     select_projections: AnnotationStore<'ast, Select, Projection>,
@@ -58,6 +63,7 @@ impl<'ast> InnerState<'ast> {
             schema: schema.into(),
             scope: Default::default(),
             expr_sources: Default::default(),
+            vec_of_select_item_projections: Default::default(),
             select_item_projection_columns: Default::default(),
             expr_projections: Default::default(),
             query_projections: Default::default(),
@@ -74,20 +80,13 @@ impl<'ast> ProvenanceState<'ast> {
             inner: InnerState::new(schema).into(),
         }
     }
-
-    pub fn of(&self, statement: &'ast Statement) -> Option<Rc<Provenance>> {
-        self.inner
-            .statement_provenances
-            .get_annotation(statement)
-            .clone()
-    }
 }
 
-macro_rules! annotates {
+macro_rules! annotate {
     ($store:ident, $node:ty, $annotation:ty) => {
-        impl<'ast> Annotates<'ast, $node, $annotation> for ProvenanceState<'ast>
+        impl<'ast> Annotate<'ast, $node, $annotation> for ProvenanceState<'ast>
         where
-            AnnotationStore<'ast, $node, $annotation>: Annotates<'ast, $node, $annotation>,
+            AnnotationStore<'ast, $node, $annotation>: Annotate<'ast, $node, $annotation>,
         {
             fn add_annotation(
                 &mut self,
@@ -95,10 +94,6 @@ macro_rules! annotates {
                 annotation: impl Into<Rc<$annotation>>,
             ) -> Rc<$annotation> {
                 self.inner.$store.add_annotation(node, annotation.into())
-            }
-
-            fn get_annotation(&self, node: &'ast $node) -> Option<Rc<$annotation>> {
-                self.inner.$store.get_annotation(node)
             }
 
             fn expect_annotation(
@@ -111,17 +106,18 @@ macro_rules! annotates {
     };
 }
 
-annotates!(expr_sources, Expr, Source);
-annotates!(
+annotate!(expr_sources, Expr, Source);
+annotate!(
     select_item_projection_columns,
     SelectItem,
     Vec<Rc<ProjectionColumn>>
 );
-annotates!(expr_projections, Expr, Projection);
-annotates!(query_projections, Query, Projection);
-annotates!(select_projections, Select, Projection);
-annotates!(set_expr_projections, SetExpr, Projection);
-annotates!(statement_provenances, Statement, Provenance);
+annotate!(vec_of_select_item_projections, Vec<SelectItem>, Projection);
+annotate!(expr_projections, Expr, Projection);
+annotate!(query_projections, Query, Projection);
+annotate!(select_projections, Select, Projection);
+annotate!(set_expr_projections, SetExpr, Projection);
+annotate!(statement_provenances, Statement, Provenance);
 
 impl<'ast> SchemaOps for ProvenanceState<'ast> {
     fn get_schema(&self) -> &Schema {
@@ -129,7 +125,7 @@ impl<'ast> SchemaOps for ProvenanceState<'ast> {
     }
 }
 
-impl<'ast> ScopeOps<'ast> for ProvenanceState<'ast> {
+impl<'ast> ScopeOps for ProvenanceState<'ast> {
     fn reset_scope(&mut self) {
         self.inner.scope.reset();
     }

@@ -1,10 +1,10 @@
-use std::ops::Deref;
+use std::{marker::PhantomData, ops::Deref};
 
 use sqlparser::ast::{Cte, Expr, Query, TableAlias};
-use sqltk::{flow, SpecializedVisitor, VisitorControlFlow};
+use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
 
 use crate::{
-    model::Annotates,
+    model::Annotate,
     model::Projection,
     model::ResolutionError,
     model::ScopeOps,
@@ -13,46 +13,66 @@ use crate::{
     SchemaOps,
 };
 
-#[derive(Default, Debug, Clone, PartialEq, PartialOrd, Ord, Eq)]
-pub struct ImportFromCte;
+#[derive(Debug)]
+pub struct ImportFromCte<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>);
 
-impl<'ast, State: 'ast> SpecializedVisitor<'ast, Cte, State, ResolutionError> for ImportFromCte
+impl<'ast, State> Default for ImportFromCte<'ast, State>
 where
-    State: ScopeOps<'ast>
-        + Annotates<'ast, Expr, Source>
-        + Annotates<'ast, Query, Projection>
+    State: ScopeOps
+        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Query, Projection>
         + SchemaOps,
 {
-    fn exit(
+    fn default() -> Self {
+        Self(PhantomData, PhantomData)
+    }
+}
+
+impl<'ast, State> Visitor<'ast> for ImportFromCte<'ast, State>
+where
+    State: ScopeOps
+        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Query, Projection>
+        + SchemaOps,
+{
+    type Error = ResolutionError;
+    type State = State;
+
+    fn exit<N: Visitable<'ast>>(
         &self,
-        node: &'ast Cte,
+        node: &'ast N,
         mut state: State,
     ) -> VisitorControlFlow<'ast, State, ResolutionError> {
-        let Cte {
-            alias: TableAlias {
-                name: alias,
-                columns,
-            },
-            query,
-            ..
-        } = node;
+        if let Some(node) = node.downcast_ref::<Cte>() {
+            let Cte {
+                alias:
+                    TableAlias {
+                        name: alias,
+                        columns,
+                    },
+                query,
+                ..
+            } = node;
 
-        if !columns.is_empty() {
-            return flow::error(ResolutionError::Unimplemented, state);
-        }
+            if !columns.is_empty() {
+                return flow::error(ResolutionError::Unimplemented);
+            }
 
-        match state.expect_annotation(query.deref()) {
-            Ok(projection) => match state.add_relation(
-                NamedRelation {
-                    name: SqlIdent::Unquoted(UnquotedIdent::new(alias.value.clone())).into(),
-                    projection: projection.clone(),
-                }
-                .into(),
-            ) {
-                Ok(_) => flow::cont(state),
-                Err(err) => flow::error(err, state),
-            },
-            Err(err) => flow::error(err.into(), state),
+            match state.expect_annotation(query.deref()) {
+                Ok(projection) => match state.add_relation(
+                    NamedRelation {
+                        name: SqlIdent::Unquoted(UnquotedIdent::new(alias.value.clone())).into(),
+                        projection: projection.clone(),
+                    }
+                    .into(),
+                ) {
+                    Ok(_) => flow::cont(state),
+                    Err(err) => flow::error(err),
+                },
+                Err(err) => flow::error(err.into()),
+            }
+        } else {
+            flow::cont(state)
         }
     }
 }

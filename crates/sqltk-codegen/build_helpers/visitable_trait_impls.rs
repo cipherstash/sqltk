@@ -31,14 +31,13 @@ impl<'a> ToTokens for VisitableImpl<'a> {
         tokens.append_all(quote! {
             #[automatically_derived]
             impl<'ast> crate::Visitable<'ast> for #path {
-                fn accept<State, E, V>(
+                fn accept<V>(
                     &'ast self,
                     visitor: &V,
-                    state: State,
-                ) -> crate::VisitorControlFlow<'ast, State, E>
+                    state: V::State,
+                ) -> crate::VisitorControlFlow<'ast, V::State, V::Error>
                     where
-                        E: std::error::Error + std::fmt::Debug,
-                        V: crate::Visitor<'ast, State, E>
+                        V: crate::Visitor<'ast>
                 {
                     visit(self, visitor, state, #[allow(unused_variables)] |visitor, state| {
                         #[allow(unused_mut)]

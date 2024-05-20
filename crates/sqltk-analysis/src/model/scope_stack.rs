@@ -1,9 +1,10 @@
 //! Types for representing and maintaining a lexical scope during AST traversal.
-//!
-
 use crate::{
-    model::{InvariantFailedError, NamedRelation, Projection, ProjectionColumn, ResolutionError, Source, SqlIdent},
-    TableColumn,
+    model::{
+        InvariantFailedError, NamedRelation, Projection, ProjectionColumn, ResolutionError, Source,
+        SqlIdent,
+    },
+    ProjectionColumnsIterator,
 };
 use core::ops::{Deref, DerefMut};
 use std::{
@@ -95,13 +96,13 @@ impl Scope {
                 )),
             }
         } else {
-            let projection: Projection = self
+            let projections: Vec<Rc<Projection>> = self
                 .bindings
                 .iter()
-                .flat_map(|relation| relation.projection.columns.clone())
+                .map(|relation| relation.projection.clone())
                 .collect();
 
-            Ok(Rc::new(projection))
+            Ok(Rc::new(Projection::Concatenated(projections)))
         }
     }
 
@@ -164,7 +165,7 @@ impl Scope {
             Ok(Some(named_relation)) => {
                 match SqlIdent::find_unique(
                     &idents[1],
-                    &mut named_relation.projection.columns.iter().cloned(),
+                    &mut named_relation.projection.columns_iter(),
                 ) {
                     Ok(projection_column) => Ok(projection_column.source.clone()),
                     Err(err) => Err(err.into()),
@@ -223,7 +224,7 @@ impl Scope {
 
 struct AllColumnsIterator<'a> {
     relations: slice::Iter<'a, Rc<NamedRelation>>,
-    columns: Option<slice::Iter<'a, Rc<ProjectionColumn>>>,
+    columns: Option<ProjectionColumnsIterator>,
     done: bool,
 }
 
@@ -248,7 +249,7 @@ impl<'a> Iterator for AllColumnsIterator<'a> {
                     self.columns = self
                         .relations
                         .next()
-                        .map(|named_relation| named_relation.projection.columns.iter());
+                        .map(|named_relation| named_relation.projection.columns_iter());
                     if self.columns.is_some() {
                         self.next()
                     } else {
@@ -306,20 +307,18 @@ mod test {
         });
         NamedRelation {
             name: Rc::new(SqlIdent::Canonical(name.deref().clone())),
-            projection: Projection {
-                columns: Vec::from_iter(table.columns.iter().map(|column| {
-                    ProjectionColumn::new(
-                        Rc::new(Source::single(SourceItem::TableColumn(TableColumn {
-                            table: Rc::clone(&table),
-                            column: Rc::clone(&column),
-                        }))),
-                        Some(Rc::new(SqlIdent::Canonical(
-                            column.name.deref().clone().into(),
-                        ))),
-                    )
-                    .into()
-                })),
-            }
+            projection: Projection::Columns(Vec::from_iter(table.columns.iter().map(|column| {
+                ProjectionColumn::new(
+                    Rc::new(Source::single(SourceItem::TableColumn(TableColumn {
+                        table: Rc::clone(&table),
+                        column: Rc::clone(&column),
+                    }))),
+                    Some(Rc::new(SqlIdent::Canonical(
+                        column.name.deref().clone().into(),
+                    ))),
+                )
+                .into()
+            })))
             .into(),
         }
     }

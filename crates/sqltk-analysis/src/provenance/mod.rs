@@ -1,48 +1,47 @@
 //! Types and functions for provenance analysis.
 
-use sqltk::prelude::*;
+use sqltk::Visitor;
 
+use crate::build_projection_columns::BuildProjectionColumns;
+use crate::build_projections::BuildProjections;
+use crate::build_statement_provenance::BuildStatementProvenance;
+use crate::trace_expr_sources::TraceExprSources;
 use crate::{
-    annotate_sources::AnnotateSource, model::Provenance, model::ResolutionError,
-    import_relations::ImportIdentifiers, update_stack::UpdateStack,
+    import_relations::ImportRelations, model::Provenance, model::ResolutionError,
+    update_stack::UpdateStack,
 };
 
+use core::marker::PhantomData;
 use std::convert::Infallible;
 use std::fmt::Debug;
 use thiserror::Error;
 
 mod state;
 
-use derive_more::Deref;
 pub use state::*;
 
-#[derive(Debug, Deref)]
-pub struct ProvenanceAnalyzer<'ast, State: 'ast>
+#[derive(Debug, Visitor)]
+#[visitor(
+    error_ty = ProvenanceError,
+    children = [
+        UpdateStack,
+        ImportRelations,
+        TraceExprSources,
+        BuildProjectionColumns,
+        BuildProjections,
+        BuildStatementProvenance,
+    ]
+)]
+pub struct ProvenanceAnalyser<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>)
+where
+    State: Debug + ProvenanceStateBounds<'ast>;
+
+impl<'ast, State> Default for ProvenanceAnalyser<'ast, State>
 where
     State: Debug + ProvenanceStateBounds<'ast>,
 {
-    stack: VisitorStack<'ast, State, ProvenanceError>,
-}
-
-impl<'ast, State: 'ast> ProvenanceAnalyzer<'ast, State>
-where
-    State: Debug + ProvenanceStateBounds<'ast>,
-{
-    pub fn new() -> Self {
-        let mut stack = VisitorStack::<State, ProvenanceError>::new();
-
-        stack.push(UpdateStack);
-
-        stack.push(ImportIdentifiers::new());
-
-        stack.push(AnnotateSource::annotate_expr_with_source());
-        stack.push(AnnotateSource::annotate_set_expr_with_projection());
-        stack.push(AnnotateSource::annotate_select_with_projection());
-        stack.push(AnnotateSource::annotate_query_with_projection());
-        stack.push(AnnotateSource::annotate_select_item_with_source());
-        stack.push(AnnotateSource::annotate_statement_with_projection());
-
-        Self { stack }
+    fn default() -> Self {
+        Self(PhantomData, PhantomData)
     }
 }
 
@@ -65,19 +64,19 @@ impl From<Infallible> for ProvenanceError {
 
 #[cfg(test)]
 mod tests {
-
     use core::ops::Deref;
+    use pretty_assertions::assert_eq;
     use std::rc::Rc;
 
     use crate::{
         make_schema,
-        model::Annotates,
+        model::Annotate,
         model::Provenance,
         model::{CanonicalIdent, SqlIdent, Table},
         model::{InsertProvenance, SelectProvenance},
         model::{Projection, ProjectionColumn},
         model::{Source, SourceItem, TableColumn},
-        ProvenanceAnalyzer,
+        ProvenanceAnalyser,
     };
     use bigdecimal::BigDecimal;
     use sqltk::prelude::*;
@@ -109,24 +108,18 @@ mod tests {
 
         let state = ProvenanceState::new(schema);
 
-        let visitor = ProvenanceAnalyzer::new();
-
-        match statements.evaluate(&visitor, state) {
+        match statements.evaluate(&ProvenanceAnalyser::default(), state) {
             Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
                 Ok(Provenance::Select(provenance)) => {
                     let SelectProvenance { projection } = provenance.deref();
                     assert_eq!(
                         projection.deref(),
-                        &Projection {
-                            columns: vec![ProjectionColumn {
-                                source: Source::single(SourceItem::TableColumn(
-                                    user_id_column.clone()
-                                ))
+                        &Projection::Columns(vec![ProjectionColumn {
+                            source: Source::single(SourceItem::TableColumn(user_id_column.clone()))
                                 .into(),
-                                alias: Some(SqlIdent::canonical("id").into())
-                            }
-                            .into()]
+                            alias: None
                         }
+                        .into()])
                     );
                 }
                 Ok(_) => {
@@ -170,26 +163,21 @@ mod tests {
 
         let state = ProvenanceState::new(schema);
 
-        let visitor = ProvenanceAnalyzer::new();
-
-        match statements.evaluate(&visitor, state) {
+        match statements.evaluate(&ProvenanceAnalyser::default(), state) {
             Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
                 Ok(Provenance::Select(provenance)) => {
                     let SelectProvenance { projection } = provenance.deref();
-                    assert_eq!(projection.deref().columns.len(), 1);
                     assert_eq!(
                         projection.deref(),
-                        &Projection {
-                            columns: vec![ProjectionColumn {
-                                source: Source::single(SourceItem::TableColumn(TableColumn::new(
-                                    Rc::clone(&users_table),
-                                    Rc::clone(&user_id_column),
-                                )))
-                                .into(),
-                                alias: None,
-                            }
-                            .into()]
+                        &Projection::Columns(vec![ProjectionColumn {
+                            source: Source::single(SourceItem::TableColumn(TableColumn::new(
+                                Rc::clone(&users_table),
+                                Rc::clone(&user_id_column),
+                            )))
+                            .into(),
+                            alias: None,
                         }
+                        .into()])
                     );
                 }
                 Ok(_) => {
@@ -268,33 +256,37 @@ mod tests {
 
         let state = ProvenanceState::new(schema);
 
-        let visitor = ProvenanceAnalyzer::new();
-
-        match statements.evaluate(&visitor, state) {
+        match statements.evaluate(&ProvenanceAnalyser::default(), state) {
             Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
                 Ok(Provenance::Select(provenance)) => {
-                    let SelectProvenance { projection } = provenance.deref();
-                    assert_eq!(projection.columns.len(), 3);
+                    let projection = provenance.projection.deref();
 
                     assert_eq!(
-                        &projection.columns[0].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(
-                            user_id_column.clone()
-                        )))
-                    );
-
-                    assert_eq!(
-                        &projection.columns[1].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(
-                            todo_list_items_id_column.clone()
-                        )))
-                    );
-
-                    assert_eq!(
-                        &projection.columns[2].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(
-                            todo_list_items_description_column.clone()
-                        )))
+                        projection,
+                        &Projection::Columns(vec![
+                            ProjectionColumn {
+                                source: Source::single(SourceItem::TableColumn(
+                                    user_id_column.clone()
+                                ))
+                                .into(),
+                                alias: None
+                            }
+                            .into(),
+                            ProjectionColumn {
+                                source: SourceItem::TableColumn(todo_list_items_id_column.clone())
+                                    .into(),
+                                alias: None
+                            }
+                            .into(),
+                            ProjectionColumn {
+                                source: SourceItem::TableColumn(
+                                    todo_list_items_description_column.clone()
+                                )
+                                .into(),
+                                alias: None
+                            }
+                            .into(),
+                        ])
                     );
                 }
                 Ok(_) => {
@@ -350,40 +342,47 @@ mod tests {
 
         let state = ProvenanceState::new(schema);
 
-        let visitor = ProvenanceAnalyzer::new();
-
-        match statements.evaluate(&visitor, state) {
+        match statements.evaluate(&ProvenanceAnalyser::default(), state) {
             Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
                 Ok(Provenance::Select(provenance)) => {
-                    let SelectProvenance { projection } = provenance.deref();
-                    assert_eq!(projection.columns.len(), 4);
+                    let projection = provenance.projection.deref();
 
                     assert_eq!(
-                        &projection.columns[0].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(
-                            films_id_column.clone()
-                        )))
-                    );
-
-                    assert_eq!(
-                        &projection.columns[1].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(
-                            films_title_column.clone()
-                        )))
-                    );
-
-                    assert_eq!(
-                        &projection.columns[2].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(
-                            films_length_column.clone()
-                        )))
-                    );
-
-                    assert_eq!(
-                        &projection.columns[3].source,
-                        &Rc::new(Source::single(SourceItem::TableColumn(
-                            films_rating_column.clone()
-                        )))
+                        projection,
+                        &Projection::Columns(vec![
+                            ProjectionColumn {
+                                source: Source::single(SourceItem::TableColumn(
+                                    films_id_column.clone()
+                                ))
+                                .into(),
+                                alias: None
+                            }
+                            .into(),
+                            ProjectionColumn {
+                                source: Source::single(SourceItem::TableColumn(
+                                    films_title_column.clone()
+                                ))
+                                .into(),
+                                alias: None
+                            }
+                            .into(),
+                            ProjectionColumn {
+                                source: Source::single(SourceItem::TableColumn(
+                                    films_length_column.clone()
+                                ))
+                                .into(),
+                                alias: None
+                            }
+                            .into(),
+                            ProjectionColumn {
+                                source: Source::single(SourceItem::TableColumn(
+                                    films_rating_column.clone()
+                                ))
+                                .into(),
+                                alias: None
+                            }
+                            .into(),
+                        ])
                     );
                 }
                 Ok(_) => {
@@ -414,20 +413,22 @@ mod tests {
 
         let state = ProvenanceState::new(schema);
 
-        let visitor = ProvenanceAnalyzer::new();
-
-        match statements.evaluate(&visitor, state) {
+        match statements.evaluate(&ProvenanceAnalyser::default(), state) {
             Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
                 Ok(Provenance::Select(provenance)) => {
-                    let SelectProvenance { projection } = provenance.deref();
-                    assert_eq!(projection.columns.len(), 1);
+                    let projection = provenance.projection.deref();
 
                     assert_eq!(
-                        &projection.columns[0].source,
-                        &Rc::new(Source::single(SourceItem::Value(Value::Number(
-                            BigDecimal::from(123),
-                            false
-                        ))))
+                        projection,
+                        &Projection::Columns(vec![ProjectionColumn {
+                            source: Source::single(SourceItem::Value(Value::Number(
+                                BigDecimal::from(123),
+                                false
+                            )))
+                            .into(),
+                            alias: None
+                        }
+                        .into(),])
                     );
                 }
                 Ok(_) => {
@@ -470,9 +471,7 @@ mod tests {
 
         let state = ProvenanceState::new(schema);
 
-        let visitor = ProvenanceAnalyzer::new();
-
-        match statements.evaluate(&visitor, state) {
+        match statements.evaluate(&ProvenanceAnalyser::default(), state) {
             Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
                 Ok(Provenance::Insert(provenance)) => {
                     if let InsertProvenance {
@@ -508,13 +507,18 @@ mod tests {
                             &Source::single(SourceItem::ColumnOfValues)
                         );
 
-                        assert_eq!(projection.columns.len(), 1);
+                        let projection = projection.deref();
 
                         assert_eq!(
-                            &projection.columns[0].source,
-                            &Rc::new(Source::single(SourceItem::TableColumn(
-                                films_id_column.clone()
-                            )))
+                            projection,
+                            &Projection::Columns(vec![ProjectionColumn {
+                                source: Source::single(SourceItem::TableColumn(
+                                    films_id_column.clone()
+                                ))
+                                .into(),
+                                alias: None
+                            }
+                            .into(),])
                         );
                     } else {
                         assert!(false, "expected Some(projection)")

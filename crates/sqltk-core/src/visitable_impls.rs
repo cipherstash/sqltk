@@ -4,17 +4,15 @@ use crate::*;
 
 impl<'ast, T> Visitable<'ast> for Vec<T>
 where
-    T: 'static + Visitable<'ast>,
-    VecOf<'ast>: From<&'ast Vec<T>>,
+    T: Visitable<'ast>,
 {
-    fn accept<State, E, V>(
+    fn accept<V>(
         &'ast self,
         visitor: &V,
-        state: State,
-    ) -> VisitorControlFlow<'ast, State, E>
+        state: V::State,
+    ) -> VisitorControlFlow<'ast, V::State, V::Error>
     where
-        E: Error + Debug,
-        V: Visitor<'ast, State, E>,
+        V: Visitor<'ast>,
     {
         if self.is_empty() {
             flow::cont(state)
@@ -32,17 +30,15 @@ where
 
 impl<'ast, N> Visitable<'ast> for Box<N>
 where
-    &'ast N: Into<Node<'ast>>,
-    N: 'static + Visitable<'ast>,
+    N: Visitable<'ast>,
 {
-    fn accept<State, E, V>(
+    fn accept<V>(
         &'ast self,
         visitor: &V,
-        state: State,
-    ) -> VisitorControlFlow<'ast, State, E>
+        state: V::State,
+    ) -> VisitorControlFlow<'ast, V::State, V::Error>
     where
-        E: Error + Debug,
-        V: Visitor<'ast, State, E>,
+        V: Visitor<'ast>,
     {
         (**self).accept(visitor, state)
     }
@@ -50,17 +46,15 @@ where
 
 impl<'ast, N> Visitable<'ast> for Option<N>
 where
-    N: 'static + Visitable<'ast>,
-    &'ast Option<N>: Into<Node<'ast>>,
+    N: Visitable<'ast>,
 {
-    fn accept<State, E, V>(
+    fn accept<V>(
         &'ast self,
         visitor: &V,
-        state: State,
-    ) -> VisitorControlFlow<'ast, State, E>
+        state: V::State,
+    ) -> VisitorControlFlow<'ast, V::State, V::Error>
     where
-        E: Error + Debug,
-        V: Visitor<'ast, State, E>,
+        V: Visitor<'ast>,
     {
         if self.is_none() {
             flow::cont(state)
@@ -77,18 +71,16 @@ where
 /// recursively while properly handling visitor control flow.
 /// FIXME: put this code in the Visitable trait - it will simplify the generics.
 #[inline(always)]
-fn visit<'v, 'ast, N, F, E, V, State>(
+fn visit<'v, 'ast, N, F, V>(
     node: &'ast N,
     visitor: &'v V,
-    state: State,
+    state: V::State,
     visit_children: F,
-) -> VisitorControlFlow<'ast, State, E>
+) -> VisitorControlFlow<'ast, V::State, V::Error>
 where
-    E: Error + Debug,
-    N: 'static + Visitable<'ast>,
-    &'ast N: Into<Node<'ast>>,
-    V: Visitor<'ast, State, E>,
-    F: Fn(&V, State) -> VisitorControlFlow<'ast, State, E>,
+    V: Visitor<'ast>,
+    N: Visitable<'ast>,
+    F: Fn(&V, V::State) -> VisitorControlFlow<'ast, V::State, V::Error>,
 {
     let flow = Visitor::enter(visitor, node, state);
     let flow = flow::map_continue(flow, |state| visit_children(visitor, state));
