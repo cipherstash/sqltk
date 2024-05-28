@@ -26,15 +26,13 @@ pub trait ScopeOps {
         relation: Rc<NamedRelation>,
     ) -> Result<Rc<NamedRelation>, ResolutionError>;
 
-    /// Resolves a relation that is either in-scope (such as an aliased subquery or CTE)
-    /// falling back to the database schema.
+    /// Resolves a [`NamedRelation`].
     fn resolve_relation(&mut self, name: &SqlIdent) -> Result<Rc<NamedRelation>, ResolutionError>;
 
     /// Resolves an identifier within the current scope.
     fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<Source>, ResolutionError>;
 
     /// Resolves a compound identifier within the current scope.
-    /// FIXME: this resolves a compound identifier expression and should be renamed
     fn resolve_compound_ident(&self, ident: &[SqlIdent]) -> Result<Rc<Source>, ResolutionError>;
 
     /// Expands a wildcard within the current scope.
@@ -45,7 +43,4 @@ pub trait ScopeOps {
         &self,
         ident: &[SqlIdent],
     ) -> Result<Rc<Projection>, ResolutionError>;
-
-    #[cfg(test)]
-    fn dump_scope(&self);
 }

@@ -4,11 +4,8 @@ use sqlparser::ast::SelectItem;
 use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps},
-    ProjectionColumn,
+    model::{Annotate, Projection, ResolutionError, ScopeOps}, AnnotateMut, ProjectionColumn
 };
-
-// TODO: remove this entire module.
 
 #[derive(Debug)]
 pub struct BuildVecOfSelectItemProjection<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>);
@@ -16,8 +13,8 @@ pub struct BuildVecOfSelectItemProjection<'ast, State>(PhantomData<&'ast ()>, Ph
 impl<'ast, State> Default for BuildVecOfSelectItemProjection<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Vec<SelectItem>, Projection>
-        + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>,
+        + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + AnnotateMut<'ast, Vec<SelectItem>, Projection>
 {
     fn default() -> Self {
         Self(PhantomData, PhantomData)
@@ -27,8 +24,8 @@ where
 impl<'ast, State> Visitor<'ast> for BuildVecOfSelectItemProjection<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Vec<SelectItem>, Projection>
-        + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>,
+        + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + AnnotateMut<'ast, Vec<SelectItem>, Projection>
 {
     type State = State;
     type Error = ResolutionError;
@@ -43,7 +40,7 @@ where
                 .iter()
                 .map(|item| {
                     state
-                        .expect_annotation(item)
+                        .get_annotation(item)
                         .map(|columns| columns.iter().cloned().collect::<Vec<_>>())
                 })
                 .collect::<Result<Vec<_>, _>>();
@@ -55,7 +52,7 @@ where
 
             match result {
                 Ok(projection) => {
-                    state.add_annotation(items, projection);
+                    state.set_annotation(items, projection);
                     flow::cont(state)
                 }
                 Err(err) => flow::error(err.into()),

@@ -1,3 +1,7 @@
+#![allow(unused_mut)]
+#![allow(unused_variables)]
+#![allow(unused_must_use)]
+
 use std::{marker::PhantomData, rc::Rc};
 
 use sqlparser::ast::{

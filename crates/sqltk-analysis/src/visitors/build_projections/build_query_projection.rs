@@ -4,8 +4,7 @@ use sqlparser::ast::{Query, SetExpr};
 use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps},
-    SchemaOps,
+    model::{Annotate, Projection, ResolutionError, ScopeOps}, AnnotateMut, SchemaOps
 };
 
 #[derive(Debug)]
@@ -14,7 +13,7 @@ pub struct BuildQueryProjection<'ast, State>(PhantomData<&'ast ()>, PhantomData<
 impl<'ast, State> Default for BuildQueryProjection<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Query, Projection>
+        + AnnotateMut<'ast, Query, Projection>
         + Annotate<'ast, SetExpr, Projection>
         + SchemaOps,
 {
@@ -26,7 +25,7 @@ where
 impl<'ast, State> Visitor<'ast> for BuildQueryProjection<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Query, Projection>
+        + AnnotateMut<'ast, Query, Projection>
         + Annotate<'ast, SetExpr, Projection>
         + SchemaOps,
 {
@@ -39,9 +38,9 @@ where
         mut state: State,
     ) -> VisitorControlFlow<'ast, State, ResolutionError> {
         if let Some(query) = node.downcast_ref::<Query>() {
-            match state.expect_annotation(query.body.deref()) {
+            match state.get_annotation(query.body.deref()) {
                 Ok(projection_annotation) => {
-                    state.add_annotation(query, projection_annotation);
+                    state.set_annotation(query, projection_annotation);
                     flow::cont(state)
                 }
                 Err(err) => flow::error(err.into()),

@@ -61,18 +61,19 @@ impl<'ast, N, V> Default for AnnotationStore<'ast, N, V> {
     }
 }
 
-// TODO: split this trait into Read & Write variants (Annotate/AnnotateMut?)
 pub trait Annotate<'ast, N, A> {
-    /// Adds an annotation of type `A` for an AST node `self`.
-    ///
-    /// Panics if an annotation of type `A` is already present for `node`.
-    fn add_annotation(&mut self, node: &'ast N, annotation: impl Into<Rc<A>>) -> Rc<A>;
-
     /// Same as [`Annotate::get_annotation`], but returns a [`Result`] instead
     /// of an [`Option`].
     ///
     /// Use this method when specific annotations are expected to be present.
-    fn expect_annotation(&self, node: &'ast N) -> Result<Rc<A>, ExpectedAnnotationError<A>>;
+    fn get_annotation(&self, node: &'ast N) -> Result<Rc<A>, ExpectedAnnotationError<A>>;
+}
+
+pub trait AnnotateMut<'ast, N, A>: Annotate<'ast, N, A> {
+    /// Adds an annotation of type `A` for an AST node `self`.
+    ///
+    /// Panics if an annotation of type `A` is already present for `node`.
+    fn set_annotation(&mut self, node: &'ast N, annotation: impl Into<Rc<A>>) -> Rc<A>;
 }
 
 impl<'ast, N, A> Annotate<'ast, N, A> for AnnotationStore<'ast, N, A>
@@ -80,7 +81,21 @@ where
     A: Debug,
     N: 'static + Clone + Debug,
 {
-    fn add_annotation(&mut self, node: &'ast N, annotation: impl Into<Rc<A>>) -> Rc<A> {
+    fn get_annotation(&self, node: &'ast N) -> Result<Rc<A>, ExpectedAnnotationError<A>> {
+        let key = NodeKey(node);
+        self.storage
+            .get(&key)
+            .cloned()
+            .ok_or(ExpectedAnnotationError(format!("{:?}", node), PhantomData))
+    }
+}
+
+impl<'ast, N, A> AnnotateMut<'ast, N, A> for AnnotationStore<'ast, N, A>
+where
+    A: Debug,
+    N: 'static + Clone + Debug,
+{
+    fn set_annotation(&mut self, node: &'ast N, annotation: impl Into<Rc<A>>) -> Rc<A> {
         let annotation: Rc<A> = annotation.into();
         let key = NodeKey(node);
 
@@ -93,15 +108,8 @@ where
             .expect("to get the entry that was just added")
             .clone()
     }
-
-    fn expect_annotation(&self, node: &'ast N) -> Result<Rc<A>, ExpectedAnnotationError<A>> {
-        let key = NodeKey(node);
-        self.storage
-            .get(&key)
-            .cloned()
-            .ok_or(ExpectedAnnotationError(format!("{:?}", node), PhantomData))
-    }
 }
+
 
 /// Error returned when attempting to retrieve an expected annotation when it is
 /// not present.

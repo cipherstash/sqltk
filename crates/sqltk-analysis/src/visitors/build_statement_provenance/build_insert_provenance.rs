@@ -7,8 +7,7 @@ use sqltk::{
 };
 
 use crate::{
-    Annotate, CanonicalIdent, ColumnWritten, InsertProvenance, Projection, Provenance,
-    ResolutionError, SchemaOps, SqlIdent, Table,
+    Annotate, AnnotateMut, CanonicalIdent, ColumnWritten, InsertProvenance, Projection, Provenance, ResolutionError, SchemaOps, SqlIdent, Table
 };
 
 #[derive(Debug)]
@@ -17,9 +16,9 @@ pub struct BuildInsertProvenance<'ast, State>(PhantomData<&'ast ()>, PhantomData
 impl<'ast, State> Default for BuildInsertProvenance<'ast, State>
 where
     State: SchemaOps
-        + Annotate<'ast, Statement, Provenance>
         + Annotate<'ast, Query, Projection>
-        + Annotate<'ast, Vec<SelectItem>, Projection>,
+        + Annotate<'ast, Vec<SelectItem>, Projection>
+        + AnnotateMut<'ast, Statement, Provenance>
 {
     fn default() -> Self {
         Self(PhantomData, PhantomData)
@@ -29,9 +28,9 @@ where
 impl<'ast, State> Visitor<'ast> for BuildInsertProvenance<'ast, State>
 where
     State: SchemaOps
-        + Annotate<'ast, Statement, Provenance>
         + Annotate<'ast, Query, Projection>
-        + Annotate<'ast, Vec<SelectItem>, Projection>,
+        + Annotate<'ast, Vec<SelectItem>, Projection>
+        + AnnotateMut<'ast, Statement, Provenance>
 {
     type Error = ResolutionError;
     type State = State;
@@ -57,7 +56,7 @@ where
 
                     let source: Result<Option<Rc<Projection>>, _> = source
                         .as_ref()
-                        .map(|source| state.expect_annotation(source.deref()))
+                        .map(|source| state.get_annotation(source.deref()))
                         .transpose()
                         .map_err(ResolutionError::from);
 
@@ -80,7 +79,7 @@ where
 
                     let returning: Result<Option<Rc<Projection>>, _> = returning
                         .as_ref()
-                        .map(|items| state.expect_annotation(items))
+                        .map(|items| state.get_annotation(items))
                         .transpose()
                         .map_err(ResolutionError::from);
 
@@ -93,7 +92,7 @@ where
                             })
                         })
                         .and_then(|(into_table, columns_written, returning)| {
-                            state.add_annotation(
+                            state.set_annotation(
                                 statement,
                                 Provenance::Insert(
                                     InsertProvenance {

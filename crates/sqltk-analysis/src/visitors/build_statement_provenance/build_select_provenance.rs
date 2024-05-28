@@ -6,14 +6,14 @@ use sqltk::{
     Visitable, Visitor,
 };
 
-use crate::{Annotate, Projection, Provenance, ResolutionError, SelectProvenance};
+use crate::{Annotate, AnnotateMut, Projection, Provenance, ResolutionError, SelectProvenance};
 
 #[derive(Debug, Clone)]
 pub struct BuildSelectProvenance<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>);
 
 impl<'ast, State> Default for BuildSelectProvenance<'ast, State>
 where
-    State: Annotate<'ast, Statement, Provenance> + Annotate<'ast, Query, Projection>,
+    State: AnnotateMut<'ast, Statement, Provenance> + Annotate<'ast, Query, Projection>,
 {
     fn default() -> Self {
         Self(PhantomData, PhantomData)
@@ -23,7 +23,7 @@ where
 
 impl<'ast, State> Visitor<'ast> for BuildSelectProvenance<'ast, State>
 where
-    State: Annotate<'ast, Statement, Provenance> + Annotate<'ast, Query, Projection>,
+    State: AnnotateMut<'ast, Statement, Provenance> + Annotate<'ast, Query, Projection>,
 {
     type Error = ResolutionError;
     type State = State;
@@ -35,9 +35,9 @@ where
     ) -> VisitorControlFlow<'ast, State, ResolutionError> {
         if let Some(statement) = node.downcast_ref::<Statement>() {
             match statement {
-                Statement::Query(query) => match state.expect_annotation(query.deref()) {
+                Statement::Query(query) => match state.get_annotation(query.deref()) {
                     Ok(projection) => {
-                        state.add_annotation(
+                        state.set_annotation(
                             statement,
                             Provenance::Select(
                                 SelectProvenance {

@@ -8,7 +8,7 @@ use std::{rc::Rc, sync::Arc};
 
 use crate::{
     model::{
-        Annotate, AnnotationStore, ExpectedAnnotationError, NamedRelation, Projection,
+        Annotate, AnnotateMut, AnnotationStore, ExpectedAnnotationError, NamedRelation, Projection,
         ProjectionColumn, ResolutionError, Schema, ScopeOps, ScopeStack, Source, SqlIdent,
     },
     provenance::Provenance,
@@ -25,14 +25,14 @@ pub struct ProvenanceState<'ast> {
 pub trait ProvenanceStateBounds<'ast>
 where
     Self: ScopeOps
-        + Annotate<'ast, Expr, Source>
-        + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
-        + Annotate<'ast, Vec<SelectItem>, Projection>
-        + Annotate<'ast, Expr, Projection>
-        + Annotate<'ast, Query, Projection>
-        + Annotate<'ast, SetExpr, Projection>
-        + Annotate<'ast, Select, Projection>
-        + Annotate<'ast, Statement, Provenance>
+        + AnnotateMut<'ast, Expr, Source>
+        + AnnotateMut<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + AnnotateMut<'ast, Vec<SelectItem>, Projection>
+        + AnnotateMut<'ast, Expr, Projection>
+        + AnnotateMut<'ast, Query, Projection>
+        + AnnotateMut<'ast, SetExpr, Projection>
+        + AnnotateMut<'ast, Select, Projection>
+        + AnnotateMut<'ast, Statement, Provenance>
         + SchemaOps
         + Debug,
 {
@@ -88,19 +88,24 @@ macro_rules! annotate {
         where
             AnnotationStore<'ast, $node, $annotation>: Annotate<'ast, $node, $annotation>,
         {
-            fn add_annotation(
+            fn get_annotation(
+                &self,
+                node: &'ast $node,
+            ) -> Result<Rc<$annotation>, ExpectedAnnotationError<$annotation>> {
+                self.inner.$store.get_annotation(node)
+            }
+        }
+
+        impl<'ast> AnnotateMut<'ast, $node, $annotation> for ProvenanceState<'ast>
+        where
+            AnnotationStore<'ast, $node, $annotation>: Annotate<'ast, $node, $annotation>,
+        {
+            fn set_annotation(
                 &mut self,
                 node: &'ast $node,
                 annotation: impl Into<Rc<$annotation>>,
             ) -> Rc<$annotation> {
-                self.inner.$store.add_annotation(node, annotation.into())
-            }
-
-            fn expect_annotation(
-                &self,
-                node: &'ast $node,
-            ) -> Result<Rc<$annotation>, ExpectedAnnotationError<$annotation>> {
-                self.inner.$store.expect_annotation(node)
+                self.inner.$store.set_annotation(node, annotation.into())
             }
         }
     };
@@ -166,10 +171,5 @@ impl<'ast> ScopeOps for ProvenanceState<'ast> {
         idents: &[SqlIdent],
     ) -> Result<Rc<Projection>, ResolutionError> {
         self.inner.scope.resolve_qualified_wildcard(idents)
-    }
-
-    #[cfg(test)]
-    fn dump_scope(&self) {
-        self.inner.scope.dump()
     }
 }

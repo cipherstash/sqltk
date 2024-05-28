@@ -4,8 +4,7 @@ use sqlparser::ast::{Expr, Query, Select, SetExpr};
 use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps, Source},
-    ProjectionColumn, SchemaOps, SourceItem,
+    model::{Annotate, Projection, ResolutionError, ScopeOps, Source}, AnnotateMut, ProjectionColumn, SchemaOps, SourceItem
 };
 
 #[derive(Debug)]
@@ -16,8 +15,8 @@ where
     State: ScopeOps
         + Annotate<'ast, Expr, Source>
         + Annotate<'ast, Select, Projection>
-        + Annotate<'ast, SetExpr, Projection>
         + Annotate<'ast, Query, Projection>
+        + AnnotateMut<'ast, SetExpr, Projection>
         + SchemaOps,
 {
     fn default() -> Self {
@@ -30,8 +29,8 @@ where
     State: ScopeOps
         + Annotate<'ast, Expr, Source>
         + Annotate<'ast, Select, Projection>
-        + Annotate<'ast, SetExpr, Projection>
         + Annotate<'ast, Query, Projection>
+        + AnnotateMut<'ast, SetExpr, Projection>
         + SchemaOps,
 {
     type State = State;
@@ -44,18 +43,18 @@ where
     ) -> VisitorControlFlow<'ast, State, ResolutionError> {
         if let Some(set_expr) = node.downcast_ref::<SetExpr>() {
             match set_expr {
-                SetExpr::Select(select) => match state.expect_annotation(select.deref()) {
+                SetExpr::Select(select) => match state.get_annotation(select.deref()) {
                     // Simply clone the annotation from the SetExpr to the Query.
                     Ok(projection) => {
-                        state.add_annotation(set_expr, projection);
+                        state.set_annotation(set_expr, projection);
                         flow::cont(state)
                     }
                     Err(err) => flow::error(err.into()),
                 },
-                SetExpr::Query(query) => match state.expect_annotation(query.deref()) {
+                SetExpr::Query(query) => match state.get_annotation(query.deref()) {
                     // Simply clone the annotation from the SetExpr to the Query.
                     Ok(projection) => {
-                        state.add_annotation(set_expr, projection);
+                        state.set_annotation(set_expr, projection);
                         flow::cont(state)
                     }
                     Err(err) => flow::error(err.into()),
@@ -80,12 +79,12 @@ where
                     // Named columns (not just expression) from the right hand side
                     // are ignored. The left hand side wins.
                     let result = state
-                        .expect_annotation(left.deref())
-                        .and_then(|left| Ok((left, state.expect_annotation(right.deref())?)));
+                        .get_annotation(left.deref())
+                        .and_then(|left| Ok((left, state.get_annotation(right.deref())?)));
 
                     match result {
                         Ok((left_projection, right_projection)) => {
-                            state.add_annotation(
+                            state.set_annotation(
                                 set_expr,
                                 Projection::Concatenated(vec![
                                     left_projection.clone(),
@@ -114,7 +113,7 @@ where
                         })
                         .collect::<Vec<_>>();
 
-                    state.add_annotation(set_expr, Projection::Columns(projection_columns));
+                    state.set_annotation(set_expr, Projection::Columns(projection_columns));
 
                     flow::cont(state)
                 }

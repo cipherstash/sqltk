@@ -5,7 +5,7 @@ use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
 
 use crate::{
     model::{Annotate, Projection, ResolutionError, ScopeOps, Source},
-    ProjectionColumn, SchemaOps,
+    AnnotateMut, ProjectionColumn, SchemaOps,
 };
 
 #[derive(Debug)]
@@ -15,8 +15,8 @@ impl<'ast, State> Default for BuildSelectProjection<'ast, State>
 where
     State: ScopeOps
         + Annotate<'ast, Expr, Source>
-        + Annotate<'ast, Select, Projection>
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + AnnotateMut<'ast, Select, Projection>
         + SchemaOps,
 {
     fn default() -> Self {
@@ -28,8 +28,8 @@ impl<'ast, State> Visitor<'ast> for BuildSelectProjection<'ast, State>
 where
     State: ScopeOps
         + Annotate<'ast, Expr, Source>
-        + Annotate<'ast, Select, Projection>
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + AnnotateMut<'ast, Select, Projection>
         + SchemaOps,
 {
     type State = State;
@@ -48,7 +48,7 @@ where
 
             let result: Result<Vec<_>, _> = select_items
                 .iter()
-                .map(|item| state.expect_annotation(item))
+                .map(|item| state.get_annotation(item))
                 .collect();
 
             let result: Result<Vec<Rc<ProjectionColumn>>, _> = result.map(|items| {
@@ -62,7 +62,7 @@ where
 
             match result {
                 Ok(columns) => {
-                    state.add_annotation(select, Projection::Columns(columns));
+                    state.set_annotation(select, Projection::Columns(columns));
                     flow::cont(state)
                 }
                 Err(err) => flow::error(err.into()),

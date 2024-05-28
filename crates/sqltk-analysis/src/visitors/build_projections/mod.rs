@@ -14,7 +14,7 @@ use sqltk::Visitor;
 
 use crate::{
     model::{Annotate, Projection, ScopeOps, Source},
-    ProjectionColumn, ResolutionError, SchemaOps,
+    AnnotateMut, ProjectionColumn, ResolutionError, SchemaOps,
 };
 
 use std::{fmt::Debug, marker::PhantomData, rc::Rc};
@@ -34,11 +34,11 @@ where
     State: Debug
         + ScopeOps
         + Annotate<'ast, Expr, Source>
-        + Annotate<'ast, Query, Projection>
-        + Annotate<'ast, Select, Projection>
-        + Annotate<'ast, Vec<SelectItem>, Projection>
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
-        + Annotate<'ast, SetExpr, Projection>
+        + AnnotateMut<'ast, Query, Projection>
+        + AnnotateMut<'ast, Select, Projection>
+        + AnnotateMut<'ast, Vec<SelectItem>, Projection>
+        + AnnotateMut<'ast, SetExpr, Projection>
         + SchemaOps;
 
 impl<'ast, State> Default for BuildProjections<'ast, State>
@@ -46,12 +46,12 @@ where
     State: Debug
         + ScopeOps
         + Annotate<'ast, Expr, Source>
-        + Annotate<'ast, Query, Projection>
-        + Annotate<'ast, Select, Projection>
-        + Annotate<'ast, Vec<SelectItem>, Projection>
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
-        + Annotate<'ast, SetExpr, Projection>
-        + SchemaOps
+        + AnnotateMut<'ast, Query, Projection>
+        + AnnotateMut<'ast, Select, Projection>
+        + AnnotateMut<'ast, Vec<SelectItem>, Projection>
+        + AnnotateMut<'ast, SetExpr, Projection>
+        + SchemaOps,
 {
     fn default() -> Self {
         Self(PhantomData, PhantomData)

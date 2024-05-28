@@ -109,7 +109,7 @@ mod tests {
         let state = ProvenanceState::new(schema);
 
         match statements.evaluate(&ProvenanceAnalyser::default(), state) {
-            Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
+            Ok(state) => match state.get_annotation(&statements[0]).as_deref() {
                 Ok(Provenance::Select(provenance)) => {
                     let SelectProvenance { projection } = provenance.deref();
                     assert_eq!(
@@ -117,7 +117,7 @@ mod tests {
                         &Projection::Columns(vec![ProjectionColumn {
                             source: Source::single(SourceItem::TableColumn(user_id_column.clone()))
                                 .into(),
-                            alias: None
+                            alias: Some(SqlIdent::unquoted("id").into())
                         }
                         .into()])
                     );
@@ -164,7 +164,7 @@ mod tests {
         let state = ProvenanceState::new(schema);
 
         match statements.evaluate(&ProvenanceAnalyser::default(), state) {
-            Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
+            Ok(state) => match state.get_annotation(&statements[0]).as_deref() {
                 Ok(Provenance::Select(provenance)) => {
                     let SelectProvenance { projection } = provenance.deref();
                     assert_eq!(
@@ -175,7 +175,7 @@ mod tests {
                                 Rc::clone(&user_id_column),
                             )))
                             .into(),
-                            alias: None,
+                            alias: Some(SqlIdent::unquoted("id").into())
                         }
                         .into()])
                     );
@@ -257,7 +257,7 @@ mod tests {
         let state = ProvenanceState::new(schema);
 
         match statements.evaluate(&ProvenanceAnalyser::default(), state) {
-            Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
+            Ok(state) => match state.get_annotation(&statements[0]).as_deref() {
                 Ok(Provenance::Select(provenance)) => {
                     let projection = provenance.projection.deref();
 
@@ -269,13 +269,13 @@ mod tests {
                                     user_id_column.clone()
                                 ))
                                 .into(),
-                                alias: None
+                                alias: Some(SqlIdent::unquoted("user_id").into())
                             }
                             .into(),
                             ProjectionColumn {
                                 source: SourceItem::TableColumn(todo_list_items_id_column.clone())
                                     .into(),
-                                alias: None
+                                alias: Some(SqlIdent::unquoted("todo_list_item_id").into())
                             }
                             .into(),
                             ProjectionColumn {
@@ -283,7 +283,7 @@ mod tests {
                                     todo_list_items_description_column.clone()
                                 )
                                 .into(),
-                                alias: None
+                                alias: Some(SqlIdent::unquoted("todo_list_item_description").into())
                             }
                             .into(),
                         ])
@@ -343,7 +343,7 @@ mod tests {
         let state = ProvenanceState::new(schema);
 
         match statements.evaluate(&ProvenanceAnalyser::default(), state) {
-            Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
+            Ok(state) => match state.get_annotation(&statements[0]).as_deref() {
                 Ok(Provenance::Select(provenance)) => {
                     let projection = provenance.projection.deref();
 
@@ -355,7 +355,7 @@ mod tests {
                                     films_id_column.clone()
                                 ))
                                 .into(),
-                                alias: None
+                                alias: Some(SqlIdent::unquoted("id").into())
                             }
                             .into(),
                             ProjectionColumn {
@@ -363,7 +363,7 @@ mod tests {
                                     films_title_column.clone()
                                 ))
                                 .into(),
-                                alias: None
+                                alias: Some(SqlIdent::unquoted("title").into())
                             }
                             .into(),
                             ProjectionColumn {
@@ -371,7 +371,7 @@ mod tests {
                                     films_length_column.clone()
                                 ))
                                 .into(),
-                                alias: None
+                                alias: Some(SqlIdent::unquoted("length").into())
                             }
                             .into(),
                             ProjectionColumn {
@@ -379,7 +379,7 @@ mod tests {
                                     films_rating_column.clone()
                                 ))
                                 .into(),
-                                alias: None
+                                alias: Some(SqlIdent::unquoted("rating").into())
                             }
                             .into(),
                         ])
@@ -414,7 +414,7 @@ mod tests {
         let state = ProvenanceState::new(schema);
 
         match statements.evaluate(&ProvenanceAnalyser::default(), state) {
-            Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
+            Ok(state) => match state.get_annotation(&statements[0]).as_deref() {
                 Ok(Provenance::Select(provenance)) => {
                     let projection = provenance.projection.deref();
 
@@ -426,7 +426,7 @@ mod tests {
                                 false
                             )))
                             .into(),
-                            alias: None
+                            alias: Some(SqlIdent::unquoted("id").into())
                         }
                         .into(),])
                     );
@@ -472,7 +472,7 @@ mod tests {
         let state = ProvenanceState::new(schema);
 
         match statements.evaluate(&ProvenanceAnalyser::default(), state) {
-            Ok(state) => match state.expect_annotation(&statements[0]).as_deref() {
+            Ok(state) => match state.get_annotation(&statements[0]).as_deref() {
                 Ok(Provenance::Insert(provenance)) => {
                     if let InsertProvenance {
                         into_table,
@@ -516,7 +516,7 @@ mod tests {
                                     films_id_column.clone()
                                 ))
                                 .into(),
-                                alias: None
+                                alias: Some(SqlIdent::unquoted("id").into())
                             }
                             .into(),])
                         );

@@ -91,7 +91,7 @@ where
                     alias: Some(alias),
                 } => {
                     let projection: Result<Rc<Projection>, _> =
-                        state.expect_annotation(subquery.body.deref());
+                        state.get_annotation(subquery.body.deref());
 
                     let result =
                         projection

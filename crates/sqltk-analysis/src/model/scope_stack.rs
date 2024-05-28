@@ -1,4 +1,5 @@
-//! Types for representing and maintaining a lexical scope during AST traversal.
+//! Types for representing and maintaining a stack of lexical scopes during AST
+//! traversal.
 use crate::{
     model::{
         InvariantFailedError, NamedRelation, Projection, ProjectionColumn, ResolutionError, Source,
@@ -22,44 +23,29 @@ pub struct ScopeStack {
     top: Scope,
 }
 
-impl Deref for ScopeStack {
-    type Target = Scope;
-
-    fn deref(&self) -> &Self::Target {
-        &self.top
-    }
-}
-
-impl DerefMut for ScopeStack {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.top
-    }
-}
-
 impl ScopeStack {
     /// Push a new empty [`Scope`] onto the stack.
     pub(crate) fn push(&mut self) {
         let top = mem::take(&mut self.top);
         self.top = Scope {
-            bindings: Vec::default(),
-            depth: top.depth + 1,
+            items: Vec::default(),
             parent: Some(Box::new(top)),
         }
     }
 
     /// Pop the top [`Scope`] of the stack.
     ///
-    /// Will panic if an attempt is made to pop the `root` [`Scope`].
+    /// Panics if the top of the stack is the `root` [`Scope`].
     pub(crate) fn pop(&mut self) {
         let mut me = mem::take(self);
         match me.top {
             Scope {
-                bindings: _,
+                items: _,
                 parent: None,
                 ..
             } => panic!("Cannot pop the root scope"),
             Scope {
-                bindings: _,
+                items: _,
                 parent: Some(parent),
                 ..
             } => me.top = *parent,
@@ -76,9 +62,15 @@ impl ScopeStack {
 /// A lexical scope.
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub struct Scope {
-    bindings: Vec<Rc<NamedRelation>>,
+    /// The items in scope.
+    ///
+    /// Searching for items in scope is a linear search through this `Vec`. This will
+    /// perform better than `HashMap` for a small number of items and is probably good
+    /// enough.
+    items: Vec<Rc<NamedRelation>>,
+
+    /// The parent scope frame.
     parent: Option<Box<Scope>>,
-    depth: u32,
 }
 
 impl Scope {
@@ -88,7 +80,7 @@ impl Scope {
     // However it does seem to hint that Projection should be an enum with a
     // variant for representing concatenated sub-projections.
     pub fn resolve_wildcard(&self) -> Result<Rc<Projection>, ResolutionError> {
-        if self.bindings.is_empty() {
+        if self.items.is_empty() {
             match &self.parent {
                 Some(parent) => parent.resolve_wildcard(),
                 None => Err(ResolutionError::InvariantFailed(
@@ -97,7 +89,7 @@ impl Scope {
             }
         } else {
             let projections: Vec<Rc<Projection>> = self
-                .bindings
+                .items
                 .iter()
                 .map(|relation| relation.projection.clone())
                 .collect();
@@ -117,7 +109,7 @@ impl Scope {
             ));
         }
 
-        match SqlIdent::try_find_unique(&idents[0], &mut self.bindings.iter().cloned()) {
+        match SqlIdent::try_find_unique(&idents[0], &mut self.items.iter().cloned()) {
             Ok(Some(relation)) => Ok(relation.projection.clone()),
             Ok(None) => match &self.parent {
                 Some(parent) => parent.resolve_qualified_wildcard(idents),
@@ -129,7 +121,7 @@ impl Scope {
 
     /// Uniquely resolves an identifier against all relations that are in scope.
     pub fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<Source>, ResolutionError> {
-        let mut bindings_iter = AllColumnsIterator::new(self.bindings.iter());
+        let mut bindings_iter = AllColumnsIterator::new(self.items.iter());
 
         match SqlIdent::try_find_unique(ident, &mut bindings_iter) {
             Ok(Some(projection_column)) => Ok(projection_column.source.clone()),
@@ -149,19 +141,12 @@ impl Scope {
         &self,
         idents: &[SqlIdent],
     ) -> Result<Rc<Source>, ResolutionError> {
-        // TODO: deal with multiple schemas (idents.len() > 2). Currently
-        // defaulting implicitly to the public schema within a database.
-        // TODO: change type from Vec (which is unbounded) to an enum with a
-        // fixed number of variants
-        // TODO: take into account the `search_path` (PG-specific, but suggests
-        // the resolution logic should be behind a trait which is implemented
-        // per database variant)
         if idents.len() != 2 {
             return Err(ResolutionError::InvariantFailed(
                 InvariantFailedError::MaxCompoundIdentLengthExceeded(idents.len() as u8),
             ));
         }
-        match SqlIdent::try_find_unique(&idents[0], &mut self.bindings.iter().cloned()) {
+        match SqlIdent::try_find_unique(&idents[0], &mut self.items.iter().cloned()) {
             Ok(Some(named_relation)) => {
                 match SqlIdent::find_unique(
                     &idents[1],
@@ -180,10 +165,6 @@ impl Scope {
             },
             Err(err) => Err(err.into()),
         }
-        .inspect_err(|_| {
-            #[cfg(test)]
-            self.dump()
-        })
     }
 
     /// Add a table/view/subquery to the current scope.
@@ -191,34 +172,18 @@ impl Scope {
         &mut self,
         relation: Rc<NamedRelation>,
     ) -> Result<Rc<NamedRelation>, ResolutionError> {
-        self.bindings.push(relation.clone());
-
-        #[cfg(test)]
-        self.dump();
-
+        self.items.push(relation.clone());
         Ok(relation)
     }
 
     pub fn resolve_relation(&self, ident: &SqlIdent) -> Result<Rc<NamedRelation>, ResolutionError> {
-        match SqlIdent::find_unique(ident, &mut self.bindings.iter().cloned()) {
+        match SqlIdent::find_unique(ident, &mut self.items.iter().cloned()) {
             Ok(found) => Ok(found.clone()),
             Err(err) => match &self.parent {
                 Some(parent) => parent.resolve_relation(ident),
                 None => Err(ResolutionError::from(err)),
             },
         }
-    }
-
-    #[cfg(test)]
-    pub fn dump(&self) {
-        // eprintln!(
-        //     "SCOPE {}: {}",
-        //     self.depth,
-        //     test_utils::OneLine(&self.bindings)
-        // );
-        // if let Some(parent) = &self.parent {
-        //     parent.dump();
-        // }
     }
 }
 
@@ -323,11 +288,25 @@ mod test {
         }
     }
 
-    #[test_case(stack(&[&[relation("users", &["id"])]]), SqlIdent::Unquoted("users".into()), &assert_ok)]
+    #[test_case(stack(&[&[relation("users", &["id"])]]), SqlIdent::unquoted("users"), &assert_ok)]
     fn resolve_relation<F>(stack: ScopeStack, ident: SqlIdent, assert_pass: F)
     where
         F: Fn(Result<Rc<NamedRelation>, ResolutionError>) -> (),
     {
         assert_pass(stack.resolve_relation(&ident))
+    }
+}
+
+impl Deref for ScopeStack {
+    type Target = Scope;
+
+    fn deref(&self) -> &Self::Target {
+        &self.top
+    }
+}
+
+impl DerefMut for ScopeStack {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.top
     }
 }

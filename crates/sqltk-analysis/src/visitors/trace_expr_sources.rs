@@ -3,26 +3,27 @@ use std::{marker::PhantomData, ops::Deref, rc::Rc};
 use sqlparser::ast::{Expr, Function, Ident, ListAggOnOverflow, Query};
 use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
 
-use crate::{Annotate, Projection, ResolutionError, ScopeOps, Source, SourceItem, SqlIdent};
+use crate::{
+    Annotate, AnnotateMut, Projection, ResolutionError, ScopeOps, Source, SourceItem, SqlIdent,
+};
 
 #[derive(Debug)]
 pub struct TraceExprSources<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>)
 where
-    State: ScopeOps + Annotate<'ast, Expr, Source> + Annotate<'ast, Query, Projection>;
+    State: ScopeOps + AnnotateMut<'ast, Expr, Source> + Annotate<'ast, Query, Projection>;
 
 impl<'ast, State> Default for TraceExprSources<'ast, State>
 where
-    State: ScopeOps + Annotate<'ast, Expr, Source> + Annotate<'ast, Query, Projection>
+    State: ScopeOps + AnnotateMut<'ast, Expr, Source> + Annotate<'ast, Query, Projection>,
 {
     fn default() -> Self {
         Self(PhantomData, PhantomData)
     }
 }
 
-
 impl<'ast, State> TraceExprSources<'ast, State>
 where
-    State: ScopeOps + Annotate<'ast, Expr, Source> + Annotate<'ast, Query, Projection>,
+    State: ScopeOps + AnnotateMut<'ast, Expr, Source> + Annotate<'ast, Query, Projection>,
 {
     fn resolve_ident_and_record_source(
         expr: &'ast Expr,
@@ -32,7 +33,7 @@ where
         let resolved = state.resolve_ident(&ident.into());
         match resolved {
             Ok(source) => {
-                state.add_annotation(expr, source);
+                state.set_annotation(expr, source);
                 flow::cont(state)
             }
             Err(err) => flow::error(err),
@@ -49,7 +50,7 @@ where
         );
         match resolved {
             Ok(source) => {
-                state.add_annotation(expr, source);
+                state.set_annotation(expr, source);
                 flow::cont(state)
             }
             Err(err) => flow::error(err),
@@ -64,7 +65,7 @@ where
         let sources = exprs
             .iter()
             .try_fold(Vec::with_capacity(exprs.len()), |mut acc, expr| {
-                state.expect_annotation(*expr).map(|source| {
+                state.get_annotation(*expr).map(|source| {
                     acc.push(source);
                     acc
                 })
@@ -78,7 +79,7 @@ where
                 let merged = rest
                     .iter()
                     .fold(first.clone(), |acc, source| Source::merge(&acc, source));
-                state.add_annotation(node, merged);
+                state.set_annotation(node, merged);
                 flow::cont(state)
             }
             Err(err) => flow::error(err.into()),
@@ -105,7 +106,7 @@ where
 
 impl<'ast, State> Visitor<'ast> for TraceExprSources<'ast, State>
 where
-    State: ScopeOps + Annotate<'ast, Expr, Source> + Annotate<'ast, Query, Projection>,
+    State: ScopeOps + AnnotateMut<'ast, Expr, Source> + Annotate<'ast, Query, Projection>,
 {
     type Error = ResolutionError;
     type State = State;
@@ -278,11 +279,11 @@ where
                 Expr::Collate { expr, collation: _ } => Self::resolve_one_source(node, expr, state),
                 Expr::Nested(expr) => Self::resolve_one_source(node, expr, state),
                 Expr::Value(value) => {
-                    state.add_annotation(node, Source::single(SourceItem::Value(value.clone())));
+                    state.set_annotation(node, Source::single(SourceItem::Value(value.clone())));
                     flow::cont(state)
                 }
                 Expr::IntroducedString { introducer, value } => {
-                    state.add_annotation(
+                    state.set_annotation(
                         node,
                         Source::single(SourceItem::IntroducedString(
                             introducer.clone(),
@@ -292,7 +293,7 @@ where
                     flow::cont(state)
                 }
                 Expr::TypedString { data_type, value } => {
-                    state.add_annotation(
+                    state.set_annotation(
                         node,
                         Source::single(SourceItem::TypedString(data_type.clone(), value.clone())),
                     );
@@ -305,7 +306,7 @@ where
                     Self::resolve_sources(node, &exprs[..], state)
                 }
                 Expr::Function(Function { args: _, name, .. }) => {
-                    state.add_annotation(
+                    state.set_annotation(
                         node,
                         Source::single(SourceItem::FunctionCall {
                             ident: SqlIdent::from(name.0.last().expect(
@@ -360,8 +361,8 @@ where
                 } => flow::cont(state),
                 Expr::Subquery(query) => {
                     let result: Result<Rc<Source>, ResolutionError> =
-                        match state.expect_annotation(query.deref()) {
-                            Ok(projection) => Ok(state.add_annotation(
+                        match state.get_annotation(query.deref()) {
+                            Ok(projection) => Ok(state.set_annotation(
                                 node,
                                 Source::single(SourceItem::Projection(projection.clone())),
                             )),
@@ -375,8 +376,8 @@ where
                 }
                 Expr::ArraySubquery(query) => {
                     let result: Result<Rc<Source>, ResolutionError> =
-                        match state.expect_annotation(query.deref()) {
-                            Ok(projection) => Ok(state.add_annotation(
+                        match state.get_annotation(query.deref()) {
+                            Ok(projection) => Ok(state.set_annotation(
                                 node,
                                 Source::single(SourceItem::Projection(projection.clone())),
                             )),
@@ -450,7 +451,7 @@ where
                 Expr::Wildcard => {
                     let result: Result<Rc<Source>, ResolutionError> = match state.resolve_wildcard()
                     {
-                        Ok(projection) => Ok(state.add_annotation(
+                        Ok(projection) => Ok(state.set_annotation(
                             node,
                             Source::single(SourceItem::Projection(projection.clone())),
                         )),
@@ -467,7 +468,7 @@ where
                         .resolve_qualified_wildcard(
                             Vec::from_iter(wildcard.0.iter().map(SqlIdent::from)).as_slice(),
                         ) {
-                        Ok(projection) => Ok(state.add_annotation(
+                        Ok(projection) => Ok(state.set_annotation(
                             node,
                             Source::single(SourceItem::Projection(projection.clone())),
                         )),

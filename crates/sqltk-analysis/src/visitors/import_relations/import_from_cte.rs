@@ -58,7 +58,7 @@ where
                 return flow::error(ResolutionError::Unimplemented);
             }
 
-            match state.expect_annotation(query.deref()) {
+            match state.get_annotation(query.deref()) {
                 Ok(projection) => match state.add_relation(
                     NamedRelation {
                         name: SqlIdent::Unquoted(UnquotedIdent::new(alias.value.clone())).into(),
