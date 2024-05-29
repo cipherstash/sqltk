@@ -1,10 +1,11 @@
-use std::{marker::PhantomData, ops::Deref, rc::Rc};
+use std::{
+    marker::PhantomData,
+    ops::{ControlFlow, Deref},
+    rc::Rc,
+};
 
 use sqlparser::ast::{Insert, Query, SelectItem, Statement};
-use sqltk::{
-    prelude::{flow, VisitorControlFlow},
-    Visitable, Visitor,
-};
+use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
     Annotate, AnnotateMut, CanonicalIdent, ColumnWritten, InsertProvenance, Projection, Provenance,
@@ -40,7 +41,7 @@ where
         &self,
         node: &'ast N,
         mut state: State,
-    ) -> VisitorControlFlow<'ast, Self::State, Self::Error> {
+    ) -> ControlFlow<Break<Self::State, Self::Error>, Self::State> {
         if let Some(statement) = node.downcast_ref::<Statement>() {
             match statement {
                 Statement::Insert(Insert {
@@ -105,14 +106,14 @@ where
                         });
 
                     match result {
-                        Ok(_) => flow::cont(state),
-                        Err(err) => flow::error(err),
+                        Ok(_) => self.continue_with_state(state),
+                        Err(err) => self.break_with_error(err),
                     }
                 }
-                _ => flow::cont(state),
+                _ => self.continue_with_state(state),
             }
         } else {
-            flow::cont(state)
+            self.continue_with_state(state)
         }
     }
 }

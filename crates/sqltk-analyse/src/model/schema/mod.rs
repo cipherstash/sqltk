@@ -6,11 +6,11 @@ use core::fmt::Debug;
 use derive_more::Display;
 use std::rc::Rc;
 
-mod sql_ident;
 mod schema_api;
+mod sql_ident;
 
-pub use sql_ident::*;
 pub use schema_api::*;
+pub use sql_ident::*;
 
 use super::source_item::TableColumn;
 
@@ -168,8 +168,8 @@ macro_rules! make_schema {
         }, false);
     };
     (@add_column $table:ident $column_name:ident ) => {
-        let $table = $table.add_column(crate::model::Column{
-            name: std::rc::Rc::new(crate::model::CanonicalIdent::from(stringify!($column_name)))
+        let $table = $table.add_column($crate::model::Column{
+            name: std::rc::Rc::new($crate::model::CanonicalIdent::from(stringify!($column_name)))
         }, false);
     };
     // Main entry points

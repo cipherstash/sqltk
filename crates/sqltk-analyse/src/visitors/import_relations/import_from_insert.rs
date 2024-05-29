@@ -1,7 +1,7 @@
-use std::{marker::PhantomData, rc::Rc};
+use std::{marker::PhantomData, ops::ControlFlow, rc::Rc};
 
 use sqlparser::ast::{Expr, Insert, Query, SetExpr};
-use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
+use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
     model::Annotate,
@@ -53,7 +53,7 @@ where
         &self,
         node: &'ast N,
         mut state: State,
-    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
+    ) -> ControlFlow<Break<State, ResolutionError>, State> {
         if let Some(node) = node.downcast_ref::<Insert>() {
             let Insert {
                 table_name,
@@ -86,11 +86,11 @@ where
             });
 
             match result {
-                Ok(_) => flow::cont(state),
-                Err(err) => flow::error(err),
+                Ok(_) => self.continue_with_state(state),
+                Err(err) => self.break_with_error(err),
             }
         } else {
-            flow::cont(state)
+            self.continue_with_state(state)
         }
     }
 }

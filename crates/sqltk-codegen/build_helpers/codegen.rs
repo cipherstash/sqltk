@@ -85,7 +85,7 @@ impl Codegen {
                         &'ast self,
                         visitor: &V,
                         state: V::State,
-                    ) -> crate::VisitorControlFlow<'ast, V::State, V::Error>
+                    ) -> ControlFlow<crate::Break<V::State, V::Error>, V::State>
                     where
                         V: crate::Visitor<'ast>
                     {
@@ -95,7 +95,8 @@ impl Codegen {
                             state,
                             #[allow(unused_variables)]
                             |visitor, state| {
-                                crate::flow::cont(state)
+                                use crate::visitor_extensions::VisitorExtensions;
+                                visitor.continue_with_state(state)
                             }
                         )
                     }

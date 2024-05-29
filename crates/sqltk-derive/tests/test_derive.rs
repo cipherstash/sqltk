@@ -1,6 +1,6 @@
 use std::{convert::Infallible, fmt::Debug, marker::PhantomData};
 
-use sqltk_core::{flow, Visitable};
+use sqltk_core::Visitable;
 use sqltk_derive::Visitor;
 
 #[test]
@@ -9,8 +9,8 @@ fn derive_visitor_for_struct() {
     #[visitor(
             state_ty = bool,
             error_ty = Infallible,
-            enter = { flow::cont(!state) },
-            exit = { flow::cont(state) },
+            enter = { self.continue_with_state(!state) },
+            exit = { self.continue_with_state(state) },
         )]
     struct MyVisitor;
 
@@ -22,8 +22,8 @@ fn derive_visitor_for_struct_with_state_bounds() {
     #[derive(Visitor)]
     #[visitor(
             error_ty = Infallible,
-            enter = { flow::cont(state) },
-            exit = { flow::cont(state) },
+            enter = { self.continue_with_state(state) },
+            exit = { self.continue_with_state(state) },
         )]
     struct MyVisitor<State>(PhantomData<State>)
     where
@@ -39,8 +39,8 @@ fn derive_visitor_for_struct_with_state_bounds() {
 fn derive_visitor_for_struct_without_error_ty() {
     #[derive(Visitor)]
     #[visitor(
-            enter = { flow::cont(state) },
-            exit = { flow::cont(state) },
+            enter = { self.continue_with_state(state) },
+            exit = { self.continue_with_state(state) },
         )]
     struct MyVisitor<State>(PhantomData<State>)
     where
@@ -58,7 +58,7 @@ fn derive_visitor_for_enum() {
     #[visitor(
             state_ty = bool,
             error_ty = Infallible,
-            enter = { flow::cont(!state) },
+            enter = { self.continue_with_state(!state) },
         )]
     struct MyVisitor1;
 
@@ -66,7 +66,7 @@ fn derive_visitor_for_enum() {
     #[visitor(
             state_ty = bool,
             error_ty = Infallible,
-            enter = { flow::cont(state) },
+            enter = { self.continue_with_state(state) },
         )]
     struct MyVisitor2;
 
@@ -95,7 +95,7 @@ fn derive_visitor_for_enum_with_state_bounds() {
     #[derive(Visitor)]
     #[visitor(
             error_ty = Infallible,
-            enter = { flow::cont(state) },
+            enter = { self.continue_with_state(state) },
         )]
     struct MyVisitor1<State>(PhantomData<State>)
     where

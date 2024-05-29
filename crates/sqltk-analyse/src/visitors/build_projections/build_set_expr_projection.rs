@@ -1,7 +1,11 @@
-use std::{marker::PhantomData, ops::Deref, rc::Rc};
+use std::{
+    marker::PhantomData,
+    ops::{ControlFlow, Deref},
+    rc::Rc,
+};
 
 use sqlparser::ast::{Expr, Query, Select, SetExpr};
-use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
+use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
     model::{Annotate, Projection, ResolutionError, ScopeOps, SourceItem},
@@ -41,24 +45,24 @@ where
         &self,
         node: &'ast N,
         mut state: State,
-    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
+    ) -> ControlFlow<Break<State, ResolutionError>, State> {
         if let Some(set_expr) = node.downcast_ref::<SetExpr>() {
             match set_expr {
                 SetExpr::Select(select) => match state.get_annotation(select.deref()) {
                     // Simply clone the annotation from the SetExpr to the Query.
                     Ok(projection) => {
                         state.set_annotation(set_expr, projection);
-                        flow::cont(state)
+                        self.continue_with_state(state)
                     }
-                    Err(err) => flow::error(err.into()),
+                    Err(err) => self.break_with_error(err.into()),
                 },
                 SetExpr::Query(query) => match state.get_annotation(query.deref()) {
                     // Simply clone the annotation from the SetExpr to the Query.
                     Ok(projection) => {
                         state.set_annotation(set_expr, projection);
-                        flow::cont(state)
+                        self.continue_with_state(state)
                     }
-                    Err(err) => flow::error(err.into()),
+                    Err(err) => self.break_with_error(err.into()),
                 },
                 SetExpr::SetOperation {
                     op: _,
@@ -93,9 +97,9 @@ where
                                 ]),
                             );
 
-                            flow::cont(state)
+                            self.continue_with_state(state)
                         }
-                        Err(err) => flow::error(err.into()),
+                        Err(err) => self.break_with_error(err.into()),
                     }
                 }
                 SetExpr::Values(values) => {
@@ -116,25 +120,25 @@ where
 
                     state.set_annotation(set_expr, Projection::Columns(projection_columns));
 
-                    flow::cont(state)
+                    self.continue_with_state(state)
                 }
                 SetExpr::Insert(_statement) => {
                     // TODO: get projection from statement.
                     // We might need the concept of an empty projection
-                    flow::error(
+                    self.break_with_error(
                         ResolutionError::UnsupportedInsertOrUpdateInSubqueryExpressionPosition(
                             Box::new(set_expr.clone()),
                         ),
                     )
                 }
-                SetExpr::Update(_statement) => flow::error(
+                SetExpr::Update(_statement) => self.break_with_error(
                     // TODO: get projection from statement.
                     // We might need the concept of an empty projection
                     ResolutionError::UnsupportedInsertOrUpdateInSubqueryExpressionPosition(
                         Box::new(set_expr.clone()),
                     ),
                 ),
-                SetExpr::Table(_table) => flow::error(
+                SetExpr::Table(_table) => self.break_with_error(
                     // TODO: implement this
                     ResolutionError::UnsupportedTableKeywordInSubqueryExpressionPosition(Box::new(
                         set_expr.clone(),
@@ -142,7 +146,7 @@ where
                 ),
             }
         } else {
-            flow::cont(state)
+            self.continue_with_state(state)
         }
     }
 }

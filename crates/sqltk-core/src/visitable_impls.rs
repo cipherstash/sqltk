@@ -10,19 +10,21 @@ where
         &'ast self,
         visitor: &V,
         state: V::State,
-    ) -> VisitorControlFlow<'ast, V::State, V::Error>
+    ) -> ControlFlow<Break<V::State, V::Error>, V::State>
     where
         V: Visitor<'ast>,
     {
+        use crate::visitor_extensions::VisitorExtensions;
+
         if self.is_empty() {
-            flow::cont(state)
+            visitor.continue_with_state(state)
         } else {
             visit(self, visitor, state, |visitor, state| {
                 let mut state = state;
                 for child in self.iter() {
                     state = child.accept(visitor, state)?;
                 }
-                flow::cont(state)
+                visitor.continue_with_state(state)
             })
         }
     }
@@ -36,7 +38,7 @@ where
         &'ast self,
         visitor: &V,
         state: V::State,
-    ) -> VisitorControlFlow<'ast, V::State, V::Error>
+    ) -> ControlFlow<Break<V::State, V::Error>, V::State>
     where
         V: Visitor<'ast>,
     {
@@ -52,16 +54,18 @@ where
         &'ast self,
         visitor: &V,
         state: V::State,
-    ) -> VisitorControlFlow<'ast, V::State, V::Error>
+    ) -> ControlFlow<Break<V::State, V::Error>, V::State>
     where
         V: Visitor<'ast>,
     {
+        use crate::visitor_extensions::VisitorExtensions;
+
         if self.is_none() {
-            flow::cont(state)
+            visitor.continue_with_state(state)
         } else {
             visit(self, visitor, state, |visitor, state| match self {
                 Some(child) => child.accept(visitor, state),
-                None => flow::cont(state),
+                None => visitor.continue_with_state(state),
             })
         }
     }
@@ -76,14 +80,13 @@ fn visit<'v, 'ast, N, F, V>(
     visitor: &'v V,
     state: V::State,
     visit_children: F,
-) -> VisitorControlFlow<'ast, V::State, V::Error>
+) -> ControlFlow<Break<V::State, V::Error>, V::State>
 where
     V: Visitor<'ast>,
     N: Visitable<'ast>,
-    F: Fn(&V, V::State) -> VisitorControlFlow<'ast, V::State, V::Error>,
+    F: Fn(&V, V::State) -> ControlFlow<Break<V::State, V::Error>, V::State>,
 {
-    let flow = Visitor::enter(visitor, node, state);
-    let flow = flow::map_continue(flow, |state| visit_children(visitor, state));
-
-    flow::map_continue(flow, |state| Visitor::exit(visitor, node, state))
+    let state = visitor.enter(node, state)?;
+    let state = visit_children(visitor, state)?;
+    visitor.exit(node, state)
 }

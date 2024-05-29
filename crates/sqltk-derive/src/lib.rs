@@ -277,10 +277,10 @@ impl TryFrom<(Option<SynBlock>, Option<SynBlock>)> for VisitorStructEnterAndExit
             (None, None) => Err(syn::Error::new(Span::call_site(), "At least one of `enter` or `exit` must be specified when Visitor is derived for a struct".to_owned())),
             (Some(SynBlock(enter)), None) => Ok(Self(
                 enter,
-                parse2::<Block>(quote!( { ::sqltk_core::flow::cont(state) })).unwrap()
+                parse2::<Block>(quote!( { self.continue_with_state(state) })).unwrap()
             )),
             (None, Some(SynBlock(exit))) => Ok(Self(
-                parse2::<Block>(quote!( { ::sqltk_core::flow::cont(state) })).unwrap(),
+                parse2::<Block>(quote!( { self.continue_with_state(state) })).unwrap(),
                 exit
             )),
             (Some(SynBlock(enter)), Some(SynBlock(exit))) => Ok(Self(
@@ -460,7 +460,7 @@ impl ToTokens for VisitorImpl {
                         &self,
                         node: &#ast_lifetime N,
                         mut state: #trait_state_ty
-                    ) -> ::sqltk_core::VisitorControlFlow<#ast_lifetime, #trait_state_ty, #trait_error_ty> {
+                    ) -> ::core::ops::ControlFlow<::sqltk_core::Break<Self::State, Self::Error>, Self::State> {
                         #dispatch_enter
                     }
 
@@ -468,7 +468,7 @@ impl ToTokens for VisitorImpl {
                         &self,
                         node: &#ast_lifetime N,
                         mut state: #trait_state_ty
-                    ) -> ::sqltk_core::VisitorControlFlow<#ast_lifetime, #trait_state_ty, #trait_error_ty> {
+                    ) -> ::core::ops::ControlFlow<::sqltk_core::Break<Self::State, Self::Error>, Self::State> {
                         #dispatch_exit
                     }
                 }
@@ -482,7 +482,8 @@ impl ToTokens for VisitorImpl {
                         &self,
                         node: &#ast_lifetime N,
                         mut state: #trait_state_ty
-                    ) -> ::sqltk_core::VisitorControlFlow<#ast_lifetime, #trait_state_ty, #trait_error_ty> {
+                    ) -> ::core::ops::ControlFlow<::sqltk_core::Break<Self::State, Self::Error>, Self::State> {
+                        use ::sqltk_core::visitor_extensions::VisitorExtensions;
                         #[allow(unused_braces)]
                         #enter
                     }
@@ -491,7 +492,8 @@ impl ToTokens for VisitorImpl {
                         &self,
                         node: &#ast_lifetime N,
                         mut state: #trait_state_ty
-                    ) -> ::sqltk_core::VisitorControlFlow<#ast_lifetime, #trait_state_ty, #trait_error_ty> {
+                    ) -> ::core::ops::ControlFlow<::sqltk_core::Break<Self::State, Self::Error>, Self::State> {
+                        use ::sqltk_core::visitor_extensions::VisitorExtensions;
                         #[allow(unused_braces)]
                         #exit
                     }
@@ -503,7 +505,7 @@ impl ToTokens for VisitorImpl {
                         &self,
                         node: &#ast_lifetime N,
                         mut state: #trait_state_ty
-                    ) -> ::sqltk_core::VisitorControlFlow<#ast_lifetime, #trait_state_ty, #trait_error_ty> {
+                    ) -> ::core::ops::ControlFlow<::sqltk_core::Break<Self::State, Self::Error>, Self::State> {
                         self.#ident.enter(node, state)
                     }
 
@@ -511,7 +513,7 @@ impl ToTokens for VisitorImpl {
                         &self,
                         node: &#ast_lifetime N,
                         mut state: #trait_state_ty
-                    ) -> ::sqltk_core::VisitorControlFlow<#ast_lifetime, #trait_state_ty, #trait_error_ty> {
+                    ) -> ::core::ops::ControlFlow<::sqltk_core::Break<Self::State, Self::Error>, Self::State> {
                         self.#ident.exit(node, state)
                     }
                 }
@@ -533,10 +535,8 @@ impl ToTokens for VisitorImpl {
 
                 let enter_body = children.iter().map(|(child_ty, child_term)| {
                     quote! {
-                        state = ::sqltk_core::flow::map_break_err::<
-                            Self::State,
-                            <#child_ty as ::sqltk_core::Visitor>::Error,
-                            Self::Error
+                        state = self.map_break_error::<
+                            <#child_ty as ::sqltk_core::Visitor>::Error
                         >(
                             #child_term::default().enter(node, state)
                         )?;
@@ -548,10 +548,8 @@ impl ToTokens for VisitorImpl {
                     children.reverse();
                     children.iter().map(|(child_ty, child_term)| {
                         quote! {
-                            state = ::sqltk_core::flow::map_break_err::<
-                                Self::State,
-                                <#child_ty as ::sqltk_core::Visitor>::Error,
-                                Self::Error
+                            state = self.map_break_error::<
+                                <#child_ty as ::sqltk_core::Visitor>::Error
                             >(
                                 #child_term::default().exit(node, state)
                             )?;
@@ -564,18 +562,20 @@ impl ToTokens for VisitorImpl {
                         &self,
                         node: &#ast_lifetime N,
                         mut state: #trait_state_ty
-                    ) -> ::sqltk_core::VisitorControlFlow<#ast_lifetime, #trait_state_ty, #trait_error_ty> {
+                    ) -> ::core::ops::ControlFlow<::sqltk_core::Break<Self::State, Self::Error>, Self::State> {
+                        use ::sqltk_core::visitor_extensions::VisitorExtensions;
                         #(#enter_body)*
-                        ::sqltk_core::flow::cont(state)
+                        self.continue_with_state(state)
                     }
 
                     fn exit<N: ::sqltk_core::Visitable<'ast>>(
                         &self,
                         node: &#ast_lifetime N,
                         mut state: #trait_state_ty
-                    ) -> ::sqltk_core::VisitorControlFlow<#ast_lifetime, #trait_state_ty, #trait_error_ty> {
+                    ) -> ::core::ops::ControlFlow<::sqltk_core::Break<Self::State, Self::Error>, Self::State> {
+                        use ::sqltk_core::visitor_extensions::VisitorExtensions;
                         #(#exit_body)*
-                        ::sqltk_core::flow::cont(state)
+                        self.continue_with_state(state)
                     }
                 }
             }

@@ -35,7 +35,7 @@ impl<'a> ToTokens for VisitableImpl<'a> {
                     &'ast self,
                     visitor: &V,
                     state: V::State,
-                ) -> crate::VisitorControlFlow<'ast, V::State, V::Error>
+                ) -> ControlFlow<crate::Break<V::State, V::Error>, V::State>
                     where
                         V: crate::Visitor<'ast>
                 {
@@ -43,7 +43,8 @@ impl<'a> ToTokens for VisitableImpl<'a> {
                         #[allow(unused_mut)]
                         let mut state = state;
                         #body
-                        crate::flow::cont(state)
+                        use crate::visitor_extensions::VisitorExtensions;
+                        visitor.continue_with_state(state)
                     })
                 }
             }

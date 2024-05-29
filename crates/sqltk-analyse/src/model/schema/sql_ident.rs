@@ -390,7 +390,7 @@ mod tests {
     #[test_case(SqlIdent::unquoted("foo"), haystack(&["foo"]), Ok(Rc::new(Item::from("foo"))) ; "Unquoted: should find match")]
     #[test_case(SqlIdent::unquoted("foo"), haystack(&["Foo"]), Ok(Rc::new(Item::from("Foo"))) ; "Unquoted: should use sensitive match")]
     #[test_case(SqlIdent::unquoted("foo"), haystack(&["Foo", "foo"]), Err(FindUniqueMatchError::Ambiguous(SqlIdent::unquoted("foo"))) ; "Unquoted: should not match multiple items differing only in case are present")]
-    fn find_unique_tests<'a>(
+    fn find_unique_tests(
         needle: SqlIdent,
         haystack: Vec<Rc<Item>>,
         expected: Result<Rc<Item>, FindUniqueMatchError>,

@@ -1,7 +1,7 @@
-use std::{marker::PhantomData, rc::Rc};
+use std::{marker::PhantomData, ops::ControlFlow, rc::Rc};
 
 use sqlparser::ast::SelectItem;
-use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
+use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
     model::{Annotate, Projection, ResolutionError, ScopeOps},
@@ -35,7 +35,7 @@ where
         &self,
         node: &'ast N,
         mut state: State,
-    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
+    ) -> ControlFlow<Break<State, ResolutionError>, State> {
         if let Some(items) = node.downcast_ref::<Vec<SelectItem>>() {
             let result = items
                 .iter()
@@ -54,12 +54,12 @@ where
             match result {
                 Ok(projection) => {
                     state.set_annotation(items, projection);
-                    flow::cont(state)
+                    self.continue_with_state(state)
                 }
-                Err(err) => flow::error(err),
+                Err(err) => self.break_with_error(err),
             }
         } else {
-            flow::cont(state)
+            self.continue_with_state(state)
         }
     }
 }

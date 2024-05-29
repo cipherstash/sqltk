@@ -1,7 +1,10 @@
-use std::{marker::PhantomData, ops::Deref};
+use std::{
+    marker::PhantomData,
+    ops::{ControlFlow, Deref},
+};
 
 use sqlparser::ast::{Cte, Expr, Query, TableAlias};
-use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
+use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
     model::Annotate,
@@ -38,7 +41,7 @@ where
         &self,
         node: &'ast N,
         mut state: State,
-    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
+    ) -> ControlFlow<Break<State, ResolutionError>, State> {
         if let Some(node) = node.downcast_ref::<Cte>() {
             let Cte {
                 alias:
@@ -51,7 +54,7 @@ where
             } = node;
 
             if !columns.is_empty() {
-                return flow::error(ResolutionError::Unimplemented);
+                return self.break_with_error(ResolutionError::Unimplemented);
             }
 
             match state.get_annotation(query.deref()) {
@@ -62,13 +65,13 @@ where
                     }
                     .into(),
                 ) {
-                    Ok(_) => flow::cont(state),
-                    Err(err) => flow::error(err),
+                    Ok(_) => self.continue_with_state(state),
+                    Err(err) => self.break_with_error(err),
                 },
-                Err(err) => flow::error(err.into()),
+                Err(err) => self.break_with_error(err.into()),
             }
         } else {
-            flow::cont(state)
+            self.continue_with_state(state)
         }
     }
 }

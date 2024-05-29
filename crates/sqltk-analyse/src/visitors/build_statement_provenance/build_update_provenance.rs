@@ -1,10 +1,7 @@
-use std::{marker::PhantomData, rc::Rc};
+use std::{marker::PhantomData, ops::ControlFlow, rc::Rc};
 
 use sqlparser::ast::{Assignment, Expr, Query, SelectItem, Statement, TableFactor};
-use sqltk::{
-    prelude::{flow, VisitorControlFlow},
-    Visitable, Visitor,
-};
+use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
     Annotate, AnnotateMut, ColumnWritten, Projection, Provenance, ResolutionError, SchemaOps,
@@ -42,7 +39,7 @@ where
         &self,
         node: &'ast N,
         mut state: State,
-    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
+    ) -> ControlFlow<Break<State, ResolutionError>, State> {
         if let Some(statement) = node.downcast_ref::<Statement>() {
             match statement {
                 Statement::Update {
@@ -118,11 +115,11 @@ where
                                     });
 
                                     match result {
-                                        Ok(_) => flow::cont(state),
-                                        Err(err) => flow::error(err),
+                                        Ok(_) => self.continue_with_state(state),
+                                        Err(err) => self.break_with_error(err),
                                     }
                                 }
-                                Err(err) => flow::error(err),
+                                Err(err) => self.break_with_error(err),
                             }
                         }
                         // `sqlparser` reuses certain AST types in grammar locations where
@@ -137,13 +134,13 @@ where
                         // vector.
                         //
                         // See: https://www.postgresql.org/docs/current/sql-update.html
-                        _ => flow::error(ResolutionError::InvalidAstNode),
+                        _ => self.break_with_error(ResolutionError::InvalidAstNode),
                     }
                 }
-                _ => flow::cont(state),
+                _ => self.continue_with_state(state),
             }
         } else {
-            flow::cont(state)
+            self.continue_with_state(state)
         }
     }
 }

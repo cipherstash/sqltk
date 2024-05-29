@@ -1,12 +1,9 @@
-use std::{marker::PhantomData, rc::Rc};
+use std::{marker::PhantomData, ops::ControlFlow, rc::Rc};
 
 use sqlparser::ast::{
     Delete, FromTable, Query, SelectItem, Statement, TableAlias, TableFactor, TableWithJoins,
 };
-use sqltk::{
-    prelude::{flow, VisitorControlFlow},
-    Visitable, Visitor,
-};
+use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
     Annotate, AnnotateMut, DeleteProvenance, Projection, Provenance, ResolutionError, SchemaOps,
@@ -50,7 +47,7 @@ where
         &self,
         node: &'ast N,
         mut state: State,
-    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
+    ) -> ControlFlow<Break<State, ResolutionError>, State> {
         if let Some(statement) = node.downcast_ref::<Statement>() {
             match statement {
                 // For reference, the Postgres DELETE grammar can be found here:
@@ -84,7 +81,8 @@ where
                     let table_factor = if tables.len() == 1 {
                         &tables[0].relation
                     } else {
-                        return flow::error(ResolutionError::TooManyTablesInDeleteFromClause);
+                        return self
+                            .break_with_error(ResolutionError::TooManyTablesInDeleteFromClause);
                     };
 
                     match table_factor {
@@ -102,7 +100,9 @@ where
                                 }
                                 None => None,
                                 _ => {
-                                    return flow::error(ResolutionError::UnsupportTableAliasVariant)
+                                    return self.break_with_error(
+                                        ResolutionError::UnsupportTableAliasVariant,
+                                    )
                                 }
                             };
 
@@ -134,21 +134,23 @@ where
                                                     .into(),
                                                 ),
                                             );
-                                            flow::cont(state)
+                                            self.continue_with_state(state)
                                         }
-                                        Err(err) => flow::error(err),
+                                        Err(err) => self.break_with_error(err),
                                     }
                                 }
-                                Err(err) => flow::error(err.into()),
+                                Err(err) => self.break_with_error(err.into()),
                             }
                         }
-                        _ => flow::error(ResolutionError::UnsupportedTableFactorVariantInDelete),
+                        _ => self.break_with_error(
+                            ResolutionError::UnsupportedTableFactorVariantInDelete,
+                        ),
                     }
                 }
-                _ => flow::cont(state),
+                _ => self.continue_with_state(state),
             }
         } else {
-            flow::cont(state)
+            self.continue_with_state(state)
         }
     }
 }

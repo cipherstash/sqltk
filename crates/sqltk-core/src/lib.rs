@@ -1,13 +1,13 @@
 mod visitable_impls;
 
-pub mod flow;
+pub mod visitor_extensions;
 
 // Re-export sqlparser
 pub use sqlparser;
 // Re-export bigdecimal
 pub use bigdecimal;
 
-use core::{convert::Infallible, fmt::Debug};
+use core::fmt::Debug;
 use std::{any::Any, error::Error, ops::ControlFlow};
 
 /// Trait for types that can visit any `sqlparser` AST node.
@@ -34,8 +34,8 @@ pub trait Visitor<'ast> {
         &self,
         _node: &'ast N,
         state: Self::State,
-    ) -> VisitorControlFlow<'ast, Self::State, Self::Error> {
-        flow::cont(state)
+    ) -> ControlFlow<Break<Self::State, Self::Error>, Self::State> {
+        ControlFlow::Continue(state)
     }
 
     /// Called when node is exited.
@@ -50,8 +50,8 @@ pub trait Visitor<'ast> {
         &self,
         _node: &'ast N,
         state: Self::State,
-    ) -> VisitorControlFlow<'ast, Self::State, Self::Error> {
-        flow::cont(state)
+    ) -> ControlFlow<Break<Self::State, Self::Error>, Self::State> {
+        ControlFlow::Continue(state)
     }
 }
 
@@ -72,7 +72,7 @@ where
         &'ast self,
         visitor: &V,
         state: V::State,
-    ) -> VisitorControlFlow<'ast, V::State, V::Error>
+    ) -> ControlFlow<Break<V::State, V::Error>, V::State>
     where
         V: Visitor<'ast>;
 
@@ -86,8 +86,8 @@ where
         V: Visitor<'ast>,
     {
         match self.accept(visitor, state) {
-            VisitorControlFlow::Continue(state) => Ok(state),
-            VisitorControlFlow::Break(brk) => match brk {
+            ControlFlow::Continue(state) => Ok(state),
+            ControlFlow::Break(brk) => match brk {
                 Break::Finished(state) => Ok(state),
                 Break::SkipChildren(state) => Ok(state),
                 Break::Err(err) => Err(err),
@@ -143,9 +143,3 @@ where
         }
     }
 }
-
-impl<State, E> Eq for Break<State, E> where State: Eq {}
-
-/// [`ControlFlow`] type alias for values returned by [`Visitor::enter`] &
-/// [`Visitor::exit`].
-pub type VisitorControlFlow<'ast, State, E = Infallible> = ControlFlow<Break<State, E>, State>;

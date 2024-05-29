@@ -46,9 +46,9 @@
 //!     state_ty = usize,
 //!     enter = {
 //!         if node.is::<Expr>() {
-//!             flow::cont(state + 1)
+//!             self.continue_with_state(state + 1)
 //!         } else {
-//!             flow::cont(state)
+//!             self.continue_with_state(state)
 //!         }
 //!     }
 //! )]
@@ -87,7 +87,7 @@ mod test {
         ast::{Expr, SelectItem, TableWithJoins, With},
         dialect, parser,
     };
-    use sqltk_core::{flow, Visitable};
+    use sqltk_core::Visitable;
     use sqltk_derive::Visitor;
 
     #[test]
@@ -106,9 +106,9 @@ mod test {
             state_ty = usize,
             enter = {
                 if node.is::<Expr>() {
-                    flow::cont(state + 1)
+                    self.continue_with_state(state + 1)
                 } else {
-                    flow::cont(state)
+                    self.continue_with_state(state)
                 }
             },
         )]
@@ -153,7 +153,7 @@ mod test {
                     state.push("Vec<SelectItem>".into());
                 }
 
-                flow::cont(state)
+                self.continue_with_state(state)
             }
         )]
         struct TestVisitor;
@@ -177,7 +177,7 @@ mod test {
             state_ty = Vec<&'static str>,
             enter = {
                 state.push(std::any::type_name::<N>());
-                flow::cont(state)
+                self.continue_with_state(state)
             }
         )]
         struct TestVisitor;
@@ -239,15 +239,15 @@ mod test {
         #[derive(Default, Visitor)]
         #[visitor(
             state_ty = MyState,
-            exit = { flow::cont(state.update_balanced()) }
+            exit = { self.continue_with_state(state.update_balanced()) }
         )]
         struct UpdateBalanced;
 
         #[derive(Default, Visitor)]
         #[visitor(
             state_ty = MyState,
-            enter = { flow::cont(state.inc_enter_count()) },
-            exit = { flow::cont(state.inc_exit_count()) },
+            enter = { self.continue_with_state(state.inc_enter_count()) },
+            exit = { self.continue_with_state(state.inc_exit_count()) },
         )]
         struct UpdateCounts;
 

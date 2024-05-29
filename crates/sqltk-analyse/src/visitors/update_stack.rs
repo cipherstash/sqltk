@@ -1,7 +1,7 @@
 use std::{convert::Infallible, marker::PhantomData};
 
 use sqlparser::ast::{Query, Statement};
-use sqltk::{flow, Visitor};
+use sqltk::Visitor;
 
 use crate::model::ScopeOps;
 
@@ -15,13 +15,13 @@ use crate::model::ScopeOps;
         if node.is::<Statement>() || node.is::<Query>() {
             state.push_scope()
         }
-        flow::cont(state)
+        self.continue_with_state(state)
     },
     exit = {
         if node.is::<Statement>() || node.is::<Query>() {
             state.pop_scope()
         }
-        flow::cont(state)
+        self.continue_with_state(state)
     }
 )]
 pub struct UpdateStack<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>)
