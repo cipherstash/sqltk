@@ -90,39 +90,3 @@ where
         VisitorControlFlow::Continue(other) => VisitorControlFlow::Continue(other),
     }
 }
-
-pub mod infallible {
-    use super::*;
-
-    /// Shorthand for returning a  `VisitorControlFlow::Continue(state)`
-    pub fn cont<'ast, State>(state: State) -> VisitorControlFlow<'ast, State, Infallible> {
-        VisitorControlFlow::Continue(state)
-    }
-
-    /// Shorthand for modifying state and then returning a
-    /// `VisitorControlFlow::Continue(state)`
-    pub fn modify_state<'ast, State, F, N>(
-        f: F,
-    ) -> impl Fn(&'ast N, State) -> VisitorControlFlow<'ast, State, Infallible>
-    where
-        N: Visitable<'ast>,
-        F: Fn(&mut State),
-    {
-        move |_: &'ast N, mut state: State| {
-            f(&mut state);
-            cont(state)
-        }
-    }
-
-    /// Shorthand for returning a
-    /// `VisitorControlFlow::Break(Break::SkipChildren(state))`
-    pub fn skip<'ast, State>(state: State) -> VisitorControlFlow<'ast, State, Infallible> {
-        VisitorControlFlow::Break(Break::SkipChildren(state))
-    }
-
-    /// Shorthand for returning a
-    /// `VisitorControlFlow::Break(Break::Abort(state))`
-    pub fn abort<'ast, State>(state: State) -> VisitorControlFlow<'ast, State, Infallible> {
-        VisitorControlFlow::Break(Break::Finished(state))
-    }
-}
