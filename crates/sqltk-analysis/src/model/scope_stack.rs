@@ -228,6 +228,20 @@ impl<'a> Iterator for AllColumnsIterator<'a> {
         }
     }
 }
+
+impl Deref for ScopeStack {
+    type Target = Scope;
+
+    fn deref(&self) -> &Self::Target {
+        &self.top
+    }
+}
+
+impl DerefMut for ScopeStack {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.top
+    }
+}
 #[cfg(test)]
 mod test {
     use crate::{
@@ -276,11 +290,9 @@ mod test {
                 ProjectionColumn::new(
                     Rc::new(Source::single(SourceItem::TableColumn(TableColumn {
                         table: Rc::clone(&table),
-                        column: Rc::clone(&column),
+                        column: Rc::clone(column),
                     }))),
-                    Some(Rc::new(SqlIdent::Canonical(
-                        column.name.deref().clone().into(),
-                    ))),
+                    Some(Rc::new(SqlIdent::Canonical(column.name.deref().clone()))),
                 )
                 .into()
             })))
@@ -291,22 +303,8 @@ mod test {
     #[test_case(stack(&[&[relation("users", &["id"])]]), SqlIdent::unquoted("users"), &assert_ok)]
     fn resolve_relation<F>(stack: ScopeStack, ident: SqlIdent, assert_pass: F)
     where
-        F: Fn(Result<Rc<NamedRelation>, ResolutionError>) -> (),
+        F: Fn(Result<Rc<NamedRelation>, ResolutionError>),
     {
         assert_pass(stack.resolve_relation(&ident))
-    }
-}
-
-impl Deref for ScopeStack {
-    type Target = Scope;
-
-    fn deref(&self) -> &Self::Target {
-        &self.top
-    }
-}
-
-impl DerefMut for ScopeStack {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.top
     }
 }

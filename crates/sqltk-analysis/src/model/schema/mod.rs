@@ -70,8 +70,8 @@ impl Schema {
         table: &SqlIdent,
         column: &SqlIdent,
     ) -> Result<TableColumn, FindUniqueMatchError> {
-        match SqlIdent::find_unique(&table, &mut self.tables.iter().cloned()) {
-            Ok(table) => match table.get_column(&column) {
+        match SqlIdent::find_unique(table, &mut self.tables.iter().cloned()) {
+            Ok(table) => match table.get_column(column) {
                 Ok(column) => Ok(TableColumn::new(Rc::clone(&table), Rc::clone(&column))),
                 Err(err) => Err(err),
             },
@@ -155,8 +155,8 @@ macro_rules! make_schema {
         $( make_schema!(@add_column $table $column_name $(($($options)*))? ); )*
     };
     (@add_column $table:ident $column_name:ident (PK) ) => {
-        let $table = $table.add_column(crate::model::Column{
-            name: std::rc::Rc::new(crate::model::CanonicalIdent::from(stringify!($column_name)))
+        let $table = $table.add_column($crate::model::Column{
+            name: std::rc::Rc::new($crate::model::CanonicalIdent::from(stringify!($column_name)))
         }, true);
     };
     (@add_column $table:ident $column_name:ident () ) => {

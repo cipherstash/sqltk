@@ -110,7 +110,6 @@ where
     }
 }
 
-
 /// Error returned when attempting to retrieve an expected annotation when it is
 /// not present.
 #[derive(Debug, thiserror::Error, Eq, PartialEq, PartialOrd, Ord)]

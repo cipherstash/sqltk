@@ -73,7 +73,7 @@ where
                 state
                     .get_schema()
                     .resolve_table(&name)
-                    .map_err(&ResolutionError::from)
+                    .map_err(ResolutionError::from)
                     .and_then(|table| {
                         state.add_relation(
                             NamedRelation {
@@ -87,7 +87,7 @@ where
 
             match result {
                 Ok(_) => flow::cont(state),
-                Err(err) => flow::error(err.into()),
+                Err(err) => flow::error(err),
             }
         } else {
             flow::cont(state)

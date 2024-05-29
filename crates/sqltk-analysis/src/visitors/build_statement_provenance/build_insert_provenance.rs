@@ -7,7 +7,8 @@ use sqltk::{
 };
 
 use crate::{
-    Annotate, AnnotateMut, CanonicalIdent, ColumnWritten, InsertProvenance, Projection, Provenance, ResolutionError, SchemaOps, SqlIdent, Table
+    Annotate, AnnotateMut, CanonicalIdent, ColumnWritten, InsertProvenance, Projection, Provenance,
+    ResolutionError, SchemaOps, SqlIdent, Table,
 };
 
 #[derive(Debug)]
@@ -18,7 +19,7 @@ where
     State: SchemaOps
         + Annotate<'ast, Query, Projection>
         + Annotate<'ast, Vec<SelectItem>, Projection>
-        + AnnotateMut<'ast, Statement, Provenance>
+        + AnnotateMut<'ast, Statement, Provenance>,
 {
     fn default() -> Self {
         Self(PhantomData, PhantomData)
@@ -30,7 +31,7 @@ where
     State: SchemaOps
         + Annotate<'ast, Query, Projection>
         + Annotate<'ast, Vec<SelectItem>, Projection>
-        + AnnotateMut<'ast, Statement, Provenance>
+        + AnnotateMut<'ast, Statement, Provenance>,
 {
     type Error = ResolutionError;
     type State = State;
@@ -52,7 +53,7 @@ where
                     let into_table: Result<Rc<Table>, _> = state
                         .get_schema()
                         .resolve_table(&SqlIdent::from(table_name.0.last().unwrap()))
-                        .map_err(|err| ResolutionError::from(err));
+                        .map_err(ResolutionError::from);
 
                     let source: Result<Option<Rc<Projection>>, _> = source
                         .as_ref()
@@ -73,7 +74,7 @@ where
                                         .map(ColumnWritten::from)
                                         .collect::<Vec<_>>()
                                 })
-                                .unwrap_or(vec![])
+                                .unwrap_or_default()
                         })
                         .map_err(ResolutionError::from);
 
@@ -86,12 +87,10 @@ where
                     let result = into_table
                         .and_then(|into_table| {
                             columns_written.and_then(|columns_written| {
-                                returning.and_then(|returning| {
-                                    Ok((into_table, columns_written, returning))
-                                })
+                                returning.map(|returning| (into_table, columns_written, returning))
                             })
                         })
-                        .and_then(|(into_table, columns_written, returning)| {
+                        .map(|(into_table, columns_written, returning)| {
                             state.set_annotation(
                                 statement,
                                 Provenance::Insert(
@@ -103,12 +102,11 @@ where
                                     .into(),
                                 ),
                             );
-                            Ok(())
                         });
 
                     match result {
                         Ok(_) => flow::cont(state),
-                        Err(err) => flow::error(err.into()),
+                        Err(err) => flow::error(err),
                     }
                 }
                 _ => flow::cont(state),

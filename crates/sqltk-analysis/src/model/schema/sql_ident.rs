@@ -1,3 +1,5 @@
+use core::mem;
+use std::hash::{Hash, Hasher};
 use std::{fmt::Debug, ops::Deref, rc::Rc};
 
 use derive_more::Display;
@@ -19,7 +21,7 @@ use unicase::UniCase;
 /// [https://www.postgresql.org/docs/14/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS].
 ///
 /// SQL is wild, hey!
-#[derive(Debug, Clone, Eq, PartialOrd, Ord, Hash, Display)]
+#[derive(Debug, Clone, Eq, PartialOrd, Ord, Display)]
 pub enum SqlIdent {
     /// A identifier without quotes.
     ///
@@ -38,12 +40,25 @@ pub enum SqlIdent {
 
     /// An identifier from the database.
     ///
-    /// It is always case-sensitive and could be the of a schema, table, view,
-    /// column etc.
+    /// It is always case-sensitive and could be the name of a schema, table,
+    /// view, column etc.
     ///
     /// Note that the `String` can be a mixed case string may contain whitespace
     /// so if used in a SQL statement might require quoting.
     Canonical(CanonicalIdent),
+}
+
+// This manual Hash implementation is required to prevent a clippy error:
+// "error: you are deriving `Hash` but have implemented `PartialEq` explicitly"
+impl Hash for SqlIdent {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        mem::discriminant(self).hash(state);
+        match self {
+            SqlIdent::Unquoted(x) => x.hash(state),
+            SqlIdent::Quoted(x) => x.hash(state),
+            SqlIdent::Canonical(x) => x.hash(state),
+        }
+    }
 }
 
 #[derive(Debug, Display, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
@@ -83,16 +98,16 @@ impl PartialEq for SqlIdent {
         match (self, other) {
             (SqlIdent::Unquoted(me), SqlIdent::Unquoted(other)) => me == other,
             (SqlIdent::Unquoted(me), SqlIdent::Quoted(other)) => {
-                &me.inner == &UniCase::<&str>::from(other.as_str())
+                me.inner == UniCase::<&str>::from(other.as_str())
             }
             (SqlIdent::Unquoted(_), SqlIdent::Canonical(other)) => self == other,
             (SqlIdent::Quoted(me), SqlIdent::Unquoted(other)) => {
-                &other.inner == &UniCase::<&str>::from(me.as_str())
+                other.inner == UniCase::<&str>::from(me.as_str())
             }
             (SqlIdent::Quoted(me), SqlIdent::Quoted(other)) => other == me,
             (SqlIdent::Quoted(me), SqlIdent::Canonical(other)) => &other.0 == me,
             (SqlIdent::Canonical(me), SqlIdent::Unquoted(other)) => {
-                &UniCase::<&str>::from(me.0.as_str()) == &other.inner
+                UniCase::<&str>::from(me.0.as_str()) == other.inner
             }
             (SqlIdent::Canonical(me), SqlIdent::Quoted(other)) => other == &me.0,
             (SqlIdent::Canonical(me), SqlIdent::Canonical(other)) => other == me,
@@ -143,7 +158,7 @@ impl SqlIdent {
     /// Returns `Ok(Some(target))` if a single unique match is found.
     /// Returns `Ok(None)` if no match is found.
     /// Returns `Err(AmbiguousMatchError)` if multiple matches are found.
-    pub fn try_find_unique<'a, T, I>(
+    pub fn try_find_unique<T, I>(
         needle: &SqlIdent,
         haystack: &mut I,
     ) -> Result<Option<Rc<T>>, AmbiguousMatchError>
@@ -163,7 +178,7 @@ impl SqlIdent {
 
     /// Like [`Self::try_find_unique`] but it is also an error when no match is
     /// found at all.
-    pub fn find_unique<'a, T, I>(
+    pub fn find_unique<T, I>(
         needle: &SqlIdent,
         haystack: &mut I,
     ) -> Result<Rc<T>, FindUniqueMatchError>
@@ -231,7 +246,7 @@ impl PartialEq<SqlIdent> for Option<Rc<SqlIdent>> {
 impl PartialEq<CanonicalIdent> for SqlIdent {
     fn eq(&self, canonical: &CanonicalIdent) -> bool {
         match self {
-            SqlIdent::Unquoted(me) => &me.inner == &UniCase::<&str>::from(canonical.0.as_str()),
+            SqlIdent::Unquoted(me) => me.inner == UniCase::<&str>::from(canonical.0.as_str()),
             SqlIdent::Quoted(me) => me.as_str() == canonical.0.as_str(),
             SqlIdent::Canonical(me) => me.0 == canonical.0,
         }
@@ -242,7 +257,7 @@ impl PartialEq<SqlIdent> for CanonicalIdent {
     fn eq(&self, other: &SqlIdent) -> bool {
         match other {
             SqlIdent::Unquoted(unquoted) => {
-                &UniCase::<&str>::from(self.0.as_str()) == &unquoted.inner
+                UniCase::<&str>::from(self.0.as_str()) == unquoted.inner
             }
             SqlIdent::Quoted(quoted) => self.0.as_str() == quoted.as_str(),
             SqlIdent::Canonical(canonical) => self == canonical,
@@ -270,11 +285,11 @@ macro_rules! impl_named {
     };
 }
 
+use crate::Column;
 use crate::NamedRelation;
+use crate::ProjectionColumn;
 use crate::Schema;
 use crate::Table;
-use crate::Column;
-use crate::ProjectionColumn;
 
 impl_named!(Schema, name, CanonicalIdent);
 impl_named!(Table, name, CanonicalIdent);
@@ -282,9 +297,10 @@ impl_named!(Column, name, CanonicalIdent);
 impl_named!(NamedRelation, name, SqlIdent);
 impl_named!(ProjectionColumn, alias, Option<Rc<SqlIdent>>);
 
-impl<'a, Other: 'a + Named, T> Named for &'a T where Self: Deref<Target = Other>
-// where
-//     <T as Named>::Name: PartialEq<SqlIdent>,
+impl<'a, Other: 'a + Named, T> Named for &'a T
+where
+    Self: Deref<Target = Other>, // where
+                                 //     <T as Named>::Name: PartialEq<SqlIdent>,
 {
     type Name = <Other as Named>::Name;
 

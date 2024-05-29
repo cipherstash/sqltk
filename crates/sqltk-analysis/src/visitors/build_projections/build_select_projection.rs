@@ -54,8 +54,7 @@ where
             let result: Result<Vec<Rc<ProjectionColumn>>, _> = result.map(|items| {
                 items
                     .iter()
-                    .map(|item| item.deref())
-                    .flatten()
+                    .flat_map(|item| item.deref())
                     .map(|item| (*item).clone())
                     .collect::<Vec<_>>()
             });

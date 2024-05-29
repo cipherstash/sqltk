@@ -20,7 +20,6 @@ where
     }
 }
 
-
 impl<'ast, State> Visitor<'ast> for BuildSelectProvenance<'ast, State>
 where
     State: AnnotateMut<'ast, Statement, Provenance> + Annotate<'ast, Query, Projection>,

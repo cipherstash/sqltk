@@ -1,12 +1,10 @@
 use std::rc::Rc;
 
-use crate::{
-    model::{
-        projection::Projection,
-        resolution_error::ResolutionError,
-        schema::SqlIdent,
-        source_annotation::{NamedRelation, Source},
-    },
+use crate::model::{
+    projection::Projection,
+    resolution_error::ResolutionError,
+    schema::SqlIdent,
+    source_annotation::{NamedRelation, Source},
 };
 
 /// Operations for manipulating lexical scope and resolving identifiers that are in-scope.

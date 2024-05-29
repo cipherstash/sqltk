@@ -34,7 +34,7 @@ where
 
 /// Shorthand for returning a
 /// `VisitorControlFlow::Break(Break::Abort(state))`
-pub fn abort<'ast, State, E>(state: State) -> VisitorControlFlow<'ast, State, E>
+pub fn finished<'ast, State, E>(state: State) -> VisitorControlFlow<'ast, State, E>
 where
     E: Error + Debug,
 {
@@ -43,7 +43,7 @@ where
 
 /// Shorthand for returning a
 /// `VisitorControlFlow::Break(Break::Err(error))`
-pub fn error<'ast, State, E: 'ast>(error: E) -> VisitorControlFlow<'ast, State, E>
+pub fn error<'ast, State, E>(error: E) -> VisitorControlFlow<'ast, State, E>
 where
     E: Error + Debug,
 {

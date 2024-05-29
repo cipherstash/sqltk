@@ -14,7 +14,8 @@ use std::{marker::PhantomData, rc::Rc};
 use sqlparser::ast::{Expr, Query, SelectItem, Statement};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps}, AnnotateMut, ProjectionColumn, Provenance, SchemaOps, Source
+    model::{Annotate, Projection, ResolutionError, ScopeOps},
+    AnnotateMut, ProjectionColumn, Provenance, SchemaOps, Source,
 };
 
 #[derive(Debug, Visitor)]
@@ -37,14 +38,15 @@ where
         + AnnotateMut<'ast, Statement, Provenance>
         + SchemaOps;
 
-impl<'ast, State> Default for BuildStatementProvenance<'ast, State> where
+impl<'ast, State> Default for BuildStatementProvenance<'ast, State>
+where
     State: ScopeOps
         + Annotate<'ast, Expr, Source>
         + Annotate<'ast, Vec<SelectItem>, Projection>
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
         + Annotate<'ast, Query, Projection>
         + AnnotateMut<'ast, Statement, Provenance>
-        + SchemaOps
+        + SchemaOps,
 {
     fn default() -> Self {
         Self(PhantomData, PhantomData)

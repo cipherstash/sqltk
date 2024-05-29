@@ -4,7 +4,8 @@ use sqlparser::ast::{Expr, Query, Select, SetExpr};
 use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps, Source}, AnnotateMut, ProjectionColumn, SchemaOps, SourceItem
+    model::{Annotate, Projection, ResolutionError, ScopeOps, Source},
+    AnnotateMut, ProjectionColumn, SchemaOps, SourceItem,
 };
 
 #[derive(Debug)]
@@ -123,7 +124,7 @@ where
                     flow::error(
                         ResolutionError::UnsupportedInsertOrUpdateInSubqueryExpressionPosition(
                             Box::new(set_expr.clone()),
-                        )
+                        ),
                     )
                 }
                 SetExpr::Update(_statement) => flow::error(
@@ -131,13 +132,13 @@ where
                     // We might need the concept of an empty projection
                     ResolutionError::UnsupportedInsertOrUpdateInSubqueryExpressionPosition(
                         Box::new(set_expr.clone()),
-                    )
+                    ),
                 ),
                 SetExpr::Table(_table) => flow::error(
                     // TODO: implement this
                     ResolutionError::UnsupportedTableKeywordInSubqueryExpressionPosition(Box::new(
                         set_expr.clone(),
-                    ))
+                    )),
                 ),
             }
         } else {

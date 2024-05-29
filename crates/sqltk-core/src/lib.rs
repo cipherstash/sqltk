@@ -1,4 +1,3 @@
-
 mod visitable_impls;
 
 pub mod flow;
@@ -82,11 +81,7 @@ where
     ///
     /// Returns `Ok(state)` on success, or `Err((err, state))` if an error
     /// occurs.
-    fn evaluate<V>(
-        &'ast self,
-        visitor: &V,
-        state: V::State,
-    ) -> Result<V::State, V::Error>
+    fn evaluate<V>(&'ast self, visitor: &V, state: V::State) -> Result<V::State, V::Error>
     where
         V: Visitor<'ast>,
     {
@@ -135,7 +130,7 @@ pub enum Break<State, E> {
     Err(E),
 }
 
-impl<'ast, State, E> PartialEq for Break<State, E>
+impl<State, E> PartialEq for Break<State, E>
 where
     State: PartialEq,
 {

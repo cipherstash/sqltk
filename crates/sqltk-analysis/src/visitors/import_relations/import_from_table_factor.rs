@@ -29,7 +29,6 @@ where
     }
 }
 
-
 impl<'ast, State> Visitor<'ast> for ImportFromTableFactor<'ast, State>
 where
     State: ScopeOps
@@ -66,7 +65,7 @@ where
                         state
                             .get_schema()
                             .resolve_table(&name)
-                            .map_err(&ResolutionError::from)
+                            .map_err(ResolutionError::from)
                             .and_then(|table| {
                                 record_as.and_then(|record_as| {
                                     state.add_relation(
@@ -82,7 +81,7 @@ where
 
                     match result {
                         Ok(_) => flow::cont(state),
-                        Err(err) => flow::error(err.into()),
+                        Err(err) => flow::error(err),
                     }
                 }
                 TableFactor::Derived {

@@ -44,8 +44,7 @@ impl ProjectionColumnsIterator {
                 projections
                     .iter()
                     .cloned()
-                    .map(|projection| projection.columns_iter())
-                    .flatten(),
+                    .flat_map(|projection| projection.columns_iter()),
             ),
         };
 

@@ -40,7 +40,7 @@ where
         + Annotate<'ast, Expr, Source>
         + Annotate<'ast, SetExpr, Projection>
         + Annotate<'ast, Query, Projection>
-        + SchemaOps
+        + SchemaOps,
 {
     fn default() -> Self {
         Self(PhantomData, PhantomData)

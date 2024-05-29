@@ -70,13 +70,11 @@ mod tests {
 
     use crate::{
         make_schema,
-        model::Annotate,
-        model::Provenance,
-        model::{CanonicalIdent, SqlIdent, Table},
-        model::{InsertProvenance, SelectProvenance},
-        model::{Projection, ProjectionColumn},
-        model::{Source, SourceItem, TableColumn},
-        ProvenanceAnalyser,
+        model::{
+            Annotate, CanonicalIdent, InsertProvenance, Projection, ProjectionColumn, Provenance,
+            SelectProvenance, Source, SourceItem, SqlIdent, Table, TableColumn,
+        },
+        DeleteProvenance, ProvenanceAnalyser,
     };
     use bigdecimal::BigDecimal;
     use sqltk::prelude::*;
@@ -283,7 +281,9 @@ mod tests {
                                     todo_list_items_description_column.clone()
                                 )
                                 .into(),
-                                alias: Some(SqlIdent::unquoted("todo_list_item_description").into())
+                                alias: Some(
+                                    SqlIdent::unquoted("todo_list_item_description").into()
+                                )
                             }
                             .into(),
                         ])
@@ -506,6 +506,67 @@ mod tests {
                             columns_written[2].data.deref(),
                             &Source::single(SourceItem::ColumnOfValues)
                         );
+
+                        let projection = projection.deref();
+
+                        assert_eq!(
+                            projection,
+                            &Projection::Columns(vec![ProjectionColumn {
+                                source: Source::single(SourceItem::TableColumn(
+                                    films_id_column.clone()
+                                ))
+                                .into(),
+                                alias: Some(SqlIdent::unquoted("id").into())
+                            }
+                            .into(),])
+                        );
+                    } else {
+                        assert!(false, "expected Some(projection)")
+                    }
+                }
+                Ok(_) => {
+                    assert!(false, "Wrong Provenance variant")
+                }
+                Err(err) => {
+                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                }
+            },
+            Err(err) => {
+                assert!(false, "Error during AST evaluation: {:#?}", err)
+            }
+        }
+    }
+
+    #[test]
+    fn basic_delete() {
+        let schema = make_schema! {
+            tables: {
+                films: {
+                    id,
+                    title,
+                    length,
+                    rating,
+                }
+            }
+        };
+
+        let statements = parse_sql("delete from films where id = 123 returning id;");
+
+        let films_id_column = schema
+            .resolve_table_column(&SqlIdent::unquoted("films"), &SqlIdent::unquoted("id"))
+            .unwrap();
+
+        let state = ProvenanceState::new(schema);
+
+        match statements.evaluate(&ProvenanceAnalyser::default(), state) {
+            Ok(state) => match state.get_annotation(&statements[0]).as_deref() {
+                Ok(Provenance::Delete(provenance)) => {
+                    if let DeleteProvenance {
+                        from_table,
+                        returning: Some(projection),
+                    } = provenance.deref()
+                    {
+                        assert_eq!(from_table.name.deref(), &CanonicalIdent::from("films"));
 
                         let projection = projection.deref();
 

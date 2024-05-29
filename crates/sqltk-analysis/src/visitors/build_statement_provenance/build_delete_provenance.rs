@@ -1,7 +1,3 @@
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(unused_must_use)]
-
 use std::{marker::PhantomData, rc::Rc};
 
 use sqlparser::ast::{
@@ -13,8 +9,8 @@ use sqltk::{
 };
 
 use crate::{
-    Annotate, NamedRelation, Projection, Provenance, ResolutionError, SchemaOps, Scope, ScopeOps,
-    SqlIdent,
+    Annotate, AnnotateMut, DeleteProvenance, Projection, Provenance, ResolutionError, SchemaOps,
+    ScopeOps, SqlIdent,
 };
 
 #[derive(Debug)]
@@ -42,7 +38,7 @@ where
 impl<'ast, State> Visitor<'ast> for BuildDeleteProvenance<'ast, State>
 where
     State: SchemaOps
-        + Annotate<'ast, Statement, Provenance>
+        + AnnotateMut<'ast, Statement, Provenance>
         + Annotate<'ast, Query, Projection>
         + Annotate<'ast, Vec<SelectItem>, Projection>
         + ScopeOps,
@@ -60,17 +56,22 @@ where
                 // For reference, the Postgres DELETE grammar can be found here:
                 // https://github.com/postgres/postgres/blob/86a2d2a321215797abd1c67d9f2c52510423a97a/src/backend/parser/gram.y#L12327
                 Statement::Delete(Delete {
+                    // The table we are deleting rows from.
                     from,
+                    // The RETURNING clause.
                     returning,
-                    // USING clause. Not (currently) relevant to building provenance.
+                    // USING (if present) will bring relations into scope that
+                    // can be referenced in the RETURNING clause.
                     using: _,
-                    // This is the WHERE clause and is not (currently) relevant to
-                    // building provenance.
+                    // IGNORED (This is the WHERE clause and is not (currently)
+                    // relevant to building provenance)
                     selection: _,
-                    // MySQL allows deleting from multiple tables at once.
+                    // IGNORED (MySQL allows deleting from multiple tables at
+                    // once)
                     tables: _,
-                    // MySQL supports ORDER BY and LIMIT in a DELETE.
+                    // IGNORED (MySQL supports ORDER BY and LIMIT in a DELETE)
                     order_by: _,
+                    // IGNORED (MySQL supports ORDER BY and LIMIT in a DELETE)
                     limit: _,
                 }) => {
                     let tables: &Vec<TableWithJoins> = match from {
@@ -94,9 +95,9 @@ where
                             with_hints,
                             version: None,
                             partitions,
-                        } if with_hints.len() == 0 && partitions.len() == 0 => {
+                        } if with_hints.is_empty() && partitions.is_empty() => {
                             let alias = match alias {
-                                Some(TableAlias { name, columns }) if columns.len() == 0 => {
+                                Some(TableAlias { name, columns }) if columns.is_empty() => {
                                     Some(name)
                                 }
                                 None => None,
@@ -106,40 +107,43 @@ where
                             };
 
                             let from_table_ident = alias
-                                .map(|alias| SqlIdent::from(alias))
+                                .map(SqlIdent::from)
                                 .unwrap_or_else(|| SqlIdent::from(name.0.last().unwrap()));
 
                             match state.get_schema().resolve_table(&from_table_ident) {
                                 Ok(from_table) => {
-                                    // Resolve `returning` (which could be a
-                                    // wildcard) within this table.  A new Scope is
-                                    // created in which to resolve the columns in
-                                    // `returning`.  This is because in a DELETE
-                                    // statement only the columns from the table
-                                    // whose rows are being deleted are allowed to
-                                    // be returned, BUT any tables in the USING
-                                    // clause (if any) will have been pushed into
-                                    // scope and using a wildcard in RETURNING would
-                                    // pick those up.
-                                    //
-                                    // So we ignore the existing lexical scope and
-                                    // create a fresh scope containing only the FROM
-                                    // table before resolving the `returning`
-                                    // projection.
-                                    let mut scope = Scope::default();
-                                    scope.add_relation(Rc::new(NamedRelation::from(from_table)));
+                                    // The `RETURNING` clause is a list of
+                                    // expressions that are resolved with the
+                                    // `FROM` table and relations brought into
+                                    // scope by the `USING` clause.
+                                    let returning: Result<Option<Rc<Projection>>, _> = returning
+                                        .as_ref()
+                                        .map(|items| state.get_annotation(items))
+                                        .transpose()
+                                        .map_err(ResolutionError::from);
+
+                                    match returning {
+                                        Ok(returning) => {
+                                            state.set_annotation(
+                                                statement,
+                                                Provenance::Delete(
+                                                    DeleteProvenance {
+                                                        from_table,
+                                                        returning,
+                                                    }
+                                                    .into(),
+                                                ),
+                                            );
+                                            flow::cont(state)
+                                        }
+                                        Err(err) => flow::error(err),
+                                    }
                                 }
-                                Err(err) => return flow::error(err.into()),
+                                Err(err) => flow::error(err.into()),
                             }
                         }
-                        _ => {
-                            return flow::error(
-                                ResolutionError::UnsupportedTableFactorVariantInDelete,
-                            )
-                        }
+                        _ => flow::error(ResolutionError::UnsupportedTableFactorVariantInDelete),
                     }
-
-                    todo!()
                 }
                 _ => flow::cont(state),
             }

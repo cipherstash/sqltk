@@ -18,10 +18,7 @@ pub struct ImportFromCte<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>)
 
 impl<'ast, State> Default for ImportFromCte<'ast, State>
 where
-    State: ScopeOps
-        + Annotate<'ast, Expr, Source>
-        + Annotate<'ast, Query, Projection>
-        + SchemaOps,
+    State: ScopeOps + Annotate<'ast, Expr, Source> + Annotate<'ast, Query, Projection> + SchemaOps,
 {
     fn default() -> Self {
         Self(PhantomData, PhantomData)
@@ -30,10 +27,7 @@ where
 
 impl<'ast, State> Visitor<'ast> for ImportFromCte<'ast, State>
 where
-    State: ScopeOps
-        + Annotate<'ast, Expr, Source>
-        + Annotate<'ast, Query, Projection>
-        + SchemaOps,
+    State: ScopeOps + Annotate<'ast, Expr, Source> + Annotate<'ast, Query, Projection> + SchemaOps,
 {
     type Error = ResolutionError;
     type State = State;

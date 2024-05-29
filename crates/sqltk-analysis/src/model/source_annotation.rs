@@ -99,7 +99,7 @@ pub enum SourceItem {
     /// A value produced by a function call.
     FunctionCall {
         ident: SqlIdent,
-        arg_sources: Vec<Rc<SourceItem>>,
+        arg_sources: Vec<Rc<Source>>,
     },
 }
 
@@ -126,7 +126,7 @@ impl From<Rc<Table>> for NamedRelation {
     fn from(table: Rc<Table>) -> Self {
         Self {
             name: Rc::new(SqlIdent::Canonical(table.name.deref().clone())),
-            projection: Rc::new(Projection::from(&table))
+            projection: Rc::new(Projection::from(&table)),
         }
     }
 }

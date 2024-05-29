@@ -4,7 +4,8 @@ use sqlparser::ast::SelectItem;
 use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps}, AnnotateMut, ProjectionColumn
+    model::{Annotate, Projection, ResolutionError, ScopeOps},
+    AnnotateMut, ProjectionColumn,
 };
 
 #[derive(Debug)]
@@ -14,7 +15,7 @@ impl<'ast, State> Default for BuildVecOfSelectItemProjection<'ast, State>
 where
     State: ScopeOps
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
-        + AnnotateMut<'ast, Vec<SelectItem>, Projection>
+        + AnnotateMut<'ast, Vec<SelectItem>, Projection>,
 {
     fn default() -> Self {
         Self(PhantomData, PhantomData)
@@ -25,7 +26,7 @@ impl<'ast, State> Visitor<'ast> for BuildVecOfSelectItemProjection<'ast, State>
 where
     State: ScopeOps
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
-        + AnnotateMut<'ast, Vec<SelectItem>, Projection>
+        + AnnotateMut<'ast, Vec<SelectItem>, Projection>,
 {
     type State = State;
     type Error = ResolutionError;
@@ -55,7 +56,7 @@ where
                     state.set_annotation(items, projection);
                     flow::cont(state)
                 }
-                Err(err) => flow::error(err.into()),
+                Err(err) => flow::error(err),
             }
         } else {
             flow::cont(state)

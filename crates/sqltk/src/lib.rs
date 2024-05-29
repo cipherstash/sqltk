@@ -83,7 +83,10 @@ pub mod prelude;
 mod test {
     use std::fmt::Debug;
 
-    use sqlparser::{ast::{Expr, SelectItem, TableWithJoins, With}, dialect, parser};
+    use sqlparser::{
+        ast::{Expr, SelectItem, TableWithJoins, With},
+        dialect, parser,
+    };
     use sqltk_core::{flow, Visitable};
     use sqltk_derive::Visitor;
 

@@ -1,7 +1,11 @@
 use std::rc::Rc;
 
 use crate::{
-    model::{projection::Projection, schema::{CanonicalIdent, Table}, source_annotation::Source},
+    model::{
+        projection::Projection,
+        schema::{CanonicalIdent, Table},
+        source_annotation::Source,
+    },
     ProjectionColumn,
 };
 
@@ -50,6 +54,9 @@ pub struct ColumnWritten {
 
 impl From<(Rc<CanonicalIdent>, Rc<ProjectionColumn>)> for ColumnWritten {
     fn from(value: (Rc<CanonicalIdent>, Rc<ProjectionColumn>)) -> Self {
-        Self{ column: value.0, data: value.1.source.clone() }
+        Self {
+            column: value.0,
+            data: value.1.source.clone(),
+        }
     }
 }

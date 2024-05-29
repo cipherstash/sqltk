@@ -158,7 +158,9 @@ impl TryFrom<VisitorInput> for VisitorImpl {
                 .attributes
                 .state_ty
                 .as_ref()
-                .map_or(parse2::<TypePath>(quote!(State)).unwrap(), |ty| ty.0.clone()),
+                .map_or(parse2::<TypePath>(quote!(State)).unwrap(), |ty| {
+                    ty.0.clone()
+                }),
             trait_error_ty: input.attributes.error_ty.map_or(
                 parse2::<TypePath>(quote!(::std::convert::Infallible)).unwrap(),
                 |ty| ty.0,
@@ -194,8 +196,7 @@ impl
         ),
     ) -> Result<Self, Error> {
         let (children, forward, enter, exit) = value;
-        VisitorStruct::try_from((children, forward, enter, exit))
-            .map(|value| VisitorData::Struct(value))
+        VisitorStruct::try_from((children, forward, enter, exit)).map(VisitorData::Struct)
     }
 }
 
@@ -242,8 +243,7 @@ impl
             )),
             (None, Some(forward), None, None) => Ok(VisitorStruct::Forward(forward)),
             (None, None, enter @ Some(_), exit) | (None, None, enter, exit @ Some(_)) => {
-                VisitorStructEnterAndExit::try_from((enter, exit))
-                    .map(|value| VisitorStruct::Inline(value))
+                VisitorStructEnterAndExit::try_from((enter, exit)).map(VisitorStruct::Inline)
             }
             _ => Err(syn::Error::new(
                 Span::call_site(),
@@ -252,8 +252,7 @@ impl
                         1. `enter` and/or `exit`, or
                         2. `forward`, or
                         3. `children`
-                    "#}
-                ),
+                    "#}),
             )),
         }
     }
@@ -315,10 +314,10 @@ impl ParseMetaItem for SynTypePath {
             Ok(Type::Path(type_path)) => Ok(SynTypePath(type_path)),
             Ok(ref do_not_want) => Err(deluxe::Error::new_spanned(
                 do_not_want,
-                String::from(format!(
+                format!(
                     "Expected Type::Path(..), got {}",
                     type_name_of_val(do_not_want)
-                )),
+                ),
             )),
             Err(err) => Err(deluxe::Error::from(err)),
         }
@@ -520,15 +519,19 @@ impl ToTokens for VisitorImpl {
             VisitorData::Struct(VisitorStruct::Children(children)) => {
                 // Create a tuple of (type, term) so that the child visitor can
                 // be referenced at both type and term level as required.
-                let children = children.clone().into_iter().map(|child| {
-                    if self.state_ty_is_concrete {
-                        (quote!(#child), quote!(#child))
-                    } else {
-                        (quote!(#child<Self::State>), quote!(#child::<Self::State>))
-                    }
-                }).collect::<Vec<_>>();
+                let children = children
+                    .clone()
+                    .into_iter()
+                    .map(|child| {
+                        if self.state_ty_is_concrete {
+                            (quote!(#child), quote!(#child))
+                        } else {
+                            (quote!(#child<Self::State>), quote!(#child::<Self::State>))
+                        }
+                    })
+                    .collect::<Vec<_>>();
 
-                let enter_body = children.iter().map(|(child_ty, child_term)|
+                let enter_body = children.iter().map(|(child_ty, child_term)| {
                     quote! {
                         state = ::sqltk_core::flow::map_break_err::<
                             Self::State,
@@ -538,12 +541,12 @@ impl ToTokens for VisitorImpl {
                             #child_term::default().enter(node, state)
                         )?;
                     }
-                );
+                });
 
                 let mut children = children.clone();
                 let exit_body = {
                     children.reverse();
-                    children.iter().map(|(child_ty, child_term)|
+                    children.iter().map(|(child_ty, child_term)| {
                         quote! {
                             state = ::sqltk_core::flow::map_break_err::<
                                 Self::State,
@@ -553,7 +556,7 @@ impl ToTokens for VisitorImpl {
                                 #child_term::default().exit(node, state)
                             )?;
                         }
-                    )
+                    })
                 };
 
                 quote! {

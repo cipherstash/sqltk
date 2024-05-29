@@ -1,6 +1,8 @@
 use std::{marker::PhantomData, ops::Deref, rc::Rc};
 
-use sqlparser::ast::{Expr, Function, Ident, ListAggOnOverflow, Query};
+use sqlparser::ast::{
+    Expr, Function, FunctionArg, FunctionArgExpr, Ident, ListAggOnOverflow, ObjectName, Query,
+};
 use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
 
 use crate::{
@@ -101,6 +103,67 @@ where
         state: State,
     ) -> VisitorControlFlow<'ast, State, ResolutionError> {
         Self::resolve_sources(node, &[expr], state)
+    }
+
+    fn resolve_function_args(
+        node: &'ast Expr,
+        mut state: State,
+        name: &ObjectName,
+        args: &'ast [FunctionArg],
+    ) -> VisitorControlFlow<'ast, State, ResolutionError> {
+        let sources: Result<Vec<Rc<Source>>, ResolutionError> = args
+            .iter()
+            .map(|arg| {
+                let arg_expr = match arg {
+                    FunctionArg::Named {
+                        name: _,
+                        arg: arg_expr,
+                        operator: _,
+                    } => arg_expr,
+                    FunctionArg::Unnamed(arg_expr) => arg_expr,
+                };
+
+                let result = match arg_expr {
+                    FunctionArgExpr::Expr(expr) => {
+                        state.get_annotation(expr).map_err(ResolutionError::from)
+                    }
+                    FunctionArgExpr::QualifiedWildcard(name) => state
+                        .resolve_qualified_wildcard(
+                            name.0
+                                .iter()
+                                .map(SqlIdent::from)
+                                .collect::<Vec<_>>()
+                                .as_slice(),
+                        )
+                        .map(|projection| {
+                            Rc::new(Source::single(SourceItem::Projection(projection.clone())))
+                        }),
+                    FunctionArgExpr::Wildcard => state.resolve_wildcard().map(|projection| {
+                        Rc::new(Source::single(SourceItem::Projection(projection.clone())))
+                    }),
+                };
+
+                result
+            })
+            .collect();
+
+        match sources {
+            Ok(sources) => {
+                state.set_annotation(
+                    node,
+                    Source::single(SourceItem::FunctionCall {
+                        ident: SqlIdent::from(
+                            name.0.last().expect(
+                                "A sqlparser ObjectName to have at least one identifier part",
+                            ),
+                        ),
+                        arg_sources: sources,
+                    }),
+                );
+                flow::cont(state)
+            }
+            Err(err) => flow::error(err),
+        }
     }
 }
 
@@ -305,18 +368,8 @@ where
                     exprs.extend(keys[..].iter().map(|k| &k.key));
                     Self::resolve_sources(node, &exprs[..], state)
                 }
-                Expr::Function(Function { args: _, name, .. }) => {
-                    state.set_annotation(
-                        node,
-                        Source::single(SourceItem::FunctionCall {
-                            ident: SqlIdent::from(name.0.last().expect(
-                                "A sqlparser ObjectName to have at least one identifier part",
-                            )),
-
-                            arg_sources: vec![], // TODO: capture the Sources for the function args
-                        }),
-                    );
-                    flow::cont(state)
+                Expr::Function(Function { args, name, .. }) => {
+                    Self::resolve_function_args(node, state, name, args)
                 }
                 Expr::AggregateExpressionWithFilter { expr, filter } => {
                     Self::resolve_sources(node, &[expr, filter], state)
@@ -395,14 +448,12 @@ where
                     if let Some(sep) = agg.separator.as_ref() {
                         exprs.push(sep.deref())
                     }
-                    if let Some(overflow) = agg.on_overflow.as_ref() {
-                        if let ListAggOnOverflow::Truncate {
-                            filler: Some(filler),
-                            with_count: _,
-                        } = overflow
-                        {
-                            exprs.push(filler)
-                        }
+                    if let Some(ListAggOnOverflow::Truncate {
+                        filler: Some(filler),
+                        with_count: _,
+                    }) = agg.on_overflow.as_ref()
+                    {
+                        exprs.push(filler)
                     }
                     Self::resolve_sources(node, &exprs[..], state)
                 }
@@ -455,7 +506,7 @@ where
                             node,
                             Source::single(SourceItem::Projection(projection.clone())),
                         )),
-                        Err(err) => Err(err.into()),
+                        Err(err) => Err(err),
                     };
 
                     match result {
@@ -472,7 +523,7 @@ where
                             node,
                             Source::single(SourceItem::Projection(projection.clone())),
                         )),
-                        Err(err) => Err(err.into()),
+                        Err(err) => Err(err),
                     };
 
                     match result {

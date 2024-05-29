@@ -62,13 +62,12 @@ where
                         ProjectionColumn::new(source.clone(), Some(SqlIdent::from(alias).into()))
                             .into()
                     })
-                    .map_err(ResolutionError::from)]
-                .into(),
+                    .map_err(ResolutionError::from)],
                 SelectItem::QualifiedWildcard(obj_name, _) => {
                     let idents: Vec<SqlIdent> = obj_name.0.iter().map(SqlIdent::from).collect();
                     match state.resolve_qualified_wildcard(idents.as_slice()) {
-                        Ok(projection) => Vec::from_iter(projection.columns_iter().map(|c| Ok(c))),
-                        Err(err) => vec![Err(err.into())],
+                        Ok(projection) => Vec::from_iter(projection.columns_iter().map(Ok)),
+                        Err(err) => vec![Err(err)],
                     }
                 }
                 SelectItem::Wildcard(_) => match state.resolve_wildcard() {

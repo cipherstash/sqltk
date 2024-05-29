@@ -85,11 +85,9 @@ where
                                                 column
                                                     .and_then(|column| {
                                                         source
-                                                            .and_then(|source| {
-                                                                Ok(ColumnWritten {
-                                                                    column: column.name.clone(),
-                                                                    data: source,
-                                                                })
+                                                            .map(|source| ColumnWritten {
+                                                                column: column.name.clone(),
+                                                                data: source,
                                                             })
                                                             .map_err(ResolutionError::from)
                                                     })
@@ -104,7 +102,7 @@ where
                                         .map_err(ResolutionError::from);
 
                                     let result = columns_written.and_then(|columns_written| {
-                                        returning.and_then(|returning| {
+                                        returning.map(|returning| {
                                             state.set_annotation(
                                                 statement,
                                                 Provenance::Update(
@@ -116,16 +114,15 @@ where
                                                     .into(),
                                                 ),
                                             );
-                                            Ok(())
                                         })
                                     });
 
                                     match result {
                                         Ok(_) => flow::cont(state),
-                                        Err(err) => flow::error(err.into()),
+                                        Err(err) => flow::error(err),
                                     }
                                 }
-                                Err(err) => flow::error(err.into()),
+                                Err(err) => flow::error(err),
                             }
                         }
                         // `sqlparser` reuses certain AST types in grammar locations where
@@ -140,7 +137,7 @@ where
                         // vector.
                         //
                         // See: https://www.postgresql.org/docs/current/sql-update.html
-                        _ => return flow::error(ResolutionError::InvalidAstNode),
+                        _ => flow::error(ResolutionError::InvalidAstNode),
                     }
                 }
                 _ => flow::cont(state),

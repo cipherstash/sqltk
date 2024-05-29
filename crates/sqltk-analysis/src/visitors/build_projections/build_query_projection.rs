@@ -4,7 +4,8 @@ use sqlparser::ast::{Query, SetExpr};
 use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps}, AnnotateMut, SchemaOps
+    model::{Annotate, Projection, ResolutionError, ScopeOps},
+    AnnotateMut, SchemaOps,
 };
 
 #[derive(Debug)]
