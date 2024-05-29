@@ -3,7 +3,9 @@ use std::{marker::PhantomData, rc::Rc};
 use sqlparser::ast::{Expr, SelectItem};
 use sqltk::{flow, prelude::VisitorControlFlow, Visitable, Visitor};
 
-use crate::{Annotate, AnnotateMut, ProjectionColumn, ResolutionError, ScopeOps, Source, SqlIdent};
+use crate::{
+    Annotate, AnnotateMut, ProjectionColumn, ResolutionError, ScopeOps, SourceItem, SqlIdent,
+};
 
 #[derive(Debug)]
 pub struct BuildProjectionColumns<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>);
@@ -11,7 +13,7 @@ pub struct BuildProjectionColumns<'ast, State>(PhantomData<&'ast ()>, PhantomDat
 impl<'ast, State> Default for BuildProjectionColumns<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + AnnotateMut<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>,
 {
     fn default() -> Self {
@@ -22,7 +24,7 @@ where
 impl<'ast, State> Visitor<'ast> for BuildProjectionColumns<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + AnnotateMut<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>,
 {
     type State = State;
@@ -37,14 +39,14 @@ where
             let result: Vec<Result<Rc<ProjectionColumn>, ResolutionError>> = match node {
                 SelectItem::UnnamedExpr(expr @ Expr::Identifier(ident)) => vec![state
                     .get_annotation(expr)
-                    .map(|source: Rc<Source>| {
+                    .map(|source: Rc<SourceItem>| {
                         ProjectionColumn::new(source.clone(), Some(SqlIdent::from(ident).into()))
                             .into()
                     })
                     .map_err(ResolutionError::from)],
                 SelectItem::UnnamedExpr(expr @ Expr::CompoundIdentifier(idents)) => vec![state
                     .get_annotation(expr)
-                    .map(|source: Rc<Source>| {
+                    .map(|source: Rc<SourceItem>| {
                         ProjectionColumn::new(
                             source.clone(),
                             Some(SqlIdent::from(idents.last().unwrap()).into()),
@@ -54,11 +56,13 @@ where
                     .map_err(ResolutionError::from)],
                 SelectItem::UnnamedExpr(expr) => vec![state
                     .get_annotation(expr)
-                    .map(|source: Rc<Source>| ProjectionColumn::new(source.clone(), None).into())
+                    .map(|source: Rc<SourceItem>| {
+                        ProjectionColumn::new(source.clone(), None).into()
+                    })
                     .map_err(ResolutionError::from)],
                 SelectItem::ExprWithAlias { expr, alias } => vec![state
                     .get_annotation(expr)
-                    .map(|source: Rc<Source>| {
+                    .map(|source: Rc<SourceItem>| {
                         ProjectionColumn::new(source.clone(), Some(SqlIdent::from(alias).into()))
                             .into()
                     })

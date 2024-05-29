@@ -9,7 +9,7 @@ use crate::{
     model::ResolutionError,
     model::ScopeOps,
     model::SqlIdent,
-    model::{NamedRelation, Source},
+    model::{NamedRelation, SourceItem},
     SchemaOps,
 };
 
@@ -19,7 +19,7 @@ pub struct ImportFromTableFactor<'ast, State>(PhantomData<&'ast ()>, PhantomData
 impl<'ast, State> Default for ImportFromTableFactor<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + Annotate<'ast, SetExpr, Projection>
         + Annotate<'ast, Query, Projection>
         + SchemaOps,
@@ -32,7 +32,7 @@ where
 impl<'ast, State> Visitor<'ast> for ImportFromTableFactor<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + Annotate<'ast, SetExpr, Projection>
         + Annotate<'ast, Query, Projection>
         + SchemaOps,

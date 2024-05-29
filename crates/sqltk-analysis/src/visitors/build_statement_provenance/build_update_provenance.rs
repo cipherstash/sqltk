@@ -8,7 +8,7 @@ use sqltk::{
 
 use crate::{
     Annotate, AnnotateMut, ColumnWritten, Projection, Provenance, ResolutionError, SchemaOps,
-    Source, SqlIdent, Table, UpdateProvenance,
+    SourceItem, SqlIdent, Table, UpdateProvenance,
 };
 
 #[derive(Debug)]
@@ -17,7 +17,7 @@ pub struct BuildUpdateProvenance<'ast, State>(PhantomData<&'ast ()>, PhantomData
 impl<'ast, State> Default for BuildUpdateProvenance<'ast, State>
 where
     State: SchemaOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + Annotate<'ast, Query, Projection>
         + Annotate<'ast, Vec<SelectItem>, Projection>
         + AnnotateMut<'ast, Statement, Provenance>,
@@ -30,7 +30,7 @@ where
 impl<'ast, State> Visitor<'ast> for BuildUpdateProvenance<'ast, State>
 where
     State: SchemaOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + Annotate<'ast, Query, Projection>
         + Annotate<'ast, Vec<SelectItem>, Projection>
         + AnnotateMut<'ast, Statement, Provenance>,

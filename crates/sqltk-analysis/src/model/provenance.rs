@@ -4,7 +4,7 @@ use crate::{
     model::{
         projection::Projection,
         schema::{CanonicalIdent, Table},
-        source_annotation::Source,
+        source_item::SourceItem,
     },
     ProjectionColumn,
 };
@@ -49,7 +49,7 @@ pub struct DeleteProvenance {
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct ColumnWritten {
     pub column: Rc<CanonicalIdent>,
-    pub data: Rc<Source>,
+    pub data: Rc<SourceItem>,
 }
 
 impl From<(Rc<CanonicalIdent>, Rc<ProjectionColumn>)> for ColumnWritten {

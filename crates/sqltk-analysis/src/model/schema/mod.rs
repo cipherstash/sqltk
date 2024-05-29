@@ -9,7 +9,7 @@ use std::rc::Rc;
 mod sql_ident;
 pub use sql_ident::*;
 
-use super::source_annotation::TableColumn;
+use super::source_item::TableColumn;
 
 /// A database schema.
 ///
@@ -160,8 +160,8 @@ macro_rules! make_schema {
         }, true);
     };
     (@add_column $table:ident $column_name:ident () ) => {
-        let $table = $table.add_column(crate::model::schema::Column{
-            name: crate::model::schema::CanonicalIdent::from(stringify!($column_name))
+        let $table = $table.add_column($crate::model::schema::Column{
+            name: $crate::model::schema::CanonicalIdent::from(stringify!($column_name))
         }, false);
     };
     (@add_column $table:ident $column_name:ident ) => {

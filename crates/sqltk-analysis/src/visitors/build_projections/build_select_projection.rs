@@ -4,7 +4,7 @@ use sqlparser::ast::{Expr, Select, SelectItem};
 use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps, Source},
+    model::{Annotate, Projection, ResolutionError, ScopeOps, SourceItem},
     AnnotateMut, ProjectionColumn, SchemaOps,
 };
 
@@ -14,7 +14,7 @@ pub struct BuildSelectProjection<'ast, State>(PhantomData<&'ast ()>, PhantomData
 impl<'ast, State> Default for BuildSelectProjection<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
         + AnnotateMut<'ast, Select, Projection>
         + SchemaOps,
@@ -27,7 +27,7 @@ where
 impl<'ast, State> Visitor<'ast> for BuildSelectProjection<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
         + AnnotateMut<'ast, Select, Projection>
         + SchemaOps,

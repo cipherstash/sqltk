@@ -371,7 +371,7 @@ mod tests {
         }
     }
 
-    fn haystack<'a>(list: &[&str]) -> Vec<Rc<Item>> {
+    fn haystack(list: &[&str]) -> Vec<Rc<Item>> {
         list.iter()
             .map(|id| Item(CanonicalIdent::from(*id)))
             .map(Into::into)

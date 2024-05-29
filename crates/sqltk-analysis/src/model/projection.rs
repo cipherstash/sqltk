@@ -2,7 +2,7 @@ use std::{ops::Deref, rc::Rc};
 
 use crate::{
     model::schema::{SqlIdent, Table},
-    model::source_annotation::{Source, SourceItem, TableColumn},
+    model::source_item::{SourceItem, TableColumn},
 };
 
 use derive_more::AsRef;
@@ -68,12 +68,12 @@ impl Iterator for ProjectionColumnsIterator {
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, AsRef)]
 pub struct ProjectionColumn {
     #[as_ref(forward)]
-    pub source: Rc<Source>,
+    pub source: Rc<SourceItem>,
     pub alias: Option<Rc<SqlIdent>>,
 }
 
 impl ProjectionColumn {
-    pub fn new(source: Rc<Source>, alias: Option<Rc<SqlIdent>>) -> Self {
+    pub fn new(source: Rc<SourceItem>, alias: Option<Rc<SqlIdent>>) -> Self {
         Self { source, alias }
     }
 }
@@ -86,10 +86,10 @@ impl From<&Rc<Table>> for Projection {
                 .columns
                 .iter()
                 .map(|column| ProjectionColumn {
-                    source: Source::single(SourceItem::TableColumn(TableColumn::new(
+                    source: SourceItem::TableColumn(TableColumn::new(
                         Rc::clone(table),
                         Rc::clone(column),
-                    )))
+                    ))
                     .into(),
                     alias: Some(Rc::new(SqlIdent::Canonical(column.name.deref().clone()))),
                 })

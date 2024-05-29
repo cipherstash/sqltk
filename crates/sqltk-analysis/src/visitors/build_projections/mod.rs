@@ -13,7 +13,7 @@ use sqlparser::ast::{Expr, Query, Select, SelectItem, SetExpr};
 use sqltk::Visitor;
 
 use crate::{
-    model::{Annotate, Projection, ScopeOps, Source},
+    model::{Annotate, Projection, ScopeOps, SourceItem},
     AnnotateMut, ProjectionColumn, ResolutionError, SchemaOps,
 };
 
@@ -33,7 +33,7 @@ pub struct BuildProjections<'ast, State>(PhantomData<&'ast ()>, PhantomData<Stat
 where
     State: Debug
         + ScopeOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
         + AnnotateMut<'ast, Query, Projection>
         + AnnotateMut<'ast, Select, Projection>
@@ -45,7 +45,7 @@ impl<'ast, State> Default for BuildProjections<'ast, State>
 where
     State: Debug
         + ScopeOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
         + AnnotateMut<'ast, Query, Projection>
         + AnnotateMut<'ast, Select, Projection>

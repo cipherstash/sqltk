@@ -72,7 +72,7 @@ mod tests {
         make_schema,
         model::{
             Annotate, CanonicalIdent, InsertProvenance, Projection, ProjectionColumn, Provenance,
-            SelectProvenance, Source, SourceItem, SqlIdent, Table, TableColumn,
+            SelectProvenance, SourceItem, SqlIdent, Table, TableColumn,
         },
         DeleteProvenance, ProvenanceAnalyser,
     };
@@ -113,22 +113,21 @@ mod tests {
                     assert_eq!(
                         projection.deref(),
                         &Projection::Columns(vec![ProjectionColumn {
-                            source: Source::single(SourceItem::TableColumn(user_id_column.clone()))
-                                .into(),
+                            source: SourceItem::TableColumn(user_id_column.clone()).into(),
                             alias: Some(SqlIdent::unquoted("id").into())
                         }
                         .into()])
                     );
                 }
                 Ok(_) => {
-                    assert!(false, "Wrong Provenance variant")
+                    panic!("Wrong Provenance variant")
                 }
                 Err(err) => {
-                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                    panic!("Error retrieving Provenance: {:#?}", err)
                 }
             },
             Err(err) => {
-                assert!(false, "Error during AST evaluation: {:#?}", err)
+                panic!("Error during AST evaluation: {:#?}", err)
             }
         }
     }
@@ -168,10 +167,10 @@ mod tests {
                     assert_eq!(
                         projection.deref(),
                         &Projection::Columns(vec![ProjectionColumn {
-                            source: Source::single(SourceItem::TableColumn(TableColumn::new(
+                            source: SourceItem::TableColumn(TableColumn::new(
                                 Rc::clone(&users_table),
                                 Rc::clone(&user_id_column),
-                            )))
+                            ))
                             .into(),
                             alias: Some(SqlIdent::unquoted("id").into())
                         }
@@ -179,14 +178,14 @@ mod tests {
                     );
                 }
                 Ok(_) => {
-                    assert!(false, "Wrong Provenance variant")
+                    panic!("Wrong Provenance variant")
                 }
                 Err(err) => {
-                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                    panic!("Error retrieving Provenance: {:#?}", err)
                 }
             },
             Err(err) => {
-                assert!(false, "Error during AST evaluation: {:#?}", err)
+                panic!("Error during AST evaluation: {:#?}", err)
             }
         }
     }
@@ -263,10 +262,7 @@ mod tests {
                         projection,
                         &Projection::Columns(vec![
                             ProjectionColumn {
-                                source: Source::single(SourceItem::TableColumn(
-                                    user_id_column.clone()
-                                ))
-                                .into(),
+                                source: SourceItem::TableColumn(user_id_column.clone()).into(),
                                 alias: Some(SqlIdent::unquoted("user_id").into())
                             }
                             .into(),
@@ -290,14 +286,14 @@ mod tests {
                     );
                 }
                 Ok(_) => {
-                    assert!(false, "Wrong Provenance variant")
+                    panic!("Wrong Provenance variant")
                 }
                 Err(err) => {
-                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                    panic!("Error retrieving Provenance: {:#?}", err)
                 }
             },
             Err(err) => {
-                assert!(false, "Error during AST evaluation: {:#?}", err)
+                panic!("Error during AST evaluation: {:#?}", err)
             }
         }
     }
@@ -351,34 +347,22 @@ mod tests {
                         projection,
                         &Projection::Columns(vec![
                             ProjectionColumn {
-                                source: Source::single(SourceItem::TableColumn(
-                                    films_id_column.clone()
-                                ))
-                                .into(),
+                                source: SourceItem::TableColumn(films_id_column.clone()).into(),
                                 alias: Some(SqlIdent::unquoted("id").into())
                             }
                             .into(),
                             ProjectionColumn {
-                                source: Source::single(SourceItem::TableColumn(
-                                    films_title_column.clone()
-                                ))
-                                .into(),
+                                source: SourceItem::TableColumn(films_title_column.clone()).into(),
                                 alias: Some(SqlIdent::unquoted("title").into())
                             }
                             .into(),
                             ProjectionColumn {
-                                source: Source::single(SourceItem::TableColumn(
-                                    films_length_column.clone()
-                                ))
-                                .into(),
+                                source: SourceItem::TableColumn(films_length_column.clone()).into(),
                                 alias: Some(SqlIdent::unquoted("length").into())
                             }
                             .into(),
                             ProjectionColumn {
-                                source: Source::single(SourceItem::TableColumn(
-                                    films_rating_column.clone()
-                                ))
-                                .into(),
+                                source: SourceItem::TableColumn(films_rating_column.clone()).into(),
                                 alias: Some(SqlIdent::unquoted("rating").into())
                             }
                             .into(),
@@ -386,14 +370,14 @@ mod tests {
                     );
                 }
                 Ok(_) => {
-                    assert!(false, "Wrong Provenance variant")
+                    panic!("Wrong Provenance variant")
                 }
                 Err(err) => {
-                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                    panic!("Error retrieving Provenance: {:#?}", err)
                 }
             },
             Err(err) => {
-                assert!(false, "Error during AST evaluation: {:#?}", err)
+                panic!("Error during AST evaluation: {:#?}", err)
             }
         }
     }
@@ -421,25 +405,22 @@ mod tests {
                     assert_eq!(
                         projection,
                         &Projection::Columns(vec![ProjectionColumn {
-                            source: Source::single(SourceItem::Value(Value::Number(
-                                BigDecimal::from(123),
-                                false
-                            )))
-                            .into(),
+                            source: SourceItem::Value(Value::Number(BigDecimal::from(123), false))
+                                .into(),
                             alias: Some(SqlIdent::unquoted("id").into())
                         }
                         .into(),])
                     );
                 }
                 Ok(_) => {
-                    assert!(false, "Wrong Provenance variant")
+                    panic!("Wrong Provenance variant")
                 }
                 Err(err) => {
-                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                    panic!("Error retrieving Provenance: {:#?}", err)
                 }
             },
             Err(err) => {
-                assert!(false, "Error during AST evaluation: {:#?}", err)
+                panic!("Error during AST evaluation: {:#?}", err)
             }
         }
     }
@@ -487,52 +468,40 @@ mod tests {
                             columns_written[0].column.deref(),
                             &CanonicalIdent::from("title")
                         );
-                        assert_eq!(
-                            columns_written[0].data.deref(),
-                            &Source::single(SourceItem::ColumnOfValues)
-                        );
+                        assert_eq!(columns_written[0].data.deref(), &SourceItem::ColumnOfValues);
 
                         assert_eq!(
                             columns_written[1].column.deref(),
                             &CanonicalIdent::from("length")
                         );
-                        assert_eq!(
-                            columns_written[1].data.deref(),
-                            &Source::single(SourceItem::ColumnOfValues)
-                        );
+                        assert_eq!(columns_written[1].data.deref(), &SourceItem::ColumnOfValues);
 
                         assert_eq!(&*columns_written[2].column, &CanonicalIdent::from("rating"));
-                        assert_eq!(
-                            columns_written[2].data.deref(),
-                            &Source::single(SourceItem::ColumnOfValues)
-                        );
+                        assert_eq!(columns_written[2].data.deref(), &SourceItem::ColumnOfValues);
 
                         let projection = projection.deref();
 
                         assert_eq!(
                             projection,
                             &Projection::Columns(vec![ProjectionColumn {
-                                source: Source::single(SourceItem::TableColumn(
-                                    films_id_column.clone()
-                                ))
-                                .into(),
+                                source: SourceItem::TableColumn(films_id_column.clone()).into(),
                                 alias: Some(SqlIdent::unquoted("id").into())
                             }
                             .into(),])
                         );
                     } else {
-                        assert!(false, "expected Some(projection)")
+                        panic!("expected Some(projection)")
                     }
                 }
                 Ok(_) => {
-                    assert!(false, "Wrong Provenance variant")
+                    panic!("Wrong Provenance variant")
                 }
                 Err(err) => {
-                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                    panic!("Error retrieving Provenance: {:#?}", err)
                 }
             },
             Err(err) => {
-                assert!(false, "Error during AST evaluation: {:#?}", err)
+                panic!("Error during AST evaluation: {:#?}", err)
             }
         }
     }
@@ -573,27 +542,24 @@ mod tests {
                         assert_eq!(
                             projection,
                             &Projection::Columns(vec![ProjectionColumn {
-                                source: Source::single(SourceItem::TableColumn(
-                                    films_id_column.clone()
-                                ))
-                                .into(),
+                                source: SourceItem::TableColumn(films_id_column.clone()).into(),
                                 alias: Some(SqlIdent::unquoted("id").into())
                             }
                             .into(),])
                         );
                     } else {
-                        assert!(false, "expected Some(projection)")
+                        panic!("expected Some(projection)")
                     }
                 }
                 Ok(_) => {
-                    assert!(false, "Wrong Provenance variant")
+                    panic!("Wrong Provenance variant")
                 }
                 Err(err) => {
-                    assert!(false, "Error retrieving Provenance: {:#?}", err)
+                    panic!("Error retrieving Provenance: {:#?}", err)
                 }
             },
             Err(err) => {
-                assert!(false, "Error during AST evaluation: {:#?}", err)
+                panic!("Error during AST evaluation: {:#?}", err)
             }
         }
     }

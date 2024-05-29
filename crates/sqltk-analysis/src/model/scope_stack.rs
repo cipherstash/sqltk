@@ -2,8 +2,8 @@
 //! traversal.
 use crate::{
     model::{
-        InvariantFailedError, NamedRelation, Projection, ProjectionColumn, ResolutionError, Source,
-        SqlIdent,
+        InvariantFailedError, NamedRelation, Projection, ProjectionColumn, ResolutionError,
+        SourceItem, SqlIdent,
     },
     ProjectionColumnsIterator,
 };
@@ -120,7 +120,7 @@ impl Scope {
     }
 
     /// Uniquely resolves an identifier against all relations that are in scope.
-    pub fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<Source>, ResolutionError> {
+    pub fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<SourceItem>, ResolutionError> {
         let mut bindings_iter = AllColumnsIterator::new(self.items.iter());
 
         match SqlIdent::try_find_unique(ident, &mut bindings_iter) {
@@ -140,7 +140,7 @@ impl Scope {
     pub fn resolve_compound_ident(
         &self,
         idents: &[SqlIdent],
-    ) -> Result<Rc<Source>, ResolutionError> {
+    ) -> Result<Rc<SourceItem>, ResolutionError> {
         if idents.len() != 2 {
             return Err(ResolutionError::InvariantFailed(
                 InvariantFailedError::MaxCompoundIdentLengthExceeded(idents.len() as u8),
@@ -288,10 +288,10 @@ mod test {
             name: Rc::new(SqlIdent::Canonical(name.deref().clone())),
             projection: Projection::Columns(Vec::from_iter(table.columns.iter().map(|column| {
                 ProjectionColumn::new(
-                    Rc::new(Source::single(SourceItem::TableColumn(TableColumn {
+                    Rc::new(SourceItem::TableColumn(TableColumn {
                         table: Rc::clone(&table),
                         column: Rc::clone(column),
-                    }))),
+                    })),
                     Some(Rc::new(SqlIdent::Canonical(column.name.deref().clone()))),
                 )
                 .into()

@@ -1,5 +1,5 @@
 //! Errors that can be returned during resolution of identifiers in scope or
-//! when attempting to resolve the [`crate::model::sources::Source`] of an
+//! when attempting to resolve the [`crate::model::sources::SourceItem`] of an
 //! [`sqlparser::ast::Expr`].
 
 use std::rc::Rc;
@@ -10,7 +10,7 @@ use crate::{
     model::annotate::ExpectedAnnotationError,
     model::projection::{Projection, ProjectionColumn},
     model::schema::{AmbiguousMatchError, FindUniqueMatchError},
-    model::source_annotation::Source,
+    model::source_item::SourceItem,
     model::Provenance,
 };
 
@@ -43,7 +43,7 @@ pub enum ResolutionError {
     InvariantFailed(#[from] InvariantFailedError),
 
     #[error("Missing source annotation: {}", _0)]
-    ExpectedSourceAnnotation(#[from] ExpectedAnnotationError<Source>),
+    ExpectedSourceAnnotation(#[from] ExpectedAnnotationError<SourceItem>),
 
     #[error("Missing statement annotation: {}", _0)]
     ExpectedProvenanceAnnotation(#[from] ExpectedAnnotationError<Provenance>),

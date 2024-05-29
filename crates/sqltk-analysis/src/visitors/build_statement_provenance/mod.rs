@@ -15,7 +15,7 @@ use sqlparser::ast::{Expr, Query, SelectItem, Statement};
 
 use crate::{
     model::{Annotate, Projection, ResolutionError, ScopeOps},
-    AnnotateMut, ProjectionColumn, Provenance, SchemaOps, Source,
+    AnnotateMut, ProjectionColumn, Provenance, SchemaOps, SourceItem,
 };
 
 #[derive(Debug, Visitor)]
@@ -31,7 +31,7 @@ use crate::{
 pub struct BuildStatementProvenance<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>)
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + Annotate<'ast, Vec<SelectItem>, Projection>
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
         + Annotate<'ast, Query, Projection>
@@ -41,7 +41,7 @@ where
 impl<'ast, State> Default for BuildStatementProvenance<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + Annotate<'ast, Vec<SelectItem>, Projection>
         + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
         + Annotate<'ast, Query, Projection>

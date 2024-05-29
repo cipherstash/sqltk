@@ -4,7 +4,7 @@ use crate::model::{
     projection::Projection,
     resolution_error::ResolutionError,
     schema::SqlIdent,
-    source_annotation::{NamedRelation, Source},
+    source_item::{NamedRelation, SourceItem},
 };
 
 /// Operations for manipulating lexical scope and resolving identifiers that are in-scope.
@@ -28,10 +28,11 @@ pub trait ScopeOps {
     fn resolve_relation(&mut self, name: &SqlIdent) -> Result<Rc<NamedRelation>, ResolutionError>;
 
     /// Resolves an identifier within the current scope.
-    fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<Source>, ResolutionError>;
+    fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<SourceItem>, ResolutionError>;
 
     /// Resolves a compound identifier within the current scope.
-    fn resolve_compound_ident(&self, ident: &[SqlIdent]) -> Result<Rc<Source>, ResolutionError>;
+    fn resolve_compound_ident(&self, ident: &[SqlIdent])
+        -> Result<Rc<SourceItem>, ResolutionError>;
 
     /// Expands a wildcard within the current scope.
     fn resolve_wildcard(&self) -> Result<Rc<Projection>, ResolutionError>;

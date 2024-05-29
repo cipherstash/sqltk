@@ -8,7 +8,7 @@ use crate::{
     model::Projection,
     model::ResolutionError,
     model::ScopeOps,
-    model::{NamedRelation, Source},
+    model::{NamedRelation, SourceItem},
     model::{SqlIdent, UnquotedIdent},
     SchemaOps,
 };
@@ -18,7 +18,8 @@ pub struct ImportFromCte<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>)
 
 impl<'ast, State> Default for ImportFromCte<'ast, State>
 where
-    State: ScopeOps + Annotate<'ast, Expr, Source> + Annotate<'ast, Query, Projection> + SchemaOps,
+    State:
+        ScopeOps + Annotate<'ast, Expr, SourceItem> + Annotate<'ast, Query, Projection> + SchemaOps,
 {
     fn default() -> Self {
         Self(PhantomData, PhantomData)
@@ -27,7 +28,8 @@ where
 
 impl<'ast, State> Visitor<'ast> for ImportFromCte<'ast, State>
 where
-    State: ScopeOps + Annotate<'ast, Expr, Source> + Annotate<'ast, Query, Projection> + SchemaOps,
+    State:
+        ScopeOps + Annotate<'ast, Expr, SourceItem> + Annotate<'ast, Query, Projection> + SchemaOps,
 {
     type Error = ResolutionError;
     type State = State;

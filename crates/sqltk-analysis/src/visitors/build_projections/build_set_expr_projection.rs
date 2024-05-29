@@ -4,8 +4,8 @@ use sqlparser::ast::{Expr, Query, Select, SetExpr};
 use sqltk::{flow, Visitable, Visitor, VisitorControlFlow};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps, Source},
-    AnnotateMut, ProjectionColumn, SchemaOps, SourceItem,
+    model::{Annotate, Projection, ResolutionError, ScopeOps, SourceItem},
+    AnnotateMut, ProjectionColumn, SchemaOps,
 };
 
 #[derive(Debug)]
@@ -14,7 +14,7 @@ pub struct BuildSetExprProjection<'ast, State>(PhantomData<&'ast ()>, PhantomDat
 impl<'ast, State> Default for BuildSetExprProjection<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + Annotate<'ast, Select, Projection>
         + Annotate<'ast, Query, Projection>
         + AnnotateMut<'ast, SetExpr, Projection>
@@ -28,7 +28,7 @@ where
 impl<'ast, State> Visitor<'ast> for BuildSetExprProjection<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, Source>
+        + Annotate<'ast, Expr, SourceItem>
         + Annotate<'ast, Select, Projection>
         + Annotate<'ast, Query, Projection>
         + AnnotateMut<'ast, SetExpr, Projection>
@@ -108,7 +108,7 @@ where
                     let projection_columns = (0..number_of_columns)
                         .map(|_| {
                             Rc::new(ProjectionColumn::new(
-                                Rc::new(Source::single(SourceItem::ColumnOfValues)),
+                                Rc::new(SourceItem::ColumnOfValues),
                                 None,
                             ))
                         })

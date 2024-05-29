@@ -9,7 +9,7 @@ use std::{rc::Rc, sync::Arc};
 use crate::{
     model::{
         Annotate, AnnotateMut, AnnotationStore, ExpectedAnnotationError, NamedRelation, Projection,
-        ProjectionColumn, ResolutionError, Schema, ScopeOps, ScopeStack, Source, SqlIdent,
+        ProjectionColumn, ResolutionError, Schema, ScopeOps, ScopeStack, SourceItem, SqlIdent,
     },
     provenance::Provenance,
     schema_api::SchemaOps,
@@ -25,7 +25,7 @@ pub struct ProvenanceState<'ast> {
 pub trait ProvenanceStateBounds<'ast>
 where
     Self: ScopeOps
-        + AnnotateMut<'ast, Expr, Source>
+        + AnnotateMut<'ast, Expr, SourceItem>
         + AnnotateMut<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
         + AnnotateMut<'ast, Vec<SelectItem>, Projection>
         + AnnotateMut<'ast, Expr, Projection>
@@ -47,7 +47,7 @@ pub struct InnerState<'ast> {
     /// The current lexical scope.
     scope: ScopeStack,
 
-    expr_sources: AnnotationStore<'ast, Expr, Source>,
+    expr_sources: AnnotationStore<'ast, Expr, SourceItem>,
     select_item_projection_columns: AnnotationStore<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>,
     vec_of_select_item_projections: AnnotationStore<'ast, Vec<SelectItem>, Projection>,
     expr_projections: AnnotationStore<'ast, Expr, Projection>,
@@ -111,7 +111,7 @@ macro_rules! annotate {
     };
 }
 
-annotate!(expr_sources, Expr, Source);
+annotate!(expr_sources, Expr, SourceItem);
 annotate!(
     select_item_projection_columns,
     SelectItem,
@@ -154,11 +154,14 @@ impl<'ast> ScopeOps for ProvenanceState<'ast> {
         self.inner.scope.resolve_relation(name)
     }
 
-    fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<Source>, ResolutionError> {
+    fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<SourceItem>, ResolutionError> {
         self.inner.scope.resolve_ident(ident)
     }
 
-    fn resolve_compound_ident(&self, ident: &[SqlIdent]) -> Result<Rc<Source>, ResolutionError> {
+    fn resolve_compound_ident(
+        &self,
+        ident: &[SqlIdent],
+    ) -> Result<Rc<SourceItem>, ResolutionError> {
         self.inner.scope.resolve_compound_ident(ident)
     }
 
