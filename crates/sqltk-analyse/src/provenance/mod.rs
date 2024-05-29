@@ -7,7 +7,7 @@ use crate::build_projections::BuildProjections;
 use crate::build_statement_provenance::BuildStatementProvenance;
 use crate::trace_expr_sources::TraceExprSources;
 use crate::{
-    import_relations::ImportRelations, model::Provenance, model::ResolutionError,
+    import_relations::ImportRelations, model::ResolutionError,
     update_stack::UpdateStack,
 };
 

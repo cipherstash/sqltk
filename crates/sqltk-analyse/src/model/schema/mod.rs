@@ -7,7 +7,10 @@ use derive_more::Display;
 use std::rc::Rc;
 
 mod sql_ident;
+mod schema_api;
+
 pub use sql_ident::*;
+pub use schema_api::*;
 
 use super::source_item::TableColumn;
 

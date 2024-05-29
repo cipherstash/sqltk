@@ -443,7 +443,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sqltk-analysis"
+name = "sqltk-analyse"
 version = "0.1.0"
 dependencies = [
  "bigdecimal",

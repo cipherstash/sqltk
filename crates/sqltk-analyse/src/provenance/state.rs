@@ -6,13 +6,10 @@ use sqlparser::ast::{Expr, Query, SelectItem, SetExpr, Statement};
 use sqltk::prelude::Select;
 use std::{rc::Rc, sync::Arc};
 
-use crate::{
-    model::{
-        Annotate, AnnotateMut, AnnotationStore, ExpectedAnnotationError, NamedRelation, Projection,
-        ProjectionColumn, ResolutionError, Schema, ScopeOps, ScopeStack, SourceItem, SqlIdent,
-    },
-    provenance::Provenance,
-    schema_api::SchemaOps,
+use crate::model::{
+    Annotate, AnnotateMut, AnnotationStore, ExpectedAnnotationError, NamedRelation, Projection,
+    ProjectionColumn, Provenance, ResolutionError, Schema, SchemaOps, ScopeOps, ScopeStack,
+    SourceItem, SqlIdent,
 };
 
 /// State that is tracked during AST traversal for provenance analysis.

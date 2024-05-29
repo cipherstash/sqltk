@@ -1,9 +1,9 @@
 [package]
-name = "sqltk-analysis"
+name = "sqltk-analyse"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Perform semantic analysis of SQL statements"
+keywords = ["SQL", "analyse", "analyze", "semantic", "query", "statement", "database", "visitor", "AST"]
 
 [dependencies]
 derive_more = "0.99.17"
