@@ -8,7 +8,12 @@ fn main() -> std::io::Result<()> {
 
     fs::write(
         PathBuf::from(&std::env::var("OUT_DIR").unwrap()).join("generated_visitable_impls.rs"),
-        *sqltk_codegen::AST_NODE_IMPLS,
+        *sqltk_codegen::VISITABLE_IMPLS,
+    )?;
+
+    fs::write(
+        PathBuf::from(&std::env::var("OUT_DIR").unwrap()).join("generated_apply_transform_impls.rs"),
+        *sqltk_codegen::APPLY_TRANSFORM_IMPLS,
     )?;
 
     Ok(())

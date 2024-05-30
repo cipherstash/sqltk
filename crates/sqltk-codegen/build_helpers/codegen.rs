@@ -1,5 +1,6 @@
 use super::meta::{PrimitiveNode, SqlParserMetaQuery};
 use super::reachability::Reachability;
+use super::apply_transform_trait_impls::ApplyTransformImpl;
 use super::{sqlparser_node_extractor, visitable_trait_impls::VisitableImpl};
 use proc_macro2::TokenStream;
 
@@ -21,6 +22,38 @@ impl Codegen {
     pub fn new() -> Self {
         Self {
             meta: SqlParserMetaQuery::from(sqlparser_node_extractor::extract(vec![])),
+        }
+    }
+    pub fn generate_apply_transform_impls(&self, dest_file: &PathBuf) {
+        let mut generated_code = TokenStream::new();
+
+        let main_nodes = self.meta.main_nodes();
+
+        let transformable_impls_for_main_nodes = main_nodes
+            .iter()
+            .map(|(type_path, type_def)| ApplyTransformImpl::new(type_path, type_def));
+
+        let transformable_impls_for_primitive_nodes =
+            self.impl_transformable_for_primitive_nodes(self.meta.primitive_nodes());
+
+        generated_code.append_all(quote! {
+            #(#transformable_impls_for_main_nodes)*
+            #transformable_impls_for_primitive_nodes
+        });
+
+        let mut file = File::create(dest_file)
+            .unwrap_or_else(|_| panic!("Could not open {}", &dest_file.display()));
+
+        let parsed = syn::parse_file(&generated_code.to_string());
+        let formatted = parsed.map(|parsed| prettyplease::unparse(&parsed));
+
+        match formatted {
+            Ok(formatted) => file
+                .write_all(formatted.as_bytes())
+                .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display())),
+            Err(_) => file
+                .write_all(generated_code.to_string().as_bytes())
+                .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display())),
         }
     }
 
@@ -99,6 +132,35 @@ impl Codegen {
                                 visitor.continue_with_state(state)
                             }
                         )
+                    }
+                }
+            });
+        }
+
+        output
+    }
+
+    pub(crate) fn impl_transformable_for_primitive_nodes(
+        &self,
+        primitive_nodes: impl IntoIterator<Item = PrimitiveNode>,
+    ) -> TokenStream {
+        let mut output = proc_macro2::TokenStream::new();
+
+        for node in primitive_nodes {
+            let type_path = node.type_path();
+
+            output.append_all(quote! {
+                #[automatically_derived]
+                impl<'ast> crate::ApplyTransform<'ast> for #type_path {
+                    fn apply_transform<T>(
+                        &'ast self,
+                        transform: &T,
+                        context: &T::Context,
+                    ) -> Result<Self, T::Error>
+                    where
+                        T: crate::Transform<'ast>
+                    {
+                        transform.transform(self, self.clone(), context)
                     }
                 }
             });

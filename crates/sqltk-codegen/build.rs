@@ -13,6 +13,10 @@ fn main() {
         &output_path("reachability-debug.txt"),
     );
 
+    codegen.generate_apply_transform_impls(
+        &output_path("apply_transform_impls.rs"),
+    );
+
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo:rerun-if-changed=Cargo.lock");

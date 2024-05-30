@@ -1,6 +1,9 @@
 mod visitable_impls;
+mod transformable_impls;
+mod transform;
 
 pub mod visitor_extensions;
+pub use transform::*;
 
 // Re-export sqlparser
 pub use sqlparser;
@@ -98,6 +101,11 @@ where
     /// Convenience for downcasting a `self` to a concrete [`Visitable`].
     fn downcast_ref<To: Visitable<'ast>>(&'ast self) -> Option<&'ast To> {
         (self as &dyn Any).downcast_ref::<To>()
+    }
+
+    /// Convenience for downcasting a `self` to a concrete mutatble [`Visitable`].
+    fn downcast_mut<To: Visitable<'ast>>(&'ast mut self) -> Option<&'ast mut To> {
+        (self as &mut dyn Any).downcast_mut::<To>()
     }
 
     /// Convenience for testing if `self` is a specific [`Visitable`] type.
