@@ -12,7 +12,7 @@ mod sql_ident;
 pub use schema_api::*;
 pub use sql_ident::*;
 
-use super::source_item::TableColumn;
+use super::expr_source::TableColumn;
 
 /// A database schema.
 ///

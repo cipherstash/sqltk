@@ -11,10 +11,11 @@ use std::rc::Rc;
 
 use crate::model::Projection;
 use crate::model::{Column, SqlIdent, Table};
+use crate::ColumnWithOptionalAlias;
 
-/// A `SourceItem` records the provenance of a single `Expr` or `SelectItem` node.
+/// `ExprSource` records the provenance of a single `Expr` node.
 ///
-/// A `SourceItem` refers to one or more [`SourceItem`]s.
+/// `ExprSource` refers to one or more [`ExprSource`]s.
 ///
 /// For example in SQL statement below, `full_name` is an expression with two
 /// `TableColumn` sources: `first_name` and `last_name`
@@ -22,24 +23,17 @@ use crate::model::{Column, SqlIdent, Table};
 /// ```sql
 /// SELECT (users.first_name || ' ' || users.last_name) as full_name from user;
 /// ```
-///
-/// `SourceItem` is not implemented recursively. When deriving the source for an
-/// expression that contains subexpression with existing `SourceItem`s, the items
-/// from the subexpression are merged into the parent.
-///
-/// Internally the items are stored in a [`BTreeSet<Rc<SourceItem>>`]. Only the
-/// [`Rc`] is cloned when merging, not the `SourceItem`s themselves. This means
-/// arbitrary large AST values contained within a `SourceItem` are allocated
-/// only once.
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub enum SourceItem {
-    /// Refers to a Table + Column
+pub enum ExprSource {
+    /// Refers to a column of a specific table
     TableColumn(TableColumn),
 
-    /// Refers to an entire projection of a sub-query
+    /// Refers to an entire projection of a sub-query.
+    /// Required because an Expr node can contain a Query node.
     Projection(Rc<Projection>),
 
     /// A literal or a placeholder
+    // TODO: split out values and placeholders
     Value(Value),
 
     /// A column of a `VALUES` expression (which can contain multiple rows).
@@ -59,10 +53,12 @@ pub enum SourceItem {
     /// A value produced by a function call.
     FunctionCall {
         ident: SqlIdent,
-        arg_sources: Vec<Rc<SourceItem>>,
+        arg_sources: Vec<Rc<ExprSource>>,
     },
 
-    Multiple(Vec<Rc<SourceItem>>),
+    Multiple(Vec<Rc<ExprSource>>),
+
+    ResolvedWildcard(Vec<Rc<ColumnWithOptionalAlias>>),
 }
 
 /// Describes a reference to a table + column.

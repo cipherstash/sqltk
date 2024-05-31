@@ -8,8 +8,8 @@ use sqlparser::ast::{Expr, Query, Select, SetExpr};
 use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps, SourceItem},
-    AnnotateMut, ProjectionColumn, SchemaOps,
+    model::{Annotate, Projection, ResolutionError, ScopeOps, ExprSource},
+    AnnotateMut, ColumnWithOptionalAlias, SchemaOps,
 };
 
 #[derive(Debug)]
@@ -18,7 +18,7 @@ pub struct BuildSetExprProjection<'ast, State>(PhantomData<&'ast ()>, PhantomDat
 impl<'ast, State> Default for BuildSetExprProjection<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, SourceItem>
+        + Annotate<'ast, Expr, ExprSource>
         + Annotate<'ast, Select, Projection>
         + Annotate<'ast, Query, Projection>
         + AnnotateMut<'ast, SetExpr, Projection>
@@ -32,7 +32,7 @@ where
 impl<'ast, State> Visitor<'ast> for BuildSetExprProjection<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, SourceItem>
+        + Annotate<'ast, Expr, ExprSource>
         + Annotate<'ast, Select, Projection>
         + Annotate<'ast, Query, Projection>
         + AnnotateMut<'ast, SetExpr, Projection>
@@ -91,10 +91,15 @@ where
                         Ok((left_projection, right_projection)) => {
                             state.set_annotation(
                                 set_expr,
-                                Projection::Concatenated(vec![
-                                    left_projection.clone(),
-                                    right_projection.clone(),
-                                ]),
+                                Projection {
+                                    columns: Vec::from_iter(
+                                        left_projection
+                                            .columns
+                                            .iter()
+                                            .cloned()
+                                            .chain(right_projection.columns.iter().cloned()),
+                                    ),
+                                },
                             );
 
                             self.continue_with_state(state)
@@ -111,14 +116,19 @@ where
 
                     let projection_columns = (0..number_of_columns)
                         .map(|_| {
-                            Rc::new(ProjectionColumn::new(
-                                Rc::new(SourceItem::ColumnOfValues),
+                            Rc::new(ColumnWithOptionalAlias::new(
+                                Rc::new(ExprSource::ColumnOfValues),
                                 None,
                             ))
                         })
                         .collect::<Vec<_>>();
 
-                    state.set_annotation(set_expr, Projection::Columns(projection_columns));
+                    state.set_annotation(
+                        set_expr,
+                        Projection {
+                            columns: projection_columns,
+                        },
+                    );
 
                     self.continue_with_state(state)
                 }

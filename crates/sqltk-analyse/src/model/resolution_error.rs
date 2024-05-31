@@ -1,5 +1,5 @@
 //! Errors that can be returned during resolution of identifiers in scope or
-//! when attempting to resolve the [`crate::model::sources::SourceItem`] of an
+//! when attempting to resolve the [`crate::model::sources::Source`] of an
 //! [`sqlparser::ast::Expr`].
 
 use std::rc::Rc;
@@ -7,11 +7,8 @@ use std::rc::Rc;
 use sqlparser::ast::{Expr, Query, SetExpr};
 
 use crate::{
-    model::annotate::ExpectedAnnotationError,
-    model::projection::{Projection, ProjectionColumn},
-    model::schema::{AmbiguousMatchError, FindUniqueMatchError},
-    model::source_item::SourceItem,
-    model::Provenance,
+    model::{annotate::ExpectedAnnotationError, expr_source::ExprSource, projection::Projection, schema::{AmbiguousMatchError, FindUniqueMatchError}, ColumnWithOptionalAlias, Provenance},
+    SelectItemSource,
 };
 
 /// Error that can be returned when either:
@@ -43,7 +40,7 @@ pub enum ResolutionError {
     InvariantFailed(#[from] InvariantFailedError),
 
     #[error("Missing source annotation: {}", _0)]
-    ExpectedSourceAnnotation(#[from] ExpectedAnnotationError<SourceItem>),
+    ExpectedSourceAnnotation(#[from] ExpectedAnnotationError<ExprSource>),
 
     #[error("Missing statement annotation: {}", _0)]
     ExpectedProvenanceAnnotation(#[from] ExpectedAnnotationError<Provenance>),
@@ -52,7 +49,14 @@ pub enum ResolutionError {
     ExpectedProjectionAnnotation(#[from] ExpectedAnnotationError<Projection>),
 
     #[error("Missing projection column annotation: {}", _0)]
-    ExpectedProjectionColumnAnnotation(#[from] ExpectedAnnotationError<Vec<Rc<ProjectionColumn>>>),
+    ExpectedProjectionColumnAnnotation(
+        #[from] ExpectedAnnotationError<Vec<Rc<ColumnWithOptionalAlias>>>,
+    ),
+
+    #[error("Missing select item source annotation: {}", _0)]
+    ExpectedSelectItemSourceAnnotation(
+        #[from] ExpectedAnnotationError<SelectItemSource>,
+    ),
 
     #[error("Invalid subquery expression (selects more than one column) {}", _0)]
     InvalidSubqueryExpr(Box<Query>),

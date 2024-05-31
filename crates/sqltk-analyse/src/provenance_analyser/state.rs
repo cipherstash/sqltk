@@ -6,11 +6,9 @@ use sqlparser::ast::{Expr, Query, SelectItem, SetExpr, Statement};
 use sqltk::prelude::Select;
 use std::{rc::Rc, sync::Arc};
 
-use crate::model::{
-    Annotate, AnnotateMut, AnnotationStore, ExpectedAnnotationError, NamedRelation, Projection,
-    ProjectionColumn, Provenance, ResolutionError, Schema, SchemaOps, ScopeOps, ScopeStack,
-    SourceItem, SqlIdent,
-};
+use crate::{model::{
+    Annotate, AnnotateMut, AnnotationStore, ColumnWithOptionalAlias, ExpectedAnnotationError, ExprSource, NamedRelation, Projection, Provenance, ResolutionError, Schema, SchemaOps, ScopeOps, ScopeStack, SqlIdent
+}, SelectItemSource};
 
 /// State that is tracked during AST traversal for provenance analysis.
 #[derive(Debug)]
@@ -22,8 +20,8 @@ pub struct ProvenanceState<'ast> {
 pub trait ProvenanceStateBounds<'ast>
 where
     Self: ScopeOps
-        + AnnotateMut<'ast, Expr, SourceItem>
-        + AnnotateMut<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + AnnotateMut<'ast, Expr, ExprSource>
+        + AnnotateMut<'ast, SelectItem, SelectItemSource>
         + AnnotateMut<'ast, Vec<SelectItem>, Projection>
         + AnnotateMut<'ast, Expr, Projection>
         + AnnotateMut<'ast, Query, Projection>
@@ -44,8 +42,8 @@ pub struct InnerState<'ast> {
     /// The current lexical scope.
     scope: ScopeStack,
 
-    expr_sources: AnnotationStore<'ast, Expr, SourceItem>,
-    select_item_projection_columns: AnnotationStore<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>,
+    expr_sources: AnnotationStore<'ast, Expr, ExprSource>,
+    select_item_sources: AnnotationStore<'ast, SelectItem, SelectItemSource>,
     vec_of_select_item_projections: AnnotationStore<'ast, Vec<SelectItem>, Projection>,
     expr_projections: AnnotationStore<'ast, Expr, Projection>,
     query_projections: AnnotationStore<'ast, Query, Projection>,
@@ -60,8 +58,8 @@ impl<'ast> InnerState<'ast> {
             schema: schema.into(),
             scope: Default::default(),
             expr_sources: Default::default(),
+            select_item_sources: Default::default(),
             vec_of_select_item_projections: Default::default(),
-            select_item_projection_columns: Default::default(),
             expr_projections: Default::default(),
             query_projections: Default::default(),
             select_projections: Default::default(),
@@ -108,13 +106,17 @@ macro_rules! annotate {
     };
 }
 
-annotate!(expr_sources, Expr, SourceItem);
+annotate!(expr_sources, Expr, ExprSource);
 annotate!(
-    select_item_projection_columns,
+    select_item_sources,
     SelectItem,
-    Vec<Rc<ProjectionColumn>>
+    SelectItemSource
 );
-annotate!(vec_of_select_item_projections, Vec<SelectItem>, Projection);
+annotate!(
+    vec_of_select_item_projections,
+    Vec<SelectItem>,
+    Projection
+);
 annotate!(expr_projections, Expr, Projection);
 annotate!(query_projections, Query, Projection);
 annotate!(select_projections, Select, Projection);
@@ -151,25 +153,25 @@ impl<'ast> ScopeOps for ProvenanceState<'ast> {
         self.inner.scope.resolve_relation(name)
     }
 
-    fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<SourceItem>, ResolutionError> {
+    fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<ExprSource>, ResolutionError> {
         self.inner.scope.resolve_ident(ident)
     }
 
     fn resolve_compound_ident(
         &self,
         ident: &[SqlIdent],
-    ) -> Result<Rc<SourceItem>, ResolutionError> {
+    ) -> Result<Rc<ExprSource>, ResolutionError> {
         self.inner.scope.resolve_compound_ident(ident)
     }
 
-    fn resolve_wildcard(&self) -> Result<Rc<Projection>, ResolutionError> {
+    fn resolve_wildcard(&self) -> Result<Vec<Rc<ColumnWithOptionalAlias>>, ResolutionError> {
         self.inner.scope.resolve_wildcard()
     }
 
     fn resolve_qualified_wildcard(
         &self,
         idents: &[SqlIdent],
-    ) -> Result<Rc<Projection>, ResolutionError> {
+    ) -> Result<Vec<Rc<ColumnWithOptionalAlias>>, ResolutionError> {
         self.inner.scope.resolve_qualified_wildcard(idents)
     }
 }

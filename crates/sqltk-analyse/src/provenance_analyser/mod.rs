@@ -2,10 +2,9 @@
 
 use sqltk::Visitor;
 
-use crate::build_projection_columns::BuildProjectionColumns;
 use crate::build_projections::BuildProjections;
+use crate::build_sources::BuildSources;
 use crate::build_statement_provenance::BuildStatementProvenance;
-use crate::trace_expr_sources::TraceExprSources;
 use crate::{import_relations::ImportRelations, model::ResolutionError, update_stack::UpdateStack};
 
 use core::marker::PhantomData;
@@ -23,8 +22,7 @@ pub use state::*;
     children = [
         UpdateStack,
         ImportRelations,
-        TraceExprSources,
-        BuildProjectionColumns,
+        BuildSources,
         BuildProjections,
         BuildStatementProvenance,
     ]
@@ -68,8 +66,8 @@ mod tests {
     use crate::{
         make_schema,
         model::{
-            Annotate, CanonicalIdent, InsertProvenance, Projection, ProjectionColumn, Provenance,
-            SelectProvenance, SourceItem, SqlIdent, Table, TableColumn,
+            Annotate, CanonicalIdent, ColumnWithOptionalAlias, InsertProvenance, Projection,
+            Provenance, SelectProvenance, ExprSource, SqlIdent, Table, TableColumn,
         },
         DeleteProvenance, ProvenanceAnalyser,
     };
@@ -109,11 +107,13 @@ mod tests {
                     let SelectProvenance { projection } = provenance.deref();
                     assert_eq!(
                         projection.deref(),
-                        &Projection::Columns(vec![ProjectionColumn {
-                            source: SourceItem::TableColumn(user_id_column.clone()).into(),
-                            alias: Some(SqlIdent::unquoted("id").into())
+                        &Projection {
+                            columns: vec![ColumnWithOptionalAlias {
+                                source: ExprSource::TableColumn(user_id_column.clone()).into(),
+                                alias: Some(SqlIdent::unquoted("id").into())
+                            }
+                            .into()]
                         }
-                        .into()])
                     );
                 }
                 Ok(_) => {
@@ -163,15 +163,17 @@ mod tests {
                     let SelectProvenance { projection } = provenance.deref();
                     assert_eq!(
                         projection.deref(),
-                        &Projection::Columns(vec![ProjectionColumn {
-                            source: SourceItem::TableColumn(TableColumn::new(
-                                Rc::clone(&users_table),
-                                Rc::clone(&user_id_column),
-                            ))
-                            .into(),
-                            alias: Some(SqlIdent::unquoted("id").into())
+                        &Projection {
+                            columns: vec![ColumnWithOptionalAlias {
+                                source: ExprSource::TableColumn(TableColumn::new(
+                                    Rc::clone(&users_table),
+                                    Rc::clone(&user_id_column),
+                                ))
+                                .into(),
+                                alias: Some(SqlIdent::unquoted("id").into())
+                            }
+                            .into()]
                         }
-                        .into()])
                     );
                 }
                 Ok(_) => {
@@ -257,29 +259,31 @@ mod tests {
 
                     assert_eq!(
                         projection,
-                        &Projection::Columns(vec![
-                            ProjectionColumn {
-                                source: SourceItem::TableColumn(user_id_column.clone()).into(),
-                                alias: Some(SqlIdent::unquoted("user_id").into())
-                            }
-                            .into(),
-                            ProjectionColumn {
-                                source: SourceItem::TableColumn(todo_list_items_id_column.clone())
-                                    .into(),
-                                alias: Some(SqlIdent::unquoted("todo_list_item_id").into())
-                            }
-                            .into(),
-                            ProjectionColumn {
-                                source: SourceItem::TableColumn(
-                                    todo_list_items_description_column.clone()
-                                )
+                        &Projection {
+                            columns: vec![
+                                ColumnWithOptionalAlias {
+                                    source: ExprSource::TableColumn(user_id_column.clone()).into(),
+                                    alias: Some(SqlIdent::unquoted("user_id").into())
+                                }
                                 .into(),
-                                alias: Some(
-                                    SqlIdent::unquoted("todo_list_item_description").into()
-                                )
-                            }
-                            .into(),
-                        ])
+                                ColumnWithOptionalAlias {
+                                    source: ExprSource::TableColumn(todo_list_items_id_column.clone())
+                                        .into(),
+                                    alias: Some(SqlIdent::unquoted("todo_list_item_id").into())
+                                }
+                                .into(),
+                                ColumnWithOptionalAlias {
+                                    source: ExprSource::TableColumn(
+                                        todo_list_items_description_column.clone()
+                                    )
+                                    .into(),
+                                    alias: Some(
+                                        SqlIdent::unquoted("todo_list_item_description").into()
+                                    )
+                                }
+                                .into(),
+                            ]
+                        }
                     );
                 }
                 Ok(_) => {
@@ -342,28 +346,30 @@ mod tests {
 
                     assert_eq!(
                         projection,
-                        &Projection::Columns(vec![
-                            ProjectionColumn {
-                                source: SourceItem::TableColumn(films_id_column.clone()).into(),
-                                alias: Some(SqlIdent::unquoted("id").into())
-                            }
-                            .into(),
-                            ProjectionColumn {
-                                source: SourceItem::TableColumn(films_title_column.clone()).into(),
-                                alias: Some(SqlIdent::unquoted("title").into())
-                            }
-                            .into(),
-                            ProjectionColumn {
-                                source: SourceItem::TableColumn(films_length_column.clone()).into(),
-                                alias: Some(SqlIdent::unquoted("length").into())
-                            }
-                            .into(),
-                            ProjectionColumn {
-                                source: SourceItem::TableColumn(films_rating_column.clone()).into(),
-                                alias: Some(SqlIdent::unquoted("rating").into())
-                            }
-                            .into(),
-                        ])
+                        &Projection {
+                            columns: vec![
+                                ColumnWithOptionalAlias {
+                                    source: ExprSource::TableColumn(films_id_column.clone()).into(),
+                                    alias: Some(SqlIdent::unquoted("id").into())
+                                }
+                                .into(),
+                                ColumnWithOptionalAlias {
+                                    source: ExprSource::TableColumn(films_title_column.clone()).into(),
+                                    alias: Some(SqlIdent::unquoted("title").into())
+                                }
+                                .into(),
+                                ColumnWithOptionalAlias {
+                                    source: ExprSource::TableColumn(films_length_column.clone()).into(),
+                                    alias: Some(SqlIdent::unquoted("length").into())
+                                }
+                                .into(),
+                                ColumnWithOptionalAlias {
+                                    source: ExprSource::TableColumn(films_rating_column.clone()).into(),
+                                    alias: Some(SqlIdent::unquoted("rating").into())
+                                }
+                                .into(),
+                            ]
+                        }
                     );
                 }
                 Ok(_) => {
@@ -401,12 +407,14 @@ mod tests {
 
                     assert_eq!(
                         projection,
-                        &Projection::Columns(vec![ProjectionColumn {
-                            source: SourceItem::Value(Value::Number(BigDecimal::from(123), false))
-                                .into(),
-                            alias: Some(SqlIdent::unquoted("id").into())
+                        &Projection {
+                            columns: vec![ColumnWithOptionalAlias {
+                                source: ExprSource::Value(Value::Number(BigDecimal::from(123), false))
+                                    .into(),
+                                alias: Some(SqlIdent::unquoted("id").into())
+                            }
+                            .into()]
                         }
-                        .into(),])
                     );
                 }
                 Ok(_) => {
@@ -465,26 +473,28 @@ mod tests {
                             columns_written[0].column.deref(),
                             &CanonicalIdent::from("title")
                         );
-                        assert_eq!(columns_written[0].data.deref(), &SourceItem::ColumnOfValues);
+                        assert_eq!(columns_written[0].data.deref(), &ExprSource::ColumnOfValues);
 
                         assert_eq!(
                             columns_written[1].column.deref(),
                             &CanonicalIdent::from("length")
                         );
-                        assert_eq!(columns_written[1].data.deref(), &SourceItem::ColumnOfValues);
+                        assert_eq!(columns_written[1].data.deref(), &ExprSource::ColumnOfValues);
 
                         assert_eq!(&*columns_written[2].column, &CanonicalIdent::from("rating"));
-                        assert_eq!(columns_written[2].data.deref(), &SourceItem::ColumnOfValues);
+                        assert_eq!(columns_written[2].data.deref(), &ExprSource::ColumnOfValues);
 
                         let projection = projection.deref();
 
                         assert_eq!(
                             projection,
-                            &Projection::Columns(vec![ProjectionColumn {
-                                source: SourceItem::TableColumn(films_id_column.clone()).into(),
-                                alias: Some(SqlIdent::unquoted("id").into())
+                            &Projection {
+                                columns: vec![ColumnWithOptionalAlias {
+                                    source: ExprSource::TableColumn(films_id_column.clone()).into(),
+                                    alias: Some(SqlIdent::unquoted("id").into())
+                                }
+                                .into()]
                             }
-                            .into(),])
                         );
                     } else {
                         panic!("expected Some(projection)")
@@ -538,11 +548,13 @@ mod tests {
 
                         assert_eq!(
                             projection,
-                            &Projection::Columns(vec![ProjectionColumn {
-                                source: SourceItem::TableColumn(films_id_column.clone()).into(),
-                                alias: Some(SqlIdent::unquoted("id").into())
+                            &Projection {
+                                columns: vec![ColumnWithOptionalAlias {
+                                    source: ExprSource::TableColumn(films_id_column.clone()).into(),
+                                    alias: Some(SqlIdent::unquoted("id").into())
+                                }
+                                .into()]
                             }
-                            .into(),])
                         );
                     } else {
                         panic!("expected Some(projection)")

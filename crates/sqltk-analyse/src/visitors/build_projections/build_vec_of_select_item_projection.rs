@@ -1,11 +1,10 @@
-use std::{marker::PhantomData, ops::ControlFlow, rc::Rc};
+use std::{marker::PhantomData, ops::{ControlFlow, Deref}, rc::Rc};
 
 use sqlparser::ast::SelectItem;
 use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps},
-    AnnotateMut, ProjectionColumn,
+    model::{Annotate, Projection, ResolutionError, ScopeOps}, AnnotateMut, ColumnWithOptionalAlias, SelectItemSource
 };
 
 #[derive(Debug)]
@@ -14,7 +13,7 @@ pub struct BuildVecOfSelectItemProjection<'ast, State>(PhantomData<&'ast ()>, Ph
 impl<'ast, State> Default for BuildVecOfSelectItemProjection<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + Annotate<'ast, SelectItem, SelectItemSource>
         + AnnotateMut<'ast, Vec<SelectItem>, Projection>,
 {
     fn default() -> Self {
@@ -25,7 +24,7 @@ where
 impl<'ast, State> Visitor<'ast> for BuildVecOfSelectItemProjection<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + Annotate<'ast, SelectItem, SelectItemSource>
         + AnnotateMut<'ast, Vec<SelectItem>, Projection>,
 {
     type State = State;
@@ -42,22 +41,30 @@ where
                 .map(|item| {
                     state
                         .get_annotation(item)
-                        .map(|columns| columns.iter().cloned().collect::<Vec<_>>())
                 })
                 .collect::<Result<Vec<_>, _>>();
 
-            let result = result
-                .map(|all_columns| all_columns.into_iter().flatten().collect::<Vec<_>>())
-                .map(|columns| Rc::new(Projection::Columns(columns)))
-                .map_err(ResolutionError::from);
 
             match result {
-                Ok(projection) => {
+                Ok(sources) => {
+                    let mut all_columns: Vec<Rc<ColumnWithOptionalAlias>> = Vec::new();
+                    for source in sources.iter() {
+                        match source.deref() {
+                            SelectItemSource::ColumnWithOptionalAlias(column) => {
+                                all_columns.push(column.clone())
+                            }
+                            SelectItemSource::ResolvedWildcard(columns) => {
+                                all_columns.extend(columns.clone());
+                            }
+                        }
+                    }
+                    let projection = Rc::new(Projection { columns: all_columns });
                     state.set_annotation(items, projection);
                     self.continue_with_state(state)
                 }
-                Err(err) => self.break_with_error(err),
+                Err(err) => self.break_with_error(err.into()),
             }
+
         } else {
             self.continue_with_state(state)
         }

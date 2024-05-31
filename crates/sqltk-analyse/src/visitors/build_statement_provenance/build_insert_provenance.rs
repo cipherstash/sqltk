@@ -71,7 +71,7 @@ where
                                         .map(|ident| {
                                             Rc::new(CanonicalIdent::from(ident.value.as_str()))
                                         })
-                                        .zip(projection.columns_iter())
+                                        .zip(projection.columns.iter().cloned())
                                         .map(ColumnWritten::from)
                                         .collect::<Vec<_>>()
                                 })

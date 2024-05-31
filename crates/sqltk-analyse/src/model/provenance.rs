@@ -4,9 +4,9 @@ use crate::{
     model::{
         projection::Projection,
         schema::{CanonicalIdent, Table},
-        source_item::SourceItem,
+        expr_source::ExprSource,
     },
-    ProjectionColumn,
+    ColumnWithOptionalAlias,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
@@ -24,6 +24,7 @@ pub enum Provenance {
 pub struct SelectProvenance {
     pub projection: Rc<Projection>, // TODO: capture columns written & columns deleted
                                     // because SELECTs that use CTEs can contain embedded
+                                    // INSERT/DELETE/UPDATE sub-statements
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
@@ -49,11 +50,11 @@ pub struct DeleteProvenance {
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct ColumnWritten {
     pub column: Rc<CanonicalIdent>,
-    pub data: Rc<SourceItem>,
+    pub data: Rc<ExprSource>,
 }
 
-impl From<(Rc<CanonicalIdent>, Rc<ProjectionColumn>)> for ColumnWritten {
-    fn from(value: (Rc<CanonicalIdent>, Rc<ProjectionColumn>)) -> Self {
+impl From<(Rc<CanonicalIdent>, Rc<ColumnWithOptionalAlias>)> for ColumnWritten {
+    fn from(value: (Rc<CanonicalIdent>, Rc<ColumnWithOptionalAlias>)) -> Self {
         Self {
             column: value.0,
             data: value.1.source.clone(),

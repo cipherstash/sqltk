@@ -287,7 +287,7 @@ macro_rules! impl_named {
 
 use crate::Column;
 use crate::NamedRelation;
-use crate::ProjectionColumn;
+use crate::ColumnWithOptionalAlias;
 use crate::Schema;
 use crate::Table;
 
@@ -295,7 +295,7 @@ impl_named!(Schema, name, CanonicalIdent);
 impl_named!(Table, name, CanonicalIdent);
 impl_named!(Column, name, CanonicalIdent);
 impl_named!(NamedRelation, name, SqlIdent);
-impl_named!(ProjectionColumn, alias, Option<Rc<SqlIdent>>);
+impl_named!(ColumnWithOptionalAlias, alias, Option<Rc<SqlIdent>>);
 
 impl<'a, Other: 'a + Named, T> Named for &'a T
 where

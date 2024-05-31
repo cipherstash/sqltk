@@ -1,17 +1,21 @@
 mod annotate;
+mod column_with_optional_alias;
 mod projection;
 mod provenance;
 mod resolution_error;
 mod schema;
 mod scope_ops;
 mod scope_stack;
-mod source_item;
+mod expr_source;
+mod select_item_source;
 
 pub use annotate::*;
+pub use column_with_optional_alias::*;
 pub use projection::*;
 pub use provenance::*;
 pub use resolution_error::*;
 pub use schema::*;
 pub use scope_ops::*;
 pub use scope_stack::*;
-pub use source_item::*;
+pub use select_item_source::*;
+pub use expr_source::*;
