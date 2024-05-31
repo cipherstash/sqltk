@@ -61,6 +61,46 @@ pub enum ExprSource {
     ResolvedWildcard(Vec<Rc<ColumnWithOptionalAlias>>),
 }
 
+impl ExprSource {
+    /// Recursively resolves an `ExprSource` into a `Vec<TableColumn>`.
+    ///
+    /// The leaf nodes of the tree of `ExprSource`s do not necessarily resolve
+    /// into `TableColumn`s and the length of the returned `Vec` is unrelated
+    /// to the number of leaf nodes and may also be empty.
+    pub fn resolve_to_table_columns(&self) -> Vec<TableColumn> {
+        let mut output: Vec<TableColumn> = Vec::new();
+        self.resolve_to_table_columns_internal(&mut output);
+        output
+    }
+
+    fn resolve_to_table_columns_internal(&self, output: &mut Vec<TableColumn>) {
+        match self {
+            ExprSource::TableColumn(tc) => output.push(tc.clone()),
+            ExprSource::Projection(projection) => {
+                for col in projection.columns.deref() {
+                    col.source.resolve_to_table_columns_internal(output)
+                }
+            }
+            ExprSource::FunctionCall { arg_sources, .. } => {
+                for source in arg_sources {
+                    source.resolve_to_table_columns_internal(output)
+                }
+            },
+            ExprSource::Multiple(sources) => {
+                for source in sources {
+                    source.resolve_to_table_columns_internal(output)
+                }
+            },
+            ExprSource::ResolvedWildcard(columns) => {
+                for col in columns {
+                    col.source.resolve_to_table_columns_internal(output)
+                }
+            },
+            _ => {}
+        }
+    }
+}
+
 /// Describes a reference to a table + column.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd, new)]
 pub struct TableColumn {
