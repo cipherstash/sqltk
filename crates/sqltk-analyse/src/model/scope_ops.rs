@@ -1,11 +1,10 @@
 use std::rc::Rc;
 
-use crate::model::{
-    projection::Projection,
+use crate::{model::{
     resolution_error::ResolutionError,
     schema::SqlIdent,
-    source_item::{NamedRelation, SourceItem},
-};
+    expr_source::{NamedRelation, ExprSource},
+}, ColumnWithOptionalAlias};
 
 /// Operations for manipulating lexical scope and resolving identifiers that are in-scope.
 pub trait ScopeOps {
@@ -28,18 +27,18 @@ pub trait ScopeOps {
     fn resolve_relation(&mut self, name: &SqlIdent) -> Result<Rc<NamedRelation>, ResolutionError>;
 
     /// Resolves an identifier within the current scope.
-    fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<SourceItem>, ResolutionError>;
+    fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<ExprSource>, ResolutionError>;
 
     /// Resolves a compound identifier within the current scope.
     fn resolve_compound_ident(&self, ident: &[SqlIdent])
-        -> Result<Rc<SourceItem>, ResolutionError>;
+        -> Result<Rc<ExprSource>, ResolutionError>;
 
     /// Expands a wildcard within the current scope.
-    fn resolve_wildcard(&self) -> Result<Rc<Projection>, ResolutionError>;
+    fn resolve_wildcard(&self) -> Result<Vec<Rc<ColumnWithOptionalAlias>>, ResolutionError>;
 
     /// Expands a qualified wildcard within the current scope.
     fn resolve_qualified_wildcard(
         &self,
         ident: &[SqlIdent],
-    ) -> Result<Rc<Projection>, ResolutionError>;
+    ) -> Result<Vec<Rc<ColumnWithOptionalAlias>>, ResolutionError>;
 }

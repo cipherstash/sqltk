@@ -11,7 +11,7 @@ use sqlparser::ast::{Expr, Query, SetExpr};
 use sqltk::Visitor;
 
 use crate::{
-    model::Annotate, model::Projection, model::ResolutionError, model::ScopeOps, model::SourceItem,
+    model::Annotate, model::Projection, model::ResolutionError, model::ScopeOps, model::ExprSource,
     SchemaOps,
 };
 
@@ -28,7 +28,7 @@ pub struct ImportRelations<'ast, State>(PhantomData<&'ast ()>, PhantomData<State
 where
     State: Debug
         + ScopeOps
-        + Annotate<'ast, Expr, SourceItem>
+        + Annotate<'ast, Expr, ExprSource>
         + Annotate<'ast, SetExpr, Projection>
         + Annotate<'ast, Query, Projection>
         + SchemaOps;
@@ -37,7 +37,7 @@ impl<'ast, State> Default for ImportRelations<'ast, State>
 where
     State: Debug
         + ScopeOps
-        + Annotate<'ast, Expr, SourceItem>
+        + Annotate<'ast, Expr, ExprSource>
         + Annotate<'ast, SetExpr, Projection>
         + Annotate<'ast, Query, Projection>
         + SchemaOps,

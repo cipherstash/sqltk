@@ -13,11 +13,11 @@ use sqlparser::ast::{Expr, Query, Select, SelectItem, SetExpr};
 use sqltk::Visitor;
 
 use crate::{
-    model::{Annotate, Projection, ScopeOps, SourceItem},
-    AnnotateMut, ProjectionColumn, ResolutionError, SchemaOps,
+    model::{Annotate, ExprSource, Projection, ScopeOps},
+    AnnotateMut, ResolutionError, SchemaOps, SelectItemSource,
 };
 
-use std::{fmt::Debug, marker::PhantomData, rc::Rc};
+use std::{fmt::Debug, marker::PhantomData};
 
 #[derive(Debug, Visitor)]
 #[visitor(
@@ -33,8 +33,8 @@ pub struct BuildProjections<'ast, State>(PhantomData<&'ast ()>, PhantomData<Stat
 where
     State: Debug
         + ScopeOps
-        + Annotate<'ast, Expr, SourceItem>
-        + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + Annotate<'ast, Expr, ExprSource>
+        + Annotate<'ast, SelectItem, SelectItemSource>
         + AnnotateMut<'ast, Query, Projection>
         + AnnotateMut<'ast, Select, Projection>
         + AnnotateMut<'ast, Vec<SelectItem>, Projection>
@@ -45,8 +45,8 @@ impl<'ast, State> Default for BuildProjections<'ast, State>
 where
     State: Debug
         + ScopeOps
-        + Annotate<'ast, Expr, SourceItem>
-        + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + Annotate<'ast, Expr, ExprSource>
+        + Annotate<'ast, SelectItem, SelectItemSource>
         + AnnotateMut<'ast, Query, Projection>
         + AnnotateMut<'ast, Select, Projection>
         + AnnotateMut<'ast, Vec<SelectItem>, Projection>

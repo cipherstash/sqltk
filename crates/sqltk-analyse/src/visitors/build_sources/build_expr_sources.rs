@@ -9,25 +9,25 @@ use sqlparser::ast::{
 };
 use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
-use crate::{Annotate, AnnotateMut, Projection, ResolutionError, ScopeOps, SourceItem, SqlIdent};
+use crate::{Annotate, AnnotateMut, Projection, ResolutionError, ScopeOps, ExprSource, SqlIdent};
 
 #[derive(Debug)]
-pub struct TraceExprSources<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>)
+pub struct BuildExprSources<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>)
 where
-    State: ScopeOps + AnnotateMut<'ast, Expr, SourceItem> + Annotate<'ast, Query, Projection>;
+    State: ScopeOps + AnnotateMut<'ast, Expr, ExprSource> + Annotate<'ast, Query, Projection>;
 
-impl<'ast, State> Default for TraceExprSources<'ast, State>
+impl<'ast, State> Default for BuildExprSources<'ast, State>
 where
-    State: ScopeOps + AnnotateMut<'ast, Expr, SourceItem> + Annotate<'ast, Query, Projection>,
+    State: ScopeOps + AnnotateMut<'ast, Expr, ExprSource> + Annotate<'ast, Query, Projection>,
 {
     fn default() -> Self {
         Self(PhantomData, PhantomData)
     }
 }
 
-impl<'ast, State> TraceExprSources<'ast, State>
+impl<'ast, State> BuildExprSources<'ast, State>
 where
-    State: ScopeOps + AnnotateMut<'ast, Expr, SourceItem> + Annotate<'ast, Query, Projection>,
+    State: ScopeOps + AnnotateMut<'ast, Expr, ExprSource> + Annotate<'ast, Query, Projection>,
 {
     fn resolve_ident_and_record_source(
         &self,
@@ -80,7 +80,7 @@ where
 
         match sources {
             Ok(sources) => {
-                state.set_annotation(node, SourceItem::Multiple(sources));
+                state.set_annotation(node, ExprSource::Multiple(sources));
                 self.continue_with_state(state)
             }
             Err(err) => self.break_with_error(err.into()),
@@ -94,7 +94,7 @@ where
         name: &ObjectName,
         args: &'ast [FunctionArg],
     ) -> ControlFlow<Break<State, ResolutionError>, State> {
-        let sources: Result<Vec<Rc<SourceItem>>, ResolutionError> = args
+        let sources: Result<Vec<Rc<ExprSource>>, ResolutionError> = args
             .iter()
             .map(|arg| {
                 let arg_expr = match arg {
@@ -118,10 +118,10 @@ where
                                 .collect::<Vec<_>>()
                                 .as_slice(),
                         )
-                        .map(|projection| Rc::new(SourceItem::Projection(projection.clone()))),
+                        .map(|columns| Rc::new(ExprSource::ResolvedWildcard(columns.clone()))),
                     FunctionArgExpr::Wildcard => state
                         .resolve_wildcard()
-                        .map(|projection| Rc::new(SourceItem::Projection(projection.clone()))),
+                        .map(|columns| Rc::new(ExprSource::ResolvedWildcard(columns.clone()))),
                 };
 
                 result
@@ -132,7 +132,7 @@ where
             Ok(sources) => {
                 state.set_annotation(
                     node,
-                    SourceItem::FunctionCall {
+                    ExprSource::FunctionCall {
                         ident: SqlIdent::from(
                             name.0.last().expect(
                                 "A sqlparser ObjectName to have at least one identifier part",
@@ -148,9 +148,9 @@ where
     }
 }
 
-impl<'ast, State> Visitor<'ast> for TraceExprSources<'ast, State>
+impl<'ast, State> Visitor<'ast> for BuildExprSources<'ast, State>
 where
-    State: ScopeOps + AnnotateMut<'ast, Expr, SourceItem> + Annotate<'ast, Query, Projection>,
+    State: ScopeOps + AnnotateMut<'ast, Expr, ExprSource> + Annotate<'ast, Query, Projection>,
 {
     type Error = ResolutionError;
     type State = State;
@@ -321,20 +321,20 @@ where
                 Expr::Collate { expr, collation: _ } => self.resolve_sources(node, &[expr], state),
                 Expr::Nested(expr) => self.resolve_sources(node, &[expr], state),
                 Expr::Value(value) => {
-                    state.set_annotation(node, SourceItem::Value(value.clone()));
+                    state.set_annotation(node, ExprSource::Value(value.clone()));
                     self.continue_with_state(state)
                 }
                 Expr::IntroducedString { introducer, value } => {
                     state.set_annotation(
                         node,
-                        SourceItem::IntroducedString(introducer.clone(), value.clone()),
+                        ExprSource::IntroducedString(introducer.clone(), value.clone()),
                     );
                     self.continue_with_state(state)
                 }
                 Expr::TypedString { data_type, value } => {
                     state.set_annotation(
                         node,
-                        SourceItem::TypedString(data_type.clone(), value.clone()),
+                        ExprSource::TypedString(data_type.clone(), value.clone()),
                     );
                     self.continue_with_state(state)
                 }
@@ -376,11 +376,11 @@ where
                 // leaks a fact by simply returning true/false.
                 //
                 // This problem is even more broad than just EXISTS. Values returned
-                // in a projection have a SourceItem (the values that they are computed
+                // in a projection have a Source (the values that they are computed
                 // from) but the entire projection also has an implied filter that
                 // had to be true for that row to be returned, and that filter
                 // itself leaks information and we should track it. It's not a
-                // SourceItem - it's something else. I think we're missing a concept.
+                // Source - it's something else. I think we're missing a concept.
                 //
                 // That missing concept is probably: "all of the table-columns that
                 // were examined by the filter in the WHERE clause"
@@ -389,10 +389,10 @@ where
                     negated: _,
                 } => self.continue_with_state(state),
                 Expr::Subquery(query) => {
-                    let result: Result<Rc<SourceItem>, ResolutionError> =
+                    let result: Result<Rc<ExprSource>, ResolutionError> =
                         match state.get_annotation(query.deref()) {
                             Ok(projection) => Ok(state
-                                .set_annotation(node, SourceItem::Projection(projection.clone()))),
+                                .set_annotation(node, ExprSource::Projection(projection.clone()))),
                             Err(err) => Err(ResolutionError::ExpectedProjectionAnnotation(err)),
                         };
 
@@ -402,10 +402,10 @@ where
                     }
                 }
                 Expr::ArraySubquery(query) => {
-                    let result: Result<Rc<SourceItem>, ResolutionError> =
+                    let result: Result<Rc<ExprSource>, ResolutionError> =
                         match state.get_annotation(query.deref()) {
                             Ok(projection) => Ok(state
-                                .set_annotation(node, SourceItem::Projection(projection.clone()))),
+                                .set_annotation(node, ExprSource::Projection(projection.clone()))),
                             Err(err) => Err(ResolutionError::ExpectedProjectionAnnotation(err)),
                         };
 
@@ -472,10 +472,10 @@ where
                 // NOTE: this is MySQL specific
                 Expr::MatchAgainst { .. } => self.break_with_error(ResolutionError::Unimplemented),
                 Expr::Wildcard => {
-                    let result: Result<Rc<SourceItem>, ResolutionError> =
+                    let result: Result<Rc<ExprSource>, ResolutionError> =
                         match state.resolve_wildcard() {
-                            Ok(projection) => Ok(state
-                                .set_annotation(node, SourceItem::Projection(projection.clone()))),
+                            Ok(columns) => Ok(state
+                                .set_annotation(node, ExprSource::ResolvedWildcard(columns.clone()))),
                             Err(err) => Err(err),
                         };
 
@@ -485,12 +485,12 @@ where
                     }
                 }
                 Expr::QualifiedWildcard(wildcard) => {
-                    let result: Result<Rc<SourceItem>, ResolutionError> =
+                    let result: Result<Rc<ExprSource>, ResolutionError> =
                         match state.resolve_qualified_wildcard(
                             Vec::from_iter(wildcard.0.iter().map(SqlIdent::from)).as_slice(),
                         ) {
-                            Ok(projection) => Ok(state
-                                .set_annotation(node, SourceItem::Projection(projection.clone()))),
+                            Ok(columns) => Ok(state
+                                .set_annotation(node, ExprSource::ResolvedWildcard(columns.clone()))),
                             Err(err) => Err(err),
                         };
 

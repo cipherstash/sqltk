@@ -5,7 +5,7 @@ use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
     Annotate, AnnotateMut, ColumnWritten, Projection, Provenance, ResolutionError, SchemaOps,
-    SourceItem, SqlIdent, Table, UpdateProvenance,
+    ExprSource, SqlIdent, Table, UpdateProvenance,
 };
 
 #[derive(Debug)]
@@ -14,7 +14,7 @@ pub struct BuildUpdateProvenance<'ast, State>(PhantomData<&'ast ()>, PhantomData
 impl<'ast, State> Default for BuildUpdateProvenance<'ast, State>
 where
     State: SchemaOps
-        + Annotate<'ast, Expr, SourceItem>
+        + Annotate<'ast, Expr, ExprSource>
         + Annotate<'ast, Query, Projection>
         + Annotate<'ast, Vec<SelectItem>, Projection>
         + AnnotateMut<'ast, Statement, Provenance>,
@@ -27,7 +27,7 @@ where
 impl<'ast, State> Visitor<'ast> for BuildUpdateProvenance<'ast, State>
 where
     State: SchemaOps
-        + Annotate<'ast, Expr, SourceItem>
+        + Annotate<'ast, Expr, ExprSource>
         + Annotate<'ast, Query, Projection>
         + Annotate<'ast, Vec<SelectItem>, Projection>
         + AnnotateMut<'ast, Statement, Provenance>,

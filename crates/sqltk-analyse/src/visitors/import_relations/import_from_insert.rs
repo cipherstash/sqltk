@@ -9,7 +9,7 @@ use crate::{
     model::ResolutionError,
     model::ScopeOps,
     model::{CanonicalIdent, SqlIdent},
-    model::{NamedRelation, SourceItem},
+    model::{NamedRelation, ExprSource},
     SchemaOps,
 };
 
@@ -19,7 +19,7 @@ pub struct ImportFromInsert<'ast, State>(PhantomData<&'ast ()>, PhantomData<Stat
 impl<'ast, State> Default for ImportFromInsert<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, SourceItem>
+        + Annotate<'ast, Expr, ExprSource>
         + Annotate<'ast, SetExpr, Projection>
         + Annotate<'ast, Query, Projection>
         + SchemaOps,
@@ -32,7 +32,7 @@ where
 impl<'ast, State> Visitor<'ast> for ImportFromInsert<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, SourceItem>
+        + Annotate<'ast, Expr, ExprSource>
         + Annotate<'ast, SetExpr, Projection>
         + Annotate<'ast, Query, Projection>
         + SchemaOps,

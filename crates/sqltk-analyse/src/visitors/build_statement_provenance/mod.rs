@@ -9,13 +9,13 @@ use build_select_provenance::*;
 use build_update_provenance::*;
 use sqltk::Visitor;
 
-use std::{marker::PhantomData, rc::Rc};
+use std::marker::PhantomData;
 
 use sqlparser::ast::{Expr, Query, SelectItem, Statement};
 
 use crate::{
     model::{Annotate, Projection, ResolutionError, ScopeOps},
-    AnnotateMut, ProjectionColumn, Provenance, SchemaOps, SourceItem,
+    AnnotateMut, ExprSource, Provenance, SchemaOps, SelectItemSource,
 };
 
 #[derive(Debug, Visitor)]
@@ -31,9 +31,9 @@ use crate::{
 pub struct BuildStatementProvenance<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>)
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, SourceItem>
+        + Annotate<'ast, Expr, ExprSource>
         + Annotate<'ast, Vec<SelectItem>, Projection>
-        + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + Annotate<'ast, SelectItem, SelectItemSource>
         + Annotate<'ast, Query, Projection>
         + AnnotateMut<'ast, Statement, Provenance>
         + SchemaOps;
@@ -41,9 +41,9 @@ where
 impl<'ast, State> Default for BuildStatementProvenance<'ast, State>
 where
     State: ScopeOps
-        + Annotate<'ast, Expr, SourceItem>
+        + Annotate<'ast, Expr, ExprSource>
         + Annotate<'ast, Vec<SelectItem>, Projection>
-        + Annotate<'ast, SelectItem, Vec<Rc<ProjectionColumn>>>
+        + Annotate<'ast, SelectItem, SelectItemSource>
         + Annotate<'ast, Query, Projection>
         + AnnotateMut<'ast, Statement, Provenance>
         + SchemaOps,

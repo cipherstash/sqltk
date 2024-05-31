@@ -2,10 +2,9 @@
 //! traversal.
 use crate::{
     model::{
-        InvariantFailedError, NamedRelation, Projection, ProjectionColumn, ResolutionError,
-        SourceItem, SqlIdent,
+        InvariantFailedError, NamedRelation, ColumnWithOptionalAlias, ResolutionError,
+        ExprSource, SqlIdent,
     },
-    ProjectionColumnsIterator,
 };
 use core::ops::{Deref, DerefMut};
 use std::{
@@ -75,11 +74,7 @@ pub struct Scope {
 
 impl Scope {
     /// Expand usage of a wildcard into the actual concrete table-columns it stands for.
-    // TODO: this fn is building the Projection on demand but returning it in an
-    // Rc which is odd, but just for consistency.
-    // However it does seem to hint that Projection should be an enum with a
-    // variant for representing concatenated sub-projections.
-    pub fn resolve_wildcard(&self) -> Result<Rc<Projection>, ResolutionError> {
+    pub fn resolve_wildcard(&self) -> Result<Vec<Rc<ColumnWithOptionalAlias>>, ResolutionError> {
         if self.items.is_empty() {
             match &self.parent {
                 Some(parent) => parent.resolve_wildcard(),
@@ -88,13 +83,13 @@ impl Scope {
                 )),
             }
         } else {
-            let projections: Vec<Rc<Projection>> = self
-                .items
-                .iter()
-                .map(|relation| relation.projection.clone())
-                .collect();
+            let mut flattened: Vec<Rc<ColumnWithOptionalAlias>> = Vec::new();
 
-            Ok(Rc::new(Projection::Concatenated(projections)))
+            for relation in self.items.iter() {
+                flattened.extend(relation.projection.columns.iter().cloned())
+            }
+
+            Ok(flattened)
         }
     }
 
@@ -102,7 +97,7 @@ impl Scope {
     pub fn resolve_qualified_wildcard(
         &self,
         idents: &[SqlIdent],
-    ) -> Result<Rc<Projection>, ResolutionError> {
+    ) -> Result<Vec<Rc<ColumnWithOptionalAlias>>, ResolutionError> {
         if idents.len() > 1 {
             return Err(ResolutionError::UnsupportedCompoundIdentifierLength(
                 idents.iter().map(|id| id.to_string()).collect::<Vec<_>>(),
@@ -110,7 +105,9 @@ impl Scope {
         }
 
         match SqlIdent::try_find_unique(&idents[0], &mut self.items.iter().cloned()) {
-            Ok(Some(relation)) => Ok(relation.projection.clone()),
+            Ok(Some(relation)) => {
+                Ok(relation.projection.columns.to_vec())
+            },
             Ok(None) => match &self.parent {
                 Some(parent) => parent.resolve_qualified_wildcard(idents),
                 None => Err(ResolutionError::NoSuchRelation(idents[0].to_string())),
@@ -120,7 +117,7 @@ impl Scope {
     }
 
     /// Uniquely resolves an identifier against all relations that are in scope.
-    pub fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<SourceItem>, ResolutionError> {
+    pub fn resolve_ident(&self, ident: &SqlIdent) -> Result<Rc<ExprSource>, ResolutionError> {
         let mut bindings_iter = AllColumnsIterator::new(self.items.iter());
 
         match SqlIdent::try_find_unique(ident, &mut bindings_iter) {
@@ -140,7 +137,7 @@ impl Scope {
     pub fn resolve_compound_ident(
         &self,
         idents: &[SqlIdent],
-    ) -> Result<Rc<SourceItem>, ResolutionError> {
+    ) -> Result<Rc<ExprSource>, ResolutionError> {
         if idents.len() != 2 {
             return Err(ResolutionError::InvariantFailed(
                 InvariantFailedError::MaxCompoundIdentLengthExceeded(idents.len() as u8),
@@ -150,7 +147,7 @@ impl Scope {
             Ok(Some(named_relation)) => {
                 match SqlIdent::find_unique(
                     &idents[1],
-                    &mut named_relation.projection.columns_iter(),
+                    &mut named_relation.projection.columns.iter().cloned(),
                 ) {
                     Ok(projection_column) => Ok(projection_column.source.clone()),
                     Err(err) => Err(err.into()),
@@ -189,7 +186,7 @@ impl Scope {
 
 struct AllColumnsIterator<'a> {
     relations: slice::Iter<'a, Rc<NamedRelation>>,
-    columns: Option<ProjectionColumnsIterator>,
+    columns: Option<slice::Iter<'a, Rc<ColumnWithOptionalAlias>>>,
     done: bool,
 }
 
@@ -204,7 +201,7 @@ impl<'a> AllColumnsIterator<'a> {
 }
 
 impl<'a> Iterator for AllColumnsIterator<'a> {
-    type Item = Rc<ProjectionColumn>;
+    type Item = Rc<ColumnWithOptionalAlias>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if !self.done {
@@ -214,7 +211,7 @@ impl<'a> Iterator for AllColumnsIterator<'a> {
                     self.columns = self
                         .relations
                         .next()
-                        .map(|named_relation| named_relation.projection.columns_iter());
+                        .map(|named_relation| named_relation.projection.columns.iter());
                     if self.columns.is_some() {
                         self.next()
                     } else {
@@ -245,8 +242,8 @@ impl DerefMut for ScopeStack {
 #[cfg(test)]
 mod test {
     use crate::{
-        model::{CanonicalIdent, Column, SqlIdent, Table},
-        model::{SourceItem, TableColumn},
+        model::{CanonicalIdent, Column, ExprSource, SqlIdent, Table, TableColumn},
+        Projection,
     };
 
     use super::*;
@@ -286,16 +283,16 @@ mod test {
         });
         NamedRelation {
             name: Rc::new(SqlIdent::Canonical(name.deref().clone())),
-            projection: Projection::Columns(Vec::from_iter(table.columns.iter().map(|column| {
-                ProjectionColumn::new(
-                    Rc::new(SourceItem::TableColumn(TableColumn {
+            projection: Projection { columns: Vec::from_iter(table.columns.iter().map(|column| {
+                ColumnWithOptionalAlias::new(
+                    Rc::new(ExprSource::TableColumn(TableColumn {
                         table: Rc::clone(&table),
                         column: Rc::clone(column),
                     })),
                     Some(Rc::new(SqlIdent::Canonical(column.name.deref().clone()))),
                 )
                 .into()
-            })))
+            }))}
             .into(),
         }
     }
