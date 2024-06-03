@@ -384,6 +384,8 @@ where
                 //
                 // That missing concept is probably: "all of the table-columns that
                 // were examined by the filter in the WHERE clause"
+                // FIXME: we need to set an annotation here or we'll panic in a
+                // higher level visitor when there's an EXISTS clause.
                 Expr::Exists {
                     subquery: _,
                     negated: _,

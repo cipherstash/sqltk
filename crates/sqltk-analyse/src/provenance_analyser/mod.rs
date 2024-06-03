@@ -5,6 +5,7 @@ use sqltk::Visitor;
 use crate::build_projections::BuildProjections;
 use crate::build_sources::BuildSources;
 use crate::build_statement_provenance::BuildStatementProvenance;
+use crate::{ExpectedAnnotationError, Provenance};
 use crate::{import_relations::ImportRelations, model::ResolutionError, update_stack::UpdateStack};
 
 use core::marker::PhantomData;
@@ -45,6 +46,9 @@ where
 pub enum ProvenanceError {
     #[error("Could not resolve identifier")]
     ResolutionError(#[from] ResolutionError),
+
+    #[error("Expected a Provenance annotation")]
+    AnnotationError(#[from] ExpectedAnnotationError<Provenance>),
 }
 
 /// Necessary to support being able to build a `VisitorStack` instance.
