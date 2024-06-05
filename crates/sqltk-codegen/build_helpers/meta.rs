@@ -13,12 +13,12 @@ use syn::{parse::Parse, ItemEnum, ItemStruct};
 #[derive(Clone)]
 pub struct SqlParserMeta {
     /// Types for which `sqlparser` derives `Visit`, which are the main structs
-    /// and enums plus primitive types & BigDecimal.  The [`TypePath`] is the
+    /// and enums plus terminal node types.  The [`TypePath`] is the
     /// *public* fully-qualified type name.
     main_nodes: HashMap<Syn<TypePath>, SqlParserTypeDef>,
 
-    /// Primitives used by sqlparser (most Rust primitives + String + BigDecimal)
-    primitive_nodes: HashSet<PrimitiveNode>,
+    /// Terminal nodes (primitives + String & BigDecimal)
+    terminal_nodes: HashSet<TerminalNode>,
 }
 
 /// Provides useful queries over a [`SqlParserMeta`].
@@ -45,11 +45,11 @@ impl SqlParserMetaQuery {
             .collect()
     }
 
-    pub fn primitive_nodes(&self) -> Vec<PrimitiveNode> {
-        let mut primitive_nodes: Vec<PrimitiveNode> =
-            self.meta.primitive_nodes.clone().into_iter().collect();
-        primitive_nodes.sort();
-        primitive_nodes
+    pub fn terminal_nodes(&self) -> Vec<TerminalNode> {
+        let mut terminal_nodes: Vec<TerminalNode> =
+            self.meta.terminal_nodes.clone().into_iter().collect();
+        terminal_nodes.sort();
+        terminal_nodes
     }
 }
 
@@ -57,7 +57,7 @@ impl SqlParserMeta {
     pub fn new(
         main_nodes: HashMap<Syn<TypePath>, SqlParserTypeDef>,
         container_nodes: HashSet<ContainerNode>,
-        primitive_nodes: HashSet<PrimitiveNode>,
+        terminal_nodes: HashSet<TerminalNode>,
     ) -> Self {
         let mut all_nodes: Vec<Syn<TypePath>> = main_nodes
             .keys()
@@ -68,9 +68,9 @@ impl SqlParserMeta {
                     .map(|container_node| container_node.type_path().clone()),
             )
             .chain(
-                primitive_nodes
+                terminal_nodes
                     .iter()
-                    .map(|primitive_node| primitive_node.type_path()),
+                    .map(|terminal_node| terminal_node.type_path()),
             )
             .collect();
 
@@ -78,7 +78,7 @@ impl SqlParserMeta {
 
         Self {
             main_nodes,
-            primitive_nodes,
+            terminal_nodes,
         }
     }
 }
@@ -110,7 +110,7 @@ pub enum ContainerNode {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum PrimitiveNode {
+pub enum TerminalNode {
     BigDecimal,
     Bool,
     Char,
@@ -125,22 +125,22 @@ pub enum PrimitiveNode {
     U8,
 }
 
-static ALL_PRIMITIVE_NODES: &[PrimitiveNode] = &[
-    PrimitiveNode::BigDecimal,
-    PrimitiveNode::Bool,
-    PrimitiveNode::Char,
-    PrimitiveNode::I16,
-    PrimitiveNode::I32,
-    PrimitiveNode::I64,
-    PrimitiveNode::I8,
-    PrimitiveNode::String,
-    PrimitiveNode::U16,
-    PrimitiveNode::U32,
-    PrimitiveNode::U64,
-    PrimitiveNode::U8,
+static ALL_TERMINAL_NODES: &[TerminalNode] = &[
+    TerminalNode::BigDecimal,
+    TerminalNode::Bool,
+    TerminalNode::Char,
+    TerminalNode::I16,
+    TerminalNode::I32,
+    TerminalNode::I64,
+    TerminalNode::I8,
+    TerminalNode::String,
+    TerminalNode::U16,
+    TerminalNode::U32,
+    TerminalNode::U64,
+    TerminalNode::U8,
 ];
 
-impl PrimitiveNode {
+impl TerminalNode {
     pub fn type_path(&self) -> Syn<TypePath> {
         let tokens = match self {
             Self::BigDecimal => quote!(bigdecimal::BigDecimal),
@@ -159,17 +159,34 @@ impl PrimitiveNode {
         Syn(syn::parse2(tokens).unwrap())
     }
 
-    pub fn all() -> &'static [PrimitiveNode] {
-        ALL_PRIMITIVE_NODES
+    pub fn all() -> &'static [TerminalNode] {
+        ALL_TERMINAL_NODES
+    }
+
+    pub fn is_primitive(&self) -> bool {
+        match self {
+            TerminalNode::BigDecimal => false,
+            TerminalNode::String => false,
+            TerminalNode::Bool => true,
+            TerminalNode::Char => true,
+            TerminalNode::I16 => true,
+            TerminalNode::I32 => true,
+            TerminalNode::I64 => true,
+            TerminalNode::I8 => true,
+            TerminalNode::U16 => true,
+            TerminalNode::U32 => true,
+            TerminalNode::U64 => true,
+            TerminalNode::U8 => true,
+        }
     }
 }
 
-impl From<TypePath> for PrimitiveNode {
+impl From<TypePath> for TerminalNode {
     fn from(value: TypePath) -> Self {
-        ALL_PRIMITIVE_NODES
+        ALL_TERMINAL_NODES
             .iter()
             .find(|item| item.type_path() == value)
-            .unwrap_or_else(|| panic!("Unexpected primitive: {}", quote!(#value)))
+            .unwrap_or_else(|| panic!("Not a terminal node: {}", quote!(#value)))
             .clone()
     }
 }

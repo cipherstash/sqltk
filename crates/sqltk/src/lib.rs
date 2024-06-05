@@ -7,7 +7,7 @@
 //! ## Key features
 //!
 //! 1. Full coverage of all AST node types from `sqlparser` (including all field
-//!    types and container types (`Vec`, `Option` & `Box`)) and primitives.
+//!    types and container types (`Vec`, `Option` & `Box`)) and terminal nodes.
 //!
 //! 2. Support for annotating AST nodes with user-defined metadata during
 //!    traversal (see: [`sqltk-analysis`])

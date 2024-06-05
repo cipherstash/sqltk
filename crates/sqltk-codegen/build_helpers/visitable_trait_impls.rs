@@ -13,7 +13,7 @@ pub(crate) struct VisitableImpl<'a> {
     node: &'a TypePath,
     def: &'a SqlParserTypeDef,
     reachability: &'a HashMap<Ident, bool>,
-    primitive_nodes: &'a HashSet<Ident>,
+    terminal_nodes: &'a HashSet<Ident>,
 }
 
 impl<'a> ToTokens for VisitableImpl<'a> {
@@ -57,13 +57,13 @@ impl<'a> VisitableImpl<'a> {
         node: &'a TypePath,
         def: &'a SqlParserTypeDef,
         reachability: &'a HashMap<Ident, bool>,
-        primitive_nodes: &'a HashSet<Ident>,
+        terminal_nodes: &'a HashSet<Ident>,
     ) -> Self {
         Self {
             node,
             def,
             reachability,
-            primitive_nodes,
+            terminal_nodes,
         }
     }
 
@@ -200,7 +200,7 @@ impl<'a> VisitableImpl<'a> {
 
     fn field_is_source_node_reachable(&self, field: &syn::Field) -> bool {
         let normalised = self.normalise_ty(&field.ty);
-        if self.primitive_nodes.contains(&normalised) {
+        if self.terminal_nodes.contains(&normalised) {
             false
         } else {
             *self.reachability.get(&normalised).unwrap_or_else(|| {

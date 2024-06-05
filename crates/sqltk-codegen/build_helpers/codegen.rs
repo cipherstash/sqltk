@@ -1,4 +1,4 @@
-use super::meta::{PrimitiveNode, SqlParserMetaQuery};
+use super::meta::{TerminalNode, SqlParserMetaQuery};
 use super::reachability::Reachability;
 use super::apply_transform_trait_impls::ApplyTransformImpl;
 use super::{sqlparser_node_extractor, visitable_trait_impls::VisitableImpl};
@@ -33,12 +33,12 @@ impl Codegen {
             .iter()
             .map(|(type_path, type_def)| ApplyTransformImpl::new(type_path, type_def));
 
-        let transformable_impls_for_primitive_nodes =
-            self.impl_transformable_for_primitive_nodes(self.meta.primitive_nodes());
+        let transformable_impls_for_terminal_nodes =
+            self.impl_transformable_for_terminal_nodes(self.meta.terminal_nodes());
 
         generated_code.append_all(quote! {
             #(#transformable_impls_for_main_nodes)*
-            #transformable_impls_for_primitive_nodes
+            #transformable_impls_for_terminal_nodes
         });
 
         let mut file = File::create(dest_file)
@@ -71,23 +71,23 @@ impl Codegen {
         let mut generated_code = TokenStream::new();
 
         let main_nodes = self.meta.main_nodes();
-        let primitive_nodes = self
+        let terminal_nodes = self
             .meta
-            .primitive_nodes()
+            .terminal_nodes()
             .iter()
             .map(|pn| pn.type_path().path.segments.last().unwrap().ident.clone())
             .collect::<HashSet<_>>();
 
         let visitable_impls_for_main_nodes = main_nodes.iter().map(|(type_path, type_def)| {
-            VisitableImpl::new(type_path, type_def, &reachability, &primitive_nodes)
+            VisitableImpl::new(type_path, type_def, &reachability, &terminal_nodes)
         });
 
-        let visitable_impls_for_primitive_nodes =
-            self.impl_visitable_for_primitive_nodes(self.meta.primitive_nodes());
+        let visitable_impls_for_terminal_nodes =
+            self.impl_visitable_for_terminal_nodes(self.meta.terminal_nodes());
 
         generated_code.append_all(quote! {
             #(#visitable_impls_for_main_nodes)*
-            #visitable_impls_for_primitive_nodes
+            #visitable_impls_for_terminal_nodes
         });
 
         let mut file = File::create(dest_file)
@@ -102,13 +102,13 @@ impl Codegen {
             .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()));
     }
 
-    pub(crate) fn impl_visitable_for_primitive_nodes(
+    pub(crate) fn impl_visitable_for_terminal_nodes(
         &self,
-        primitive_nodes: impl IntoIterator<Item = PrimitiveNode>,
+        terminal_nodes: impl IntoIterator<Item = TerminalNode>,
     ) -> TokenStream {
         let mut output = proc_macro2::TokenStream::new();
 
-        for node in primitive_nodes {
+        for node in terminal_nodes {
             let type_path = node.type_path();
 
             output.append_all(quote! {
@@ -140,13 +140,13 @@ impl Codegen {
         output
     }
 
-    pub(crate) fn impl_transformable_for_primitive_nodes(
+    pub(crate) fn impl_transformable_for_terminal_nodes(
         &self,
-        primitive_nodes: impl IntoIterator<Item = PrimitiveNode>,
+        terminal_nodes: impl IntoIterator<Item = TerminalNode>,
     ) -> TokenStream {
         let mut output = proc_macro2::TokenStream::new();
 
-        for node in primitive_nodes {
+        for node in terminal_nodes {
             let type_path = node.type_path();
 
             output.append_all(quote! {

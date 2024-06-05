@@ -120,8 +120,7 @@ impl Reachability {
                     self.traverse_child_types(field_types)
                 }
 
-                // Any field types that are not a "main" node (i.e. primitives &
-                // containers) can be freely ignored.
+                // Terminal nodes can be freely ignored
                 None => false,
             }
         }

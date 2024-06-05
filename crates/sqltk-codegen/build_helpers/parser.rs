@@ -7,7 +7,7 @@ use super::generics::{
     is_generic_type, ContainerType,
 };
 use super::meta::{
-    ContainerNode, PrimitiveNode, SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn,
+    ContainerNode, TerminalNode, SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn,
 };
 use proc_macro2::Span;
 use syn::{
@@ -300,9 +300,9 @@ impl SqlParserAstAnalyser {
         ))
         .unwrap())));
 
-        let primitive_nodes = PrimitiveNode::all().iter().cloned().collect();
+        let terninal_nodes = TerminalNode::all().iter().cloned().collect();
 
-        SqlParserMeta::new(main_nodes, container_nodes, primitive_nodes)
+        SqlParserMeta::new(main_nodes, container_nodes, terninal_nodes)
     }
 }
 
