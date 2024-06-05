@@ -6,9 +6,14 @@ use sqlparser::ast::{Expr, Query, SelectItem, SetExpr, Statement};
 use sqltk::prelude::Select;
 use std::{rc::Rc, sync::Arc};
 
-use crate::{model::{
-    Annotate, AnnotateMut, AnnotationStore, ColumnWithOptionalAlias, ExpectedAnnotationError, ExprSource, NamedRelation, Projection, Provenance, ResolutionError, Schema, SchemaOps, ScopeOps, ScopeStack, SqlIdent
-}, SelectItemSource};
+use crate::{
+    model::{
+        Annotate, AnnotateMut, AnnotationStore, ColumnWithOptionalAlias, ExpectedAnnotationError,
+        ExprSource, NamedRelation, Projection, Provenance, ResolutionError, Schema, SchemaOps,
+        ScopeOps, ScopeStack, SqlIdent,
+    },
+    SelectItemSource,
+};
 
 /// State that is tracked during AST traversal for provenance analysis.
 #[derive(Debug)]
@@ -107,16 +112,8 @@ macro_rules! annotate {
 }
 
 annotate!(expr_sources, Expr, ExprSource);
-annotate!(
-    select_item_sources,
-    SelectItem,
-    SelectItemSource
-);
-annotate!(
-    vec_of_select_item_projections,
-    Vec<SelectItem>,
-    Projection
-);
+annotate!(select_item_sources, SelectItem, SelectItemSource);
+annotate!(vec_of_select_item_projections, Vec<SelectItem>, Projection);
 annotate!(expr_projections, Expr, Projection);
 annotate!(query_projections, Query, Projection);
 annotate!(select_projections, Select, Projection);

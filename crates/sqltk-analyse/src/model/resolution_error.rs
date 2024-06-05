@@ -7,7 +7,13 @@ use std::rc::Rc;
 use sqlparser::ast::{Expr, Query, SetExpr};
 
 use crate::{
-    model::{annotate::ExpectedAnnotationError, expr_source::ExprSource, projection::Projection, schema::{AmbiguousMatchError, FindUniqueMatchError}, ColumnWithOptionalAlias, Provenance},
+    model::{
+        annotate::ExpectedAnnotationError,
+        expr_source::ExprSource,
+        projection::Projection,
+        schema::{AmbiguousMatchError, FindUniqueMatchError},
+        ColumnWithOptionalAlias, Provenance,
+    },
     SelectItemSource,
 };
 
@@ -54,9 +60,7 @@ pub enum ResolutionError {
     ),
 
     #[error("Missing select item source annotation: {}", _0)]
-    ExpectedSelectItemSourceAnnotation(
-        #[from] ExpectedAnnotationError<SelectItemSource>,
-    ),
+    ExpectedSelectItemSourceAnnotation(#[from] ExpectedAnnotationError<SelectItemSource>),
 
     #[error("Invalid subquery expression (selects more than one column) {}", _0)]
     InvalidSubqueryExpr(Box<Query>),

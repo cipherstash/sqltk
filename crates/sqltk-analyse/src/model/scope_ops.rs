@@ -1,10 +1,13 @@
 use std::rc::Rc;
 
-use crate::{model::{
-    resolution_error::ResolutionError,
-    schema::SqlIdent,
-    expr_source::{NamedRelation, ExprSource},
-}, ColumnWithOptionalAlias};
+use crate::{
+    model::{
+        expr_source::{ExprSource, NamedRelation},
+        resolution_error::ResolutionError,
+        schema::SqlIdent,
+    },
+    ColumnWithOptionalAlias,
+};
 
 /// Operations for manipulating lexical scope and resolving identifiers that are in-scope.
 pub trait ScopeOps {

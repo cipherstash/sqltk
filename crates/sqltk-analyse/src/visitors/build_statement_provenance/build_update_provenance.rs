@@ -4,8 +4,8 @@ use sqlparser::ast::{Assignment, Expr, Query, SelectItem, Statement, TableFactor
 use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
-    Annotate, AnnotateMut, ColumnWritten, Projection, Provenance, ResolutionError, SchemaOps,
-    ExprSource, SqlIdent, Table, UpdateProvenance,
+    Annotate, AnnotateMut, ColumnWritten, ExprSource, Projection, Provenance, ResolutionError,
+    SchemaOps, SqlIdent, Table, UpdateProvenance,
 };
 
 #[derive(Debug)]

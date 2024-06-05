@@ -9,7 +9,7 @@ use crate::{
     model::ResolutionError,
     model::ScopeOps,
     model::{CanonicalIdent, SqlIdent},
-    model::{NamedRelation, ExprSource},
+    model::{ExprSource, NamedRelation},
     SchemaOps,
 };
 

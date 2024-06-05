@@ -85,17 +85,17 @@ impl ExprSource {
                 for source in arg_sources {
                     source.resolve_to_table_columns_internal(output)
                 }
-            },
+            }
             ExprSource::Multiple(sources) => {
                 for source in sources {
                     source.resolve_to_table_columns_internal(output)
                 }
-            },
+            }
             ExprSource::ResolvedWildcard(columns) => {
                 for col in columns {
                     col.source.resolve_to_table_columns_internal(output)
                 }
-            },
+            }
             _ => {}
         }
     }

@@ -9,7 +9,7 @@ use sqlparser::ast::{
 };
 use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
-use crate::{Annotate, AnnotateMut, Projection, ResolutionError, ScopeOps, ExprSource, SqlIdent};
+use crate::{Annotate, AnnotateMut, ExprSource, Projection, ResolutionError, ScopeOps, SqlIdent};
 
 #[derive(Debug)]
 pub struct BuildExprSources<'ast, State>(PhantomData<&'ast ()>, PhantomData<State>)
@@ -474,12 +474,13 @@ where
                 // NOTE: this is MySQL specific
                 Expr::MatchAgainst { .. } => self.break_with_error(ResolutionError::Unimplemented),
                 Expr::Wildcard => {
-                    let result: Result<Rc<ExprSource>, ResolutionError> =
-                        match state.resolve_wildcard() {
-                            Ok(columns) => Ok(state
-                                .set_annotation(node, ExprSource::ResolvedWildcard(columns.clone()))),
-                            Err(err) => Err(err),
-                        };
+                    let result: Result<Rc<ExprSource>, ResolutionError> = match state
+                        .resolve_wildcard()
+                    {
+                        Ok(columns) => Ok(state
+                            .set_annotation(node, ExprSource::ResolvedWildcard(columns.clone()))),
+                        Err(err) => Err(err),
+                    };
 
                     match result {
                         Ok(_) => self.continue_with_state(state),
@@ -487,14 +488,14 @@ where
                     }
                 }
                 Expr::QualifiedWildcard(wildcard) => {
-                    let result: Result<Rc<ExprSource>, ResolutionError> =
-                        match state.resolve_qualified_wildcard(
+                    let result: Result<Rc<ExprSource>, ResolutionError> = match state
+                        .resolve_qualified_wildcard(
                             Vec::from_iter(wildcard.0.iter().map(SqlIdent::from)).as_slice(),
                         ) {
-                            Ok(columns) => Ok(state
-                                .set_annotation(node, ExprSource::ResolvedWildcard(columns.clone()))),
-                            Err(err) => Err(err),
-                        };
+                        Ok(columns) => Ok(state
+                            .set_annotation(node, ExprSource::ResolvedWildcard(columns.clone()))),
+                        Err(err) => Err(err),
+                    };
 
                     match result {
                         Ok(_) => self.continue_with_state(state),

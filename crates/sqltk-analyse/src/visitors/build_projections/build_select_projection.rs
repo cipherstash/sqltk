@@ -1,4 +1,8 @@
-use std::{marker::PhantomData, ops::{ControlFlow, Deref}, rc::Rc};
+use std::{
+    marker::PhantomData,
+    ops::{ControlFlow, Deref},
+    rc::Rc,
+};
 
 use sqlparser::ast::{Expr, Select, SelectItem};
 use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};

@@ -1,10 +1,8 @@
 //! Types for representing and maintaining a stack of lexical scopes during AST
 //! traversal.
-use crate::{
-    model::{
-        InvariantFailedError, NamedRelation, ColumnWithOptionalAlias, ResolutionError,
-        ExprSource, SqlIdent,
-    },
+use crate::model::{
+    ColumnWithOptionalAlias, ExprSource, InvariantFailedError, NamedRelation, ResolutionError,
+    SqlIdent,
 };
 use core::ops::{Deref, DerefMut};
 use std::{
@@ -105,9 +103,7 @@ impl Scope {
         }
 
         match SqlIdent::try_find_unique(&idents[0], &mut self.items.iter().cloned()) {
-            Ok(Some(relation)) => {
-                Ok(relation.projection.columns.to_vec())
-            },
+            Ok(Some(relation)) => Ok(relation.projection.columns.to_vec()),
             Ok(None) => match &self.parent {
                 Some(parent) => parent.resolve_qualified_wildcard(idents),
                 None => Err(ResolutionError::NoSuchRelation(idents[0].to_string())),
@@ -283,16 +279,18 @@ mod test {
         });
         NamedRelation {
             name: Rc::new(SqlIdent::Canonical(name.deref().clone())),
-            projection: Projection { columns: Vec::from_iter(table.columns.iter().map(|column| {
-                ColumnWithOptionalAlias::new(
-                    Rc::new(ExprSource::TableColumn(TableColumn {
-                        table: Rc::clone(&table),
-                        column: Rc::clone(column),
-                    })),
-                    Some(Rc::new(SqlIdent::Canonical(column.name.deref().clone()))),
-                )
-                .into()
-            }))}
+            projection: Projection {
+                columns: Vec::from_iter(table.columns.iter().map(|column| {
+                    ColumnWithOptionalAlias::new(
+                        Rc::new(ExprSource::TableColumn(TableColumn {
+                            table: Rc::clone(&table),
+                            column: Rc::clone(column),
+                        })),
+                        Some(Rc::new(SqlIdent::Canonical(column.name.deref().clone()))),
+                    )
+                    .into()
+                })),
+            }
             .into(),
         }
     }

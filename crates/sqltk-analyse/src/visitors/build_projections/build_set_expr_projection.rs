@@ -8,7 +8,7 @@ use sqlparser::ast::{Expr, Query, Select, SetExpr};
 use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps, ExprSource},
+    model::{Annotate, ExprSource, Projection, ResolutionError, ScopeOps},
     AnnotateMut, ColumnWithOptionalAlias, SchemaOps,
 };
 

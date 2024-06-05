@@ -7,7 +7,7 @@ use super::generics::{
     is_generic_type, ContainerType,
 };
 use super::meta::{
-    ContainerNode, TerminalNode, SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn,
+    ContainerNode, SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn, TerminalNode,
 };
 use proc_macro2::Span;
 use syn::{

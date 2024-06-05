@@ -13,9 +13,10 @@ impl<'a> ToTokens for ApplyTransformImpl<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let (ref path, ref body) = match &self.def.ty {
             SqlParserTypeDefKind::Enum(item_enum) => {
-                let variants = self.match_variants(self.node, item_enum, self.def.is_non_exhaustive);
+                let variants =
+                    self.match_variants(self.node, item_enum, self.def.is_non_exhaustive);
                 (self.node, variants)
-            },
+            }
             SqlParserTypeDefKind::Struct(item_struct) => {
                 let fields = self.walk_struct_fields(item_struct);
                 (self.node, fields)
@@ -41,14 +42,8 @@ impl<'a> ToTokens for ApplyTransformImpl<'a> {
 }
 
 impl<'a> ApplyTransformImpl<'a> {
-    pub(crate) fn new(
-        node: &'a TypePath,
-        def: &'a SqlParserTypeDef,
-    ) -> Self {
-        Self {
-            node,
-            def,
-        }
+    pub(crate) fn new(node: &'a TypePath, def: &'a SqlParserTypeDef) -> Self {
+        Self { node, def }
     }
 
     fn walk_struct_fields(&self, item: &ItemStruct) -> TokenStream {
@@ -59,23 +54,22 @@ impl<'a> ApplyTransformImpl<'a> {
             Fields::Named(named) => {
                 let field_names = named.named.iter().map(|f| f.ident.clone().unwrap());
 
-                let transformed_fields = field_names.clone().map(|field_name| quote! {
-                    #field_name: #field_name.apply_transform(transformer, context)?
+                let transformed_fields = field_names.clone().map(|field_name| {
+                    quote! {
+                        #field_name: #field_name.apply_transform(transformer, context)?
+                    }
                 });
 
                 tokens.append_all(quote! {
                     let Self { #(#field_names,)* } = self;
-                    Ok(
-                        transformer.transform(
-                            self,
-                            Self {
-                                #(#transformed_fields,)*
-                            },
-                            context
-                        )?
+                    transformer.transform(
+                        self,
+                        Self {
+                            #(#transformed_fields,)*
+                        },
+                        context
                     )
                 });
-
             }
             Fields::Unnamed(unnamed) => {
                 let field_params = unnamed
@@ -84,22 +78,22 @@ impl<'a> ApplyTransformImpl<'a> {
                     .enumerate()
                     .map(|(idx, _)| format_ident!("field{}", idx));
 
-                let transformed_field_params = field_params.clone().map(|field_param| quote! {
-                    #field_param.apply_transform(transformer, context)?
+                let transformed_field_params = field_params.clone().map(|field_param| {
+                    quote! {
+                        #field_param.apply_transform(transformer, context)?
+                    }
                 });
 
                 tokens.append_all(quote! {
                     let Self(#(#field_params,)*) = self;
-                    Ok(
-                        transformer.transform(
-                            self,
-                            Self(#(#transformed_field_params,)*),
-                            context
-                        )?
+                    transformer.transform(
+                        self,
+                        Self(#(#transformed_field_params,)*),
+                        context
                     )
                 });
             }
-            Fields::Unit => tokens.append_all(quote!(Ok(Self)))
+            Fields::Unit => tokens.append_all(quote!(Ok(Self))),
         }
         tokens
     }
@@ -119,19 +113,19 @@ impl<'a> ApplyTransformImpl<'a> {
                 Fields::Named(named) => {
                     let field_names = named.named.iter().map(|f| f.ident.clone().unwrap());
 
-                    let transformed_fields = field_names.clone().map(|field_name| quote! {
-                        #field_name: #field_name.apply_transform(transformer, context)?
+                    let transformed_fields = field_names.clone().map(|field_name| {
+                        quote! {
+                            #field_name: #field_name.apply_transform(transformer, context)?
+                        }
                     });
 
                     tokens.append_all(quote! {
-                        #path::#ident { #(#field_names,)* } => Ok(
-                            transformer.transform(
-                                self,
-                                #path::#ident {
-                                    #(#transformed_fields,)*
-                                },
-                                context
-                            )?
+                        #path::#ident { #(#field_names,)* } => transformer.transform(
+                            self,
+                            #path::#ident {
+                                #(#transformed_fields,)*
+                            },
+                            context
                         ),
                     });
                 }
@@ -142,27 +136,25 @@ impl<'a> ApplyTransformImpl<'a> {
                         .enumerate()
                         .map(|(idx, _)| format_ident!("field{}", idx));
 
-                    let transformed_field_params = field_params.clone().map(|field_param| quote! {
-                        #field_param.apply_transform(transformer, context)?
+                    let transformed_field_params = field_params.clone().map(|field_param| {
+                        quote! {
+                            #field_param.apply_transform(transformer, context)?
+                        }
                     });
 
                     tokens.append_all(quote! {
-                        #path::#ident( #(#field_params,)* ) => Ok(
-                            transformer.transform(
-                                self,
-                                #path::#ident(
-                                    #(#transformed_field_params,)*
-                                ),
-                                context
-                            )?
+                        #path::#ident( #(#field_params,)* ) => transformer.transform(
+                            self,
+                            #path::#ident(
+                                #(#transformed_field_params,)*
+                            ),
+                            context
                         ),
                     });
                 }
-                Fields::Unit => {
-                    tokens.append_all(quote! {
-                        #path::#ident => Ok(transformer.transform(self, #path::#ident, context)?),
-                    })
-                }
+                Fields::Unit => tokens.append_all(quote! {
+                    #path::#ident => transformer.transform(self, #path::#ident, context),
+                }),
             }
         }
 

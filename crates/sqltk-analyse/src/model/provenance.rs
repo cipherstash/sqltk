@@ -2,9 +2,9 @@ use std::rc::Rc;
 
 use crate::{
     model::{
+        expr_source::ExprSource,
         projection::Projection,
         schema::{CanonicalIdent, Table},
-        expr_source::ExprSource,
     },
     ColumnWithOptionalAlias,
 };

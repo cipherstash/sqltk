@@ -9,7 +9,11 @@ impl<'ast, N> ApplyTransform<'ast> for Vec<N>
 where
     N: 'static + ApplyTransform<'ast>,
 {
-    fn apply_transform<T>(&'ast self, transformer: &T, context: &T::Context) -> Result<Self, T::Error>
+    fn apply_transform<T>(
+        &'ast self,
+        transformer: &T,
+        context: &T::Context,
+    ) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
@@ -27,7 +31,11 @@ impl<'ast, N> ApplyTransform<'ast> for Option<N>
 where
     N: 'static + ApplyTransform<'ast>,
 {
-    fn apply_transform<T>(&'ast self, transformer: &T, context: &T::Context) -> Result<Self, T::Error>
+    fn apply_transform<T>(
+        &'ast self,
+        transformer: &T,
+        context: &T::Context,
+    ) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
@@ -45,13 +53,19 @@ impl<'ast, N> ApplyTransform<'ast> for Box<N>
 where
     N: 'static + ApplyTransform<'ast>,
 {
-    fn apply_transform<T>(&'ast self, transformer: &T, context: &T::Context) -> Result<Self, T::Error>
+    fn apply_transform<T>(
+        &'ast self,
+        transformer: &T,
+        context: &T::Context,
+    ) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
         transformer.transform(
             self,
-            (**self).apply_transform(transformer, context).map(Box::new)?,
+            (**self)
+                .apply_transform(transformer, context)
+                .map(Box::new)?,
             context,
         )
     }

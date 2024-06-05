@@ -1,10 +1,15 @@
-use std::{marker::PhantomData, ops::{ControlFlow, Deref}, rc::Rc};
+use std::{
+    marker::PhantomData,
+    ops::{ControlFlow, Deref},
+    rc::Rc,
+};
 
 use sqlparser::ast::SelectItem;
 use sqltk::{visitor_extensions::VisitorExtensions, Break, Visitable, Visitor};
 
 use crate::{
-    model::{Annotate, Projection, ResolutionError, ScopeOps}, AnnotateMut, ColumnWithOptionalAlias, SelectItemSource
+    model::{Annotate, Projection, ResolutionError, ScopeOps},
+    AnnotateMut, ColumnWithOptionalAlias, SelectItemSource,
 };
 
 #[derive(Debug)]
@@ -38,12 +43,8 @@ where
         if let Some(items) = node.downcast_ref::<Vec<SelectItem>>() {
             let result = items
                 .iter()
-                .map(|item| {
-                    state
-                        .get_annotation(item)
-                })
+                .map(|item| state.get_annotation(item))
                 .collect::<Result<Vec<_>, _>>();
-
 
             match result {
                 Ok(sources) => {
@@ -58,13 +59,14 @@ where
                             }
                         }
                     }
-                    let projection = Rc::new(Projection { columns: all_columns });
+                    let projection = Rc::new(Projection {
+                        columns: all_columns,
+                    });
                     state.set_annotation(items, projection);
                     self.continue_with_state(state)
                 }
                 Err(err) => self.break_with_error(err.into()),
             }
-
         } else {
             self.continue_with_state(state)
         }

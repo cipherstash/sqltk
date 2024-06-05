@@ -11,7 +11,7 @@ use crate::{
     model::Projection,
     model::ResolutionError,
     model::ScopeOps,
-    model::{NamedRelation, ExprSource},
+    model::{ExprSource, NamedRelation},
     model::{SqlIdent, UnquotedIdent},
     SchemaOps,
 };

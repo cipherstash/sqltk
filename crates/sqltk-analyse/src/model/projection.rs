@@ -2,8 +2,8 @@ use std::{ops::Deref, rc::Rc};
 
 use crate::{
     model::{
-        schema::{SqlIdent, Table},
         expr_source::{ExprSource, TableColumn},
+        schema::{SqlIdent, Table},
     },
     ColumnWithOptionalAlias,
 };

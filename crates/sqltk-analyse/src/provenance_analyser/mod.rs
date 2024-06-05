@@ -5,8 +5,8 @@ use sqltk::Visitor;
 use crate::build_projections::BuildProjections;
 use crate::build_sources::BuildSources;
 use crate::build_statement_provenance::BuildStatementProvenance;
-use crate::{ExpectedAnnotationError, Provenance};
 use crate::{import_relations::ImportRelations, model::ResolutionError, update_stack::UpdateStack};
+use crate::{ExpectedAnnotationError, Provenance};
 
 use core::marker::PhantomData;
 use std::convert::Infallible;
@@ -70,8 +70,8 @@ mod tests {
     use crate::{
         make_schema,
         model::{
-            Annotate, CanonicalIdent, ColumnWithOptionalAlias, InsertProvenance, Projection,
-            Provenance, SelectProvenance, ExprSource, SqlIdent, Table, TableColumn,
+            Annotate, CanonicalIdent, ColumnWithOptionalAlias, ExprSource, InsertProvenance,
+            Projection, Provenance, SelectProvenance, SqlIdent, Table, TableColumn,
         },
         DeleteProvenance, ProvenanceAnalyser,
     };
@@ -271,8 +271,10 @@ mod tests {
                                 }
                                 .into(),
                                 ColumnWithOptionalAlias {
-                                    source: ExprSource::TableColumn(todo_list_items_id_column.clone())
-                                        .into(),
+                                    source: ExprSource::TableColumn(
+                                        todo_list_items_id_column.clone()
+                                    )
+                                    .into(),
                                     alias: Some(SqlIdent::unquoted("todo_list_item_id").into())
                                 }
                                 .into(),
@@ -358,17 +360,20 @@ mod tests {
                                 }
                                 .into(),
                                 ColumnWithOptionalAlias {
-                                    source: ExprSource::TableColumn(films_title_column.clone()).into(),
+                                    source: ExprSource::TableColumn(films_title_column.clone())
+                                        .into(),
                                     alias: Some(SqlIdent::unquoted("title").into())
                                 }
                                 .into(),
                                 ColumnWithOptionalAlias {
-                                    source: ExprSource::TableColumn(films_length_column.clone()).into(),
+                                    source: ExprSource::TableColumn(films_length_column.clone())
+                                        .into(),
                                     alias: Some(SqlIdent::unquoted("length").into())
                                 }
                                 .into(),
                                 ColumnWithOptionalAlias {
-                                    source: ExprSource::TableColumn(films_rating_column.clone()).into(),
+                                    source: ExprSource::TableColumn(films_rating_column.clone())
+                                        .into(),
                                     alias: Some(SqlIdent::unquoted("rating").into())
                                 }
                                 .into(),
@@ -413,8 +418,11 @@ mod tests {
                         projection,
                         &Projection {
                             columns: vec![ColumnWithOptionalAlias {
-                                source: ExprSource::Value(Value::Number(BigDecimal::from(123), false))
-                                    .into(),
+                                source: ExprSource::Value(Value::Number(
+                                    BigDecimal::from(123),
+                                    false
+                                ))
+                                .into(),
                                 alias: Some(SqlIdent::unquoted("id").into())
                             }
                             .into()]

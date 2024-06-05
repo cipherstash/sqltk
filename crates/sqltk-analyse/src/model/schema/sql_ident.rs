@@ -286,8 +286,8 @@ macro_rules! impl_named {
 }
 
 use crate::Column;
-use crate::NamedRelation;
 use crate::ColumnWithOptionalAlias;
+use crate::NamedRelation;
 use crate::Schema;
 use crate::Table;
 

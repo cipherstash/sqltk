@@ -11,7 +11,7 @@ use sqlparser::ast::{Expr, Query, SetExpr};
 use sqltk::Visitor;
 
 use crate::{
-    model::Annotate, model::Projection, model::ResolutionError, model::ScopeOps, model::ExprSource,
+    model::Annotate, model::ExprSource, model::Projection, model::ResolutionError, model::ScopeOps,
     SchemaOps,
 };
 

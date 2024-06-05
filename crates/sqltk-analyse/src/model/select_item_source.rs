@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{ColumnWithOptionalAlias};
+use crate::ColumnWithOptionalAlias;
 
 /// Records the provenance of a single `SelectItem` node.
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]

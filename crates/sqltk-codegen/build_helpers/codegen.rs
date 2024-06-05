@@ -1,6 +1,6 @@
-use super::meta::{TerminalNode, SqlParserMetaQuery};
-use super::reachability::Reachability;
 use super::apply_transform_trait_impls::ApplyTransformImpl;
+use super::meta::{SqlParserMetaQuery, TerminalNode};
+use super::reachability::Reachability;
 use super::{sqlparser_node_extractor, visitable_trait_impls::VisitableImpl};
 use proc_macro2::TokenStream;
 
@@ -149,6 +149,12 @@ impl Codegen {
         for node in terminal_nodes {
             let type_path = node.type_path();
 
+            let copy_or_clone = if node.is_primitive() {
+                quote!(*self)
+            } else {
+                quote!(self.clone())
+            };
+
             output.append_all(quote! {
                 #[automatically_derived]
                 impl<'ast> crate::ApplyTransform<'ast> for #type_path {
@@ -160,7 +166,7 @@ impl Codegen {
                     where
                         T: crate::Transform<'ast>
                     {
-                        transform.transform(self, self.clone(), context)
+                        transform.transform(self, #copy_or_clone, context)
                     }
                 }
             });
