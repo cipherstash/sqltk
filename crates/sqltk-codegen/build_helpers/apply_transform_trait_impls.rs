@@ -111,11 +111,7 @@ impl ApplyTransformImpl {
         tokens
     }
 
-    fn match_variants(
-        &self,
-        item_enum: &ItemEnum,
-        is_non_exhaustive: bool,
-    ) -> TokenStream {
+    fn match_variants(&self, item_enum: &ItemEnum, is_non_exhaustive: bool) -> TokenStream {
         let mut tokens = TokenStream::new();
         let path = &self.path;
 

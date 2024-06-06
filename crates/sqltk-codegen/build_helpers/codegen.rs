@@ -1,5 +1,5 @@
 use super::apply_transform_trait_impls::ApplyTransformImpl;
-use super::meta::{AstNode, SqlParserMetaQuery, TerminalNode};
+use super::meta::{AstNode, SqlParserMetaQuery};
 use super::reachability::Reachability;
 use super::{sqlparser_node_extractor, visitable_trait_impls::VisitableImpl};
 use proc_macro2::TokenStream;
@@ -45,7 +45,7 @@ impl Codegen {
             )
         });
 
-        generated_code.append_all(quote!{
+        generated_code.append_all(quote! {
             #(#transformable_impls_for_main_nodes)*
             #(#transformable_impls_for_terminal_nodes)*
         });
@@ -87,16 +87,28 @@ impl Codegen {
             .map(|pn| pn.type_path().path.segments.last().unwrap().ident.clone())
             .collect::<HashSet<_>>();
 
-        let visitable_impls_for_main_nodes = main_nodes.iter().map(|(type_path, type_def)| {
-            VisitableImpl::new(type_path, type_def, &reachability, &terminal_nodes)
+        let visitable_impls_for_main_nodes = main_nodes.into_iter().map(|(type_path, type_def)| {
+            VisitableImpl::new(
+                type_path,
+                AstNode::SqlParserTypeDef(type_def),
+                reachability.clone(),
+                terminal_nodes.clone(),
+            )
         });
 
         let visitable_impls_for_terminal_nodes =
-            self.impl_visitable_for_terminal_nodes(self.meta.terminal_nodes());
+            self.meta.terminal_nodes().into_iter().map(|terminal_node| {
+                VisitableImpl::new(
+                    terminal_node.type_path().0,
+                    AstNode::TerminalNode(terminal_node),
+                    reachability.clone(),
+                    terminal_nodes.clone(),
+                )
+            });
 
         generated_code.append_all(quote! {
             #(#visitable_impls_for_main_nodes)*
-            #visitable_impls_for_terminal_nodes
+            #(#visitable_impls_for_terminal_nodes)*
         });
 
         let mut file = File::create(dest_file)
@@ -109,43 +121,5 @@ impl Codegen {
 
         file.write_all(formatted.as_bytes())
             .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()));
-    }
-
-    pub(crate) fn impl_visitable_for_terminal_nodes(
-        &self,
-        terminal_nodes: impl IntoIterator<Item = TerminalNode>,
-    ) -> TokenStream {
-        let mut output = proc_macro2::TokenStream::new();
-
-        for node in terminal_nodes {
-            let type_path = node.type_path();
-
-            output.append_all(quote! {
-                #[automatically_derived]
-                impl<'ast> crate::Visitable<'ast> for #type_path {
-                    fn accept<V>(
-                        &'ast self,
-                        visitor: &V,
-                        state: V::State,
-                    ) -> ControlFlow<crate::Break<V::State, V::Error>, V::State>
-                    where
-                        V: crate::Visitor<'ast>
-                    {
-                        visit(
-                            self,
-                            visitor,
-                            state,
-                            #[allow(unused_variables)]
-                            |visitor, state| {
-                                use crate::visitor_extensions::VisitorExtensions;
-                                visitor.continue_with_state(state)
-                            }
-                        )
-                    }
-                }
-            });
-        }
-
-        output
     }
 }

@@ -1,5 +1,4 @@
 use core::cmp::Reverse;
-// use core::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 
 use proc_macro2::TokenStream;
@@ -7,25 +6,29 @@ use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::{Fields, Ident, ItemEnum, Type, TypePath};
 
 use super::generics::{self};
-use super::meta::{SqlParserTypeDef, SqlParserTypeDefKind};
+use super::meta::{AstNode, SqlParserTypeDefKind};
 
-pub(crate) struct VisitableImpl<'a> {
-    node: &'a TypePath,
-    def: &'a SqlParserTypeDef,
-    reachability: &'a HashMap<Ident, bool>,
-    terminal_nodes: &'a HashSet<Ident>,
+pub(crate) struct VisitableImpl {
+    type_path: TypePath,
+    node: AstNode,
+    reachability: HashMap<Ident, bool>,
+    terminal_nodes: HashSet<Ident>,
 }
 
-impl<'a> ToTokens for VisitableImpl<'a> {
+impl ToTokens for VisitableImpl {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let (ref path, ref body) = match &self.def.ty {
-            SqlParserTypeDefKind::Enum(item_enum) => (
-                self.node,
-                self.match_variants(self.node, item_enum, self.def.is_non_exhaustive),
-            ),
-            SqlParserTypeDefKind::Struct(item_struct) => {
-                (self.node, self.walk_struct_fields(&item_struct.fields))
-            }
+        let (ref path, ref body) = match &self.node {
+            AstNode::SqlParserTypeDef(def) => match &def.ty {
+                SqlParserTypeDefKind::Enum(item_enum) => (
+                    self.type_path.clone(),
+                    self.match_variants(&self.type_path, item_enum, def.is_non_exhaustive),
+                ),
+                SqlParserTypeDefKind::Struct(item_struct) => (
+                    self.type_path.clone(),
+                    self.walk_struct_fields(&item_struct.fields),
+                ),
+            },
+            AstNode::TerminalNode(terminal_node) => (terminal_node.type_path().0, quote!()),
         };
 
         tokens.append_all(quote! {
@@ -52,16 +55,16 @@ impl<'a> ToTokens for VisitableImpl<'a> {
     }
 }
 
-impl<'a> VisitableImpl<'a> {
+impl VisitableImpl {
     pub(crate) fn new(
-        node: &'a TypePath,
-        def: &'a SqlParserTypeDef,
-        reachability: &'a HashMap<Ident, bool>,
-        terminal_nodes: &'a HashSet<Ident>,
+        type_path: TypePath,
+        node: AstNode,
+        reachability: HashMap<Ident, bool>,
+        terminal_nodes: HashSet<Ident>,
     ) -> Self {
         Self {
+            type_path,
             node,
-            def,
             reachability,
             terminal_nodes,
         }
