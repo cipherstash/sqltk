@@ -96,6 +96,11 @@ pub struct SqlParserTypeDef {
     pub ty: SqlParserTypeDefKind,
 }
 
+pub enum AstNode {
+    SqlParserTypeDef(SqlParserTypeDef),
+    TerminalNode(TerminalNode),
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum SqlParserTypeDefKind {
     Enum(Syn<ItemEnum>),

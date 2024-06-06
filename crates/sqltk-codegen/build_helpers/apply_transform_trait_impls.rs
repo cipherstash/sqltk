@@ -2,24 +2,37 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::{Fields, ItemEnum, ItemStruct, TypePath};
 
-use super::meta::{SqlParserTypeDef, SqlParserTypeDefKind};
+use super::meta::{AstNode, SqlParserTypeDefKind};
 
-pub(crate) struct ApplyTransformImpl<'a> {
-    node: &'a TypePath,
-    def: &'a SqlParserTypeDef,
+pub(crate) struct ApplyTransformImpl {
+    path: TypePath,
+    node: AstNode,
 }
 
-impl<'a> ToTokens for ApplyTransformImpl<'a> {
+impl ToTokens for ApplyTransformImpl {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let (ref path, ref body) = match &self.def.ty {
-            SqlParserTypeDefKind::Enum(item_enum) => {
-                let variants =
-                    self.match_variants(self.node, item_enum, self.def.is_non_exhaustive);
-                (self.node, variants)
-            }
-            SqlParserTypeDefKind::Struct(item_struct) => {
-                let fields = self.walk_struct_fields(item_struct);
-                (self.node, fields)
+        let (ref path, ref body) = match &self.node {
+            AstNode::SqlParserTypeDef(def) => match &def.ty {
+                SqlParserTypeDefKind::Enum(item_enum) => {
+                    let variants = self.match_variants(item_enum, def.is_non_exhaustive);
+                    (&self.path, variants)
+                }
+                SqlParserTypeDefKind::Struct(item_struct) => {
+                    let fields = self.walk_struct_fields(item_struct);
+                    (&self.path, fields)
+                }
+            },
+            AstNode::TerminalNode(terminal) => {
+                let copy_or_clone = if terminal.is_primitive() {
+                    quote!(*self)
+                } else {
+                    quote!(self.clone())
+                };
+
+                (
+                    &self.path,
+                    quote!(transformer.transform(self, #copy_or_clone, context)),
+                )
             }
         };
 
@@ -41,9 +54,9 @@ impl<'a> ToTokens for ApplyTransformImpl<'a> {
     }
 }
 
-impl<'a> ApplyTransformImpl<'a> {
-    pub(crate) fn new(node: &'a TypePath, def: &'a SqlParserTypeDef) -> Self {
-        Self { node, def }
+impl ApplyTransformImpl {
+    pub(crate) fn new(path: TypePath, node: AstNode) -> Self {
+        Self { path, node }
     }
 
     fn walk_struct_fields(&self, item: &ItemStruct) -> TokenStream {
@@ -100,11 +113,11 @@ impl<'a> ApplyTransformImpl<'a> {
 
     fn match_variants(
         &self,
-        path: &syn::TypePath,
         item_enum: &ItemEnum,
         is_non_exhaustive: bool,
     ) -> TokenStream {
         let mut tokens = TokenStream::new();
+        let path = &self.path;
 
         for variant in &item_enum.variants {
             let ident = &variant.ident;

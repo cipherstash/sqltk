@@ -1,5 +1,5 @@
 use super::apply_transform_trait_impls::ApplyTransformImpl;
-use super::meta::{SqlParserMetaQuery, TerminalNode};
+use super::meta::{AstNode, SqlParserMetaQuery, TerminalNode};
 use super::reachability::Reachability;
 use super::{sqlparser_node_extractor, visitable_trait_impls::VisitableImpl};
 use proc_macro2::TokenStream;
@@ -24,21 +24,30 @@ impl Codegen {
             meta: SqlParserMetaQuery::from(sqlparser_node_extractor::extract(vec![])),
         }
     }
+
     pub fn generate_apply_transform_impls(&self, dest_file: &PathBuf) {
         let mut generated_code = TokenStream::new();
 
         let main_nodes = self.meta.main_nodes();
+        let terminal_nodes = self.meta.terminal_nodes();
 
-        let transformable_impls_for_main_nodes = main_nodes
-            .iter()
-            .map(|(type_path, type_def)| ApplyTransformImpl::new(type_path, type_def));
+        let transformable_impls_for_main_nodes = main_nodes.iter().map(|(type_path, type_def)| {
+            ApplyTransformImpl::new(
+                type_path.clone(),
+                AstNode::SqlParserTypeDef(type_def.clone()),
+            )
+        });
 
-        let transformable_impls_for_terminal_nodes =
-            self.impl_transformable_for_terminal_nodes(self.meta.terminal_nodes());
+        let transformable_impls_for_terminal_nodes = terminal_nodes.iter().map(|terminal_node| {
+            ApplyTransformImpl::new(
+                terminal_node.type_path().0.clone(),
+                AstNode::TerminalNode(terminal_node.clone()),
+            )
+        });
 
-        generated_code.append_all(quote! {
+        generated_code.append_all(quote!{
             #(#transformable_impls_for_main_nodes)*
-            #transformable_impls_for_terminal_nodes
+            #(#transformable_impls_for_terminal_nodes)*
         });
 
         let mut file = File::create(dest_file)
@@ -132,41 +141,6 @@ impl Codegen {
                                 visitor.continue_with_state(state)
                             }
                         )
-                    }
-                }
-            });
-        }
-
-        output
-    }
-
-    pub(crate) fn impl_transformable_for_terminal_nodes(
-        &self,
-        terminal_nodes: impl IntoIterator<Item = TerminalNode>,
-    ) -> TokenStream {
-        let mut output = proc_macro2::TokenStream::new();
-
-        for node in terminal_nodes {
-            let type_path = node.type_path();
-
-            let copy_or_clone = if node.is_primitive() {
-                quote!(*self)
-            } else {
-                quote!(self.clone())
-            };
-
-            output.append_all(quote! {
-                #[automatically_derived]
-                impl<'ast> crate::ApplyTransform<'ast> for #type_path {
-                    fn apply_transform<T>(
-                        &'ast self,
-                        transform: &T,
-                        context: &T::Context,
-                    ) -> Result<Self, T::Error>
-                    where
-                        T: crate::Transform<'ast>
-                    {
-                        transform.transform(self, #copy_or_clone, context)
                     }
                 }
             });
