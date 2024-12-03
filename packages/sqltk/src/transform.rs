@@ -21,7 +21,7 @@ pub trait Transform<'ast> {
     ///
     /// An error during transformation will immediatly terminatate the entire transformation process of the AST.
     fn transform<N: Visitable>(
-        &self,
+        &mut self,
         original_node: &'ast N,
         new_node: N,
     ) -> Result<N, Self::Error>;
@@ -39,7 +39,7 @@ where
     ///
     /// The `transform` is applied depth-first before finally being applied to
     /// `self`.
-    fn apply_transform<T>(&'ast self, transform: &T) -> Result<Self, T::Error>
+    fn apply_transform<T>(&'ast self, transform: &mut T) -> Result<Self, T::Error>
     where
         T: Transform<'ast>;
 }
@@ -63,7 +63,7 @@ mod tests {
             type Error = Infallible;
 
             fn transform<N: Visitable>(
-                &self,
+                &mut self,
                 _: &'ast N,
                 mut new_node: N,
             ) -> Result<N, Self::Error> {
@@ -89,7 +89,7 @@ mod tests {
             type Error = Infallible;
 
             fn transform<N: Visitable>(
-                &self,
+                &mut self,
                 _: &'ast N,
                 mut new_node: N,
             ) -> Result<N, Self::Error> {
@@ -106,7 +106,7 @@ mod tests {
         )
         .unwrap();
 
-        match ast.apply_transform(&UpcaseIdents) {
+        match ast.apply_transform(&mut UpcaseIdents) {
             Ok(statements) => {
                 let statement = statements.first().unwrap();
                 assert_eq!(
@@ -126,7 +126,7 @@ mod tests {
             type Error = Infallible;
 
             fn transform<N: Visitable>(
-                &self,
+                &mut self,
                 _: &'ast N,
                 mut new_node: N,
             ) -> Result<N, Self::Error> {
@@ -143,7 +143,7 @@ mod tests {
         )
         .unwrap();
 
-        match ast.apply_transform(&ReverseProjectionColumns) {
+        match ast.apply_transform(&mut ReverseProjectionColumns) {
             Ok(statements) => {
                 let statement = statements.first().unwrap();
                 assert_eq!(
@@ -163,7 +163,7 @@ mod tests {
             type Error = Infallible;
 
             fn transform<N: Visitable>(
-                &self,
+                &mut self,
                 _: &'ast N,
                 mut new_node: N,
             ) -> Result<N, Self::Error> {
@@ -184,7 +184,7 @@ mod tests {
         )
         .unwrap();
 
-        match ast.apply_transform(&InsertSelectItem) {
+        match ast.apply_transform(&mut InsertSelectItem) {
             Ok(statements) => {
                 let statement = statements.first().unwrap();
                 assert_eq!(

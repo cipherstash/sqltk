@@ -78,8 +78,8 @@
 // No functionality should be created here (beyond simply re-exporting).
 
 mod transform;
-mod visitable_impls;
 mod transformable_impls;
+mod visitable_impls;
 
 use sqlparser::ast::{Expr, ObjectName, Statement};
 pub use transform::*;
@@ -344,11 +344,11 @@ mod test {
         rc::Rc,
     };
 
+    use super::{into_result, Break, Visitable, Visitor};
     use sqlparser::{
         ast::{Expr, SelectItem, TableWithJoins, With},
         dialect, parser,
     };
-    use super::{into_result, Break, Visitable, Visitor};
 
     #[test]
     fn basic() {

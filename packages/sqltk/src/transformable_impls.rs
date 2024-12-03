@@ -1,6 +1,6 @@
 use sqlparser::ast::{OneOrManyWithParens, WrappedCollection};
 
-use crate::{Transformable, Transform, Visitable};
+use crate::{Transform, Transformable, Visitable};
 
 include!(concat!(
     env!("OUT_DIR"),
@@ -11,16 +11,16 @@ impl<'ast, N> Transformable<'ast> for Vec<N>
 where
     N: Visitable + Transformable<'ast>,
 {
-    fn apply_transform<T>(&'ast self, transformer: &T) -> Result<Self, T::Error>
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
-        transformer.transform(
-            self,
-            self.iter()
-                .map(|item| item.apply_transform(transformer))
-                .collect::<Result<Vec<N>, T::Error>>()?,
-        )
+        let items = self
+            .iter()
+            .map(|item| item.apply_transform(transformer))
+            .collect::<Result<Vec<N>, T::Error>>()?;
+
+        transformer.transform(self, items)
     }
 }
 
@@ -28,16 +28,16 @@ impl<'ast, N> Transformable<'ast> for Option<N>
 where
     N: Visitable + Transformable<'ast>,
 {
-    fn apply_transform<T>(&'ast self, transformer: &T) -> Result<Self, T::Error>
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
-        transformer.transform(
-            self,
-            self.as_ref()
-                .map(|item| item.apply_transform(transformer))
-                .transpose()?,
-        )
+        let item = self
+            .as_ref()
+            .map(|item| item.apply_transform(transformer))
+            .transpose()?;
+
+        transformer.transform(self, item)
     }
 }
 
@@ -45,11 +45,12 @@ impl<'ast, N> Transformable<'ast> for Box<N>
 where
     N: Visitable + Transformable<'ast>,
 {
-    fn apply_transform<T>(&'ast self, transformer: &T) -> Result<Self, T::Error>
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
-        transformer.transform(self, (**self).apply_transform(transformer).map(Box::new)?)
+        let item = (**self).apply_transform(transformer).map(Box::new)?;
+        transformer.transform(self, item)
     }
 }
 
@@ -59,7 +60,7 @@ impl<'ast, N> Transformable<'ast> for OneOrManyWithParens<N>
 where
     N: Visitable + Transformable<'ast>,
 {
-    fn apply_transform<T>(&'ast self, transformer: &T) -> Result<Self, T::Error>
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
@@ -78,7 +79,7 @@ impl<'ast, N> Transformable<'ast> for WrappedCollection<N>
 where
     N: Visitable + Transformable<'ast>,
 {
-    fn apply_transform<T>(&'ast self, transformer: &T) -> Result<Self, T::Error>
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
