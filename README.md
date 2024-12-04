@@ -4,7 +4,11 @@
 
 ## Features
 
-- A generalised `Visitor` trait and implementations for all `sqlparser` AST node types.
+- A comprehensive `Visitor` trait and implementations for all `sqlparser` AST node types.
+
+- A `Transform` trait for rewriting ASTs (`sqltk` does not provide a `VisitorMut` trait).
+
+### Comprehensive Visitor trait with more useful AST traversal order
 
 `sqlparser`'s `Visitor` implementation only contains callbacks for a handful of AST node types.
 
@@ -17,6 +21,16 @@ This means your `Visitor` implementations can safely assume that any semantic de
 For example, in a `SELECT` statement the `FROM` clause will be visited before the projection or the `WHERE` clause etc.
 
 The analysis that determines AST traversal order happens at compile time (see `packages/sqltk-codegen`).
+
+### Transform trait
+
+The `Transform` trait contains a single method imaginitively named `transform`. Which takes a reference to the *original* AST node and an owned clone of the node as arguments. Edits are applied to the owned node and returned in a `Result`.
+
+The reason for this existence of this trait is so that metadata about nodes (from a previous analysis step) which inform the transformation process can be held in the type that implements `Transform`. These will be regular Rust shared references to AST nodes (and therefore read-only). Which would *prevent* mutation of the nodes in-place because Rust will not allow coexistence of `&node` and `&mut node`.
+
+`sqlparser`'s `VisitorMut::visit_mut` method accepts a `&mut node` argument, thus preventing coexistance of references to nodes in another data structure - which rules out the use of some patterns for associating metadata with those nodes.
+
+Transformation begins at the leaf nodes of the AST (AKA depth-first) and ends at the root node.
 
 ## Getting started
 
