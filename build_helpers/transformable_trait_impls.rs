@@ -4,12 +4,12 @@ use syn::{Fields, ItemEnum, ItemStruct, TypePath};
 
 use super::meta::{AstNode, SqlParserTypeDefKind};
 
-pub(crate) struct ApplyTransformImpl {
+pub(crate) struct TransformableImpl {
     path: TypePath,
     node: AstNode,
 }
 
-impl ToTokens for ApplyTransformImpl {
+impl ToTokens for TransformableImpl {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let (ref path, ref body) = match &self.node {
             AstNode::SqlParserTypeDef(def) => match &def.ty {
@@ -54,7 +54,7 @@ impl ToTokens for ApplyTransformImpl {
     }
 }
 
-impl ApplyTransformImpl {
+impl TransformableImpl {
     pub(crate) fn new(path: TypePath, node: AstNode) -> Self {
         Self { path, node }
     }

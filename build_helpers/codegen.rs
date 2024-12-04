@@ -1,6 +1,6 @@
-use super::apply_transform_trait_impls::ApplyTransformImpl;
 use super::meta::{AstNode, SqlParserMetaQuery};
 use super::reachability::Reachability;
+use super::transformable_trait_impls::TransformableImpl;
 use super::{sqlparser_node_extractor, visitable_trait_impls::VisitableImpl};
 use proc_macro2::TokenStream;
 
@@ -32,14 +32,14 @@ impl Codegen {
         let terminal_nodes = self.meta.terminal_nodes();
 
         let transformable_impls_for_main_nodes = main_nodes.iter().map(|(type_path, type_def)| {
-            ApplyTransformImpl::new(
+            TransformableImpl::new(
                 type_path.clone(),
                 AstNode::SqlParserTypeDef(type_def.clone()),
             )
         });
 
         let transformable_impls_for_terminal_nodes = terminal_nodes.iter().map(|terminal_node| {
-            ApplyTransformImpl::new(
+            TransformableImpl::new(
                 terminal_node.type_path().0.clone(),
                 AstNode::TerminalNode(terminal_node.clone()),
             )
@@ -66,15 +66,23 @@ impl Codegen {
         }
     }
 
-    pub fn generate_visitable_impls(&self, dest_file: &PathBuf, reachability_debug_file: &PathBuf) {
+    pub fn generate_visitable_impls(
+        &self,
+        dest_file: &PathBuf,
+        reachability_debug_file: Option<&PathBuf>,
+    ) {
         let reachability = Reachability::derive(&self.meta);
 
-        let mut file = File::create(reachability_debug_file)
-            .unwrap_or_else(|_| panic!("Could not open {}", &reachability_debug_file.display()));
+        if let Some(reachability_debug_file) = reachability_debug_file {
+            let mut file = File::create(reachability_debug_file).unwrap_or_else(|_| {
+                panic!("Could not open {}", &reachability_debug_file.display())
+            });
 
-        for (ty, source_node_reachable) in &reachability {
-            let _ = file
-                .write(format!("{} {}\n", source_node_reachable, ty.to_token_stream()).as_bytes());
+            for (ty, source_node_reachable) in &reachability {
+                let _ = file.write(
+                    format!("{} {}\n", source_node_reachable, ty.to_token_stream()).as_bytes(),
+                );
+            }
         }
 
         let mut generated_code = TokenStream::new();

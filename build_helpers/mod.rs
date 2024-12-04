@@ -1,4 +1,4 @@
-mod apply_transform_trait_impls;
+mod transformable_trait_impls;
 mod codegen;
 mod generics;
 mod meta;

@@ -4,7 +4,7 @@ use crate::{Transform, Transformable, Visitable};
 
 include!(concat!(
     env!("OUT_DIR"),
-    "/generated_apply_transform_impls.rs"
+    "/generated/transformable_impls.rs"
 ));
 
 impl<'ast, N> Transformable<'ast> for Vec<N>

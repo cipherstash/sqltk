@@ -46,20 +46,14 @@ Transformation begins at the leaf nodes of the AST (AKA depth-first) and ends at
 
 `$ cargo add sqltk`
 
-## A tour of the cargo workspace
-
-### sqltk
-
-The main lib crate.  Where all logic & non-generated trait implementations are maintained.
-
-### sqltk-codegen
+## build.rs
 
 Analyses `sqlparser` source code and generates:
 
 - A serialized blob of metadata about `sqlparser` AST nodes
-- Analyzes the `sqlparser` AST in order to determine an AST traversal order for single-pass semantic analysis workloads.
-- Generates the `Visitable` trait implementation for all AST node types
-- Generates the `Transformer` trait implementation for all AST node types
+- Analyzes the `sqlparser` AST in order to determine an AST traversal order for single-pass semantic analysis workloads
+- Generates the `Visitable` trait implementations for all AST node types
+- Generates the `Transformer` trait implementations for all AST node types
 
 ## About
 

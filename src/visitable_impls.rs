@@ -1,4 +1,4 @@
-include!(concat!(env!("OUT_DIR"), "/generated_visitable_impls.rs"));
+include!(concat!(env!("OUT_DIR"), "/generated/visitable_impls.rs"));
 
 use sqlparser::ast::{OneOrManyWithParens, WrappedCollection};
 
