@@ -13,12 +13,9 @@ homepage = "https://github.com/cipherstash/sqltk"
 documentation = "https://docs.rs/sqltk/"
 keywords = [
     "sql",
-    "lexer",
-    "parser",
     "visitor",
     "transform",
     "analyze",
-    "analyse",
     "cipherstash",
 ]
 repository = "https://github.com/cipherstash/sqltk"
