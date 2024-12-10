@@ -6,15 +6,11 @@
 //!
 //! ## Key features
 //!
-//! 1. Full coverage of all AST node types from `sqlparser` (including all field
-//!    types and container types (`Vec`, `Option` & `Box`)) and terminal nodes.
+//! 1. Full coverage of all AST node types from `sqlparser` (including all field types and container types (`Vec`,
+//! `Option` & `Box`)) and terminal nodes.
 //!
-//! 2. Support for annotating AST nodes with user-defined metadata during
-//!    traversal (see: [`sqltk-analysis`])
-//!
-//! 4. An API for composing [`Visitor`] implementations to facilitate complex
-//!    SQL analysis scenarios made from small, unit testable pieces
-//!    (see: [`sqltk-analysis`]).
+//! 2. [`Transform`] trait methods do not receive a mutable node argument which means that non-mutable references AST
+//! nodes can be retained in your own data structures from previous analysis passes.
 //!
 //! ## Installation
 //!
