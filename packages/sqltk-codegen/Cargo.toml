@@ -2,7 +2,7 @@
 name = "sqltk-codegen"
 resolver = "2"
 description = "Offline codegen for Visitable & Transformable implementations for sqltk"
-version = "0.2.0"
+version = "0.2.1"
 publish = false
 edition = "2021"
 authors = ["James Sadler <james@cipherstash.com>"]
