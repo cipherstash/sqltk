@@ -37,10 +37,10 @@ impl ToTokens for VisitableImpl {
                 fn accept<'ast, V: crate::Visitor<'ast>>(
                     &'ast self,
                     visitor: &mut V
-                ) -> ControlFlow<crate::Break<V::Error>> {
+                ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
                     visit(self, visitor, #[allow(unused_variables)] |visitor| {
                         #body
-                        ControlFlow::Continue(())
+                        std::ops::ControlFlow::Continue(())
                     })
                 }
             }

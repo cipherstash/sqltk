@@ -1,0 +1,30 @@
+[package]
+name = "sqltk-codegen"
+resolver = "2"
+description = "Offline codegen for Visitable & Transformable implementations for sqltk"
+version = "0.1.0"
+publish = false
+edition = "2021"
+authors = ["James Sadler <james@cipherstash.com>"]
+homepage = "https://github.com/cipherstash/sqltk"
+documentation = "https://docs.rs/sqltk/"
+keywords = ["sql", "visitor", "transform", "analyze", "cipherstash"]
+repository = "https://github.com/cipherstash/sqltk"
+license = "MIT"
+include = [
+  "src/**/*.rs",
+  "Cargo.toml",
+  "CONTRIBUTING.md",
+  "LICENSE",
+  "README.md",
+]
+
+[dependencies]
+syn = { version = "^2.0", features = ["full", "extra-traits", "printing"] }
+proc-macro2 = { version = "^1.0", features = ["span-locations"] }
+quote = { version = "^1" }
+prettyplease = "^0.2"
+cargo_metadata = "^0.19"
+Inflector = "^0.11"
+bigdecimal = { version = "^0.4" }
+sqlparser = { version = "^0.52", features = ["bigdecimal"] }

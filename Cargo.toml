@@ -1,46 +1,14 @@
-[package]
-name = "sqltk"
+[workspace]
 resolver = "2"
-description = "Enhanced Visitor implementation for sqlparser"
-version = "0.1.0"
-publish = true
+members = ["packages/*"]
+
+[workspace.package]
 edition = "2021"
 authors = [
-    "James Sadler <james@cipherstash.com>",
-    "Robin Howard <robin@cipherstash.com>",
-]
-homepage = "https://github.com/cipherstash/sqltk"
-documentation = "https://docs.rs/sqltk/"
-keywords = [
-    "sql",
-    "visitor",
-    "transform",
-    "analyze",
-    "cipherstash",
+  "James Sadler <james@cipherstash.com>",
+  "Robin Howard <robin@cipherstash.com>",
 ]
 repository = "https://github.com/cipherstash/sqltk"
-license = "MIT"
-readme = "README.md"
-include = [
-    "build.rs",
-    "build_helpers/**/*.rs",
-    "src/**/*.rs",
-    "Cargo.toml",
-    "CONTRIBUTING.md",
-    "LICENSE",
-    "README.md",
-]
-
-[dependencies]
-bigdecimal = { version = "^0.4" }
-sqlparser = { version = "^0.52", features = ["bigdecimal"]}
-
-[build-dependencies]
-syn = { version = "^2.0", features = ["full", "extra-traits", "printing"] }
-proc-macro2 = { version = "^1.0", features = ["span-locations"] }
-quote = { version = "^1" }
-prettyplease = "^0.2"
-cargo_metadata = "^0.19"
-Inflector = "^0.11"
-bigdecimal = { version = "^0.4" }
-sqlparser = { version = "^0.52", features = ["bigdecimal"]}
+homepage = "https://cipherstash.com"
+keywords = ["sqlparser", "database", "sql"]
+categories = ["sql", "database"]

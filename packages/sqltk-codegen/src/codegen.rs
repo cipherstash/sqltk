@@ -115,6 +115,8 @@ impl Codegen {
             });
 
         generated_code.append_all(quote! {
+            use crate::visitable_impls::visit;
+
             #(#visitable_impls_for_main_nodes)*
             #(#visitable_impls_for_terminal_nodes)*
         });
