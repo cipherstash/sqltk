@@ -19,10 +19,7 @@
 //! ## Installation
 //!
 //! ```shell
-//! $ cargo install cargo-expand
 //! $ cargo add sqltk
-//! # optional:
-//! $ cargo add sqltk-analysis
 //! ```
 //!
 //! ## Example

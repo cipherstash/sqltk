@@ -40,8 +40,6 @@ Add `sqltk` to your Cargo project
 
 If you plan to hack on `sqltk` itself then you will need to install `cargo-expand` if you plan on running the code generator.
 
-1. Install `cargo-expand`
-
 `$ cargo install cargo-expand`
 
   > NOTE: `cargo-expand` invokes Rust *nightly* to do its job. Therefore a nightly Rust toolchain must be installed. However, `sqltk`'s generated code does not require a nightly compiler.
