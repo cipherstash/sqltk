@@ -2,7 +2,7 @@
 name = "sqltk"
 resolver = "2"
 description = "Enhanced Visitor implementation for sqlparser"
-version = "0.1.0"
+version = "0.2.0"
 publish = true
 edition = "2021"
 authors = [
@@ -20,13 +20,13 @@ keywords = [
 ]
 repository = "https://github.com/cipherstash/sqltk"
 license = "MIT"
-readme = "../README.md"
+readme = "../../README.md"
 include = [
     "src/**/*.rs",
     "Cargo.toml",
     "CONTRIBUTING.md",
     "LICENSE",
-    "../README.md",
+    "../../README.md",
 ]
 
 [dependencies]
