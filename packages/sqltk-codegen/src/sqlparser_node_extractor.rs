@@ -1,4 +1,5 @@
 use cargo_metadata::{CargoOpt, MetadataCommand};
+use parser::SqlParserAstAnalyser;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -31,15 +32,9 @@ pub fn extract(sqlparser_features: Vec<String>) -> SqlParserMeta {
             .unwrap(),
     );
 
-    println!(
-        "cargo:rerun-if-changed={}",
-        sql_parser_dir.as_os_str().to_str().unwrap()
-    );
-
     // TODO: instead of depending on cargo-expand, just invoke rustc the same
     // way that cargo-expand does and remove a dependency.
     // change to this command: `cargo +nightly rustc -- -Zunstable-options -Zunpretty=expanded`
-    //
     let output = Command::new("cargo")
         .arg("expand")
         .arg("--features")

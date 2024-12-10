@@ -34,7 +34,11 @@ Transformation begins at the leaf nodes of the AST (AKA depth-first) and ends at
 
 ## Getting started
 
-`sqltk-codegen` requires `cargo-expand` to be installed.
+Add `sqltk` to your Cargo project
+
+`$ cargo add sqltk`
+
+If you plan to hack on `sqltk` itself then you will need to install `cargo-expand` if you plan on running the code generator.
 
 1. Install `cargo-expand`
 
@@ -42,18 +46,14 @@ Transformation begins at the leaf nodes of the AST (AKA depth-first) and ends at
 
   > NOTE: `cargo-expand` invokes Rust *nightly* to do its job. Therefore a nightly Rust toolchain must be installed. However, `sqltk`'s generated code does not require a nightly compiler.
 
-2. Add `sqltk` to your Cargo project
-
-`$ cargo add sqltk`
-
-## build.rs
+## `sqltk-codegen`
 
 Analyses `sqlparser` source code and generates:
 
-- A serialized blob of metadata about `sqlparser` AST nodes
 - Analyzes the `sqlparser` AST in order to determine an AST traversal order for single-pass semantic analysis workloads
 - Generates the `Visitable` trait implementations for all AST node types
 - Generates the `Transformer` trait implementations for all AST node types
+- Generates the `Semantic` trait implementations
 
 ## About
 

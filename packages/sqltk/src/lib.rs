@@ -77,6 +77,7 @@
 //
 // No functionality should be created here (beyond simply re-exporting).
 
+mod generated;
 mod transform;
 mod transformable_impls;
 mod visitable_impls;

@@ -1,5 +1,3 @@
-include!(concat!(env!("OUT_DIR"), "/generated/visitable_impls.rs"));
-
 use sqlparser::ast::{OneOrManyWithParens, WrappedCollection};
 
 use crate::*;
@@ -83,7 +81,7 @@ where
 /// Helper function used by generated code for visiting a node and its children
 /// recursively while properly handling visitor control flow.
 #[inline(always)]
-fn visit<'ast, N, F, V>(
+pub(crate) fn visit<'ast, N, F, V>(
     node: &'ast N,
     visitor: &mut V,
     visit_children: F,

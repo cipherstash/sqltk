@@ -2,11 +2,6 @@ use sqlparser::ast::{OneOrManyWithParens, WrappedCollection};
 
 use crate::{Transform, Transformable, Visitable};
 
-include!(concat!(
-    env!("OUT_DIR"),
-    "/generated/transformable_impls.rs"
-));
-
 impl<'ast, N> Transformable<'ast> for Vec<N>
 where
     N: Visitable + Transformable<'ast>,
