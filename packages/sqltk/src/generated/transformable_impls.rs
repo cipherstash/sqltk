@@ -536,6 +536,21 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::AlterTableOperation {
                 };
                 transformer.transform(self, transformed)
             }
+            sqlparser::ast::AlterTableOperation::ClusterBy { exprs } => {
+                let transformed = sqlparser::ast::AlterTableOperation::ClusterBy {
+                    exprs: exprs.apply_transform(transformer)?,
+                };
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::AlterTableOperation::DropClusteringKey => {
+                transformer.transform(self, sqlparser::ast::AlterTableOperation::DropClusteringKey)
+            }
+            sqlparser::ast::AlterTableOperation::SuspendRecluster => {
+                transformer.transform(self, sqlparser::ast::AlterTableOperation::SuspendRecluster)
+            }
+            sqlparser::ast::AlterTableOperation::ResumeRecluster => {
+                transformer.transform(self, sqlparser::ast::AlterTableOperation::ResumeRecluster)
+            }
         }
     }
 }
@@ -674,6 +689,22 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::AttachDuckDBDatabaseOp
                     field0.apply_transform(transformer)?,
                 );
                 transformer.transform(self, transformed)
+            }
+        }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::BeginTransactionKind {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::BeginTransactionKind::Transaction => {
+                transformer.transform(self, sqlparser::ast::BeginTransactionKind::Transaction)
+            }
+            sqlparser::ast::BeginTransactionKind::Work => {
+                transformer.transform(self, sqlparser::ast::BeginTransactionKind::Work)
             }
         }
     }
@@ -1242,6 +1273,18 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::CommentObject {
             sqlparser::ast::CommentObject::Extension => {
                 transformer.transform(self, sqlparser::ast::CommentObject::Extension)
             }
+            sqlparser::ast::CommentObject::Schema => {
+                transformer.transform(self, sqlparser::ast::CommentObject::Schema)
+            }
+            sqlparser::ast::CommentObject::Database => {
+                transformer.transform(self, sqlparser::ast::CommentObject::Database)
+            }
+            sqlparser::ast::CommentObject::User => {
+                transformer.transform(self, sqlparser::ast::CommentObject::User)
+            }
+            sqlparser::ast::CommentObject::Role => {
+                transformer.transform(self, sqlparser::ast::CommentObject::Role)
+            }
         }
     }
 }
@@ -1503,6 +1546,49 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::CopyTarget {
                 transformer.transform(self, transformed)
             }
         }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::CreateFunction {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self {
+            or_replace,
+            temporary,
+            if_not_exists,
+            name,
+            args,
+            return_type,
+            function_body,
+            behavior,
+            called_on_null,
+            parallel,
+            using,
+            language,
+            determinism_specifier,
+            options,
+            remote_connection,
+        } = self;
+        let transformed = Self {
+            or_replace: or_replace.apply_transform(transformer)?,
+            temporary: temporary.apply_transform(transformer)?,
+            if_not_exists: if_not_exists.apply_transform(transformer)?,
+            name: name.apply_transform(transformer)?,
+            args: args.apply_transform(transformer)?,
+            return_type: return_type.apply_transform(transformer)?,
+            function_body: function_body.apply_transform(transformer)?,
+            behavior: behavior.apply_transform(transformer)?,
+            called_on_null: called_on_null.apply_transform(transformer)?,
+            parallel: parallel.apply_transform(transformer)?,
+            using: using.apply_transform(transformer)?,
+            language: language.apply_transform(transformer)?,
+            determinism_specifier: determinism_specifier.apply_transform(transformer)?,
+            options: options.apply_transform(transformer)?,
+            remote_connection: remote_connection.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
     }
 }
 #[automatically_derived]
@@ -1771,12 +1857,14 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Cte {
             query,
             from,
             materialized,
+            closing_paren_token,
         } = self;
         let transformed = Self {
             alias: alias.apply_transform(transformer)?,
             query: query.apply_transform(transformer)?,
             from: from.apply_transform(transformer)?,
             materialized: materialized.apply_transform(transformer)?,
+            closing_paren_token: closing_paren_token.apply_transform(transformer)?,
         };
         transformer.transform(self, transformed)
     }
@@ -1868,6 +1956,15 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::DataType {
                 let transformed =
                     sqlparser::ast::DataType::Blob(field0.apply_transform(transformer)?);
                 transformer.transform(self, transformed)
+            }
+            sqlparser::ast::DataType::TinyBlob => {
+                transformer.transform(self, sqlparser::ast::DataType::TinyBlob)
+            }
+            sqlparser::ast::DataType::MediumBlob => {
+                transformer.transform(self, sqlparser::ast::DataType::MediumBlob)
+            }
+            sqlparser::ast::DataType::LongBlob => {
+                transformer.transform(self, sqlparser::ast::DataType::LongBlob)
             }
             sqlparser::ast::DataType::Bytes(field0) => {
                 let transformed =
@@ -2044,8 +2141,10 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::DataType {
             sqlparser::ast::DataType::Float8 => {
                 transformer.transform(self, sqlparser::ast::DataType::Float8)
             }
-            sqlparser::ast::DataType::Double => {
-                transformer.transform(self, sqlparser::ast::DataType::Double)
+            sqlparser::ast::DataType::Double(field0) => {
+                let transformed =
+                    sqlparser::ast::DataType::Double(field0.apply_transform(transformer)?);
+                transformer.transform(self, transformed)
             }
             sqlparser::ast::DataType::DoublePrecision => {
                 transformer.transform(self, sqlparser::ast::DataType::DoublePrecision)
@@ -2103,6 +2202,15 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::DataType {
             sqlparser::ast::DataType::Text => {
                 transformer.transform(self, sqlparser::ast::DataType::Text)
             }
+            sqlparser::ast::DataType::TinyText => {
+                transformer.transform(self, sqlparser::ast::DataType::TinyText)
+            }
+            sqlparser::ast::DataType::MediumText => {
+                transformer.transform(self, sqlparser::ast::DataType::MediumText)
+            }
+            sqlparser::ast::DataType::LongText => {
+                transformer.transform(self, sqlparser::ast::DataType::LongText)
+            }
             sqlparser::ast::DataType::String(field0) => {
                 let transformed =
                     sqlparser::ast::DataType::String(field0.apply_transform(transformer)?);
@@ -2115,6 +2223,16 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::DataType {
             }
             sqlparser::ast::DataType::Bytea => {
                 transformer.transform(self, sqlparser::ast::DataType::Bytea)
+            }
+            sqlparser::ast::DataType::Bit(field0) => {
+                let transformed =
+                    sqlparser::ast::DataType::Bit(field0.apply_transform(transformer)?);
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::DataType::BitVarying(field0) => {
+                let transformed =
+                    sqlparser::ast::DataType::BitVarying(field0.apply_transform(transformer)?);
+                transformer.transform(self, transformed)
             }
             sqlparser::ast::DataType::Custom(field0, field1) => {
                 let transformed = sqlparser::ast::DataType::Custom(
@@ -2145,9 +2263,11 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::DataType {
                     sqlparser::ast::DataType::Nested(field0.apply_transform(transformer)?);
                 transformer.transform(self, transformed)
             }
-            sqlparser::ast::DataType::Enum(field0) => {
-                let transformed =
-                    sqlparser::ast::DataType::Enum(field0.apply_transform(transformer)?);
+            sqlparser::ast::DataType::Enum(field0, field1) => {
+                let transformed = sqlparser::ast::DataType::Enum(
+                    field0.apply_transform(transformer)?,
+                    field1.apply_transform(transformer)?,
+                );
                 transformer.transform(self, transformed)
             }
             sqlparser::ast::DataType::Set(field0) => {
@@ -2182,6 +2302,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::DataType {
             }
             sqlparser::ast::DataType::Trigger => {
                 transformer.transform(self, sqlparser::ast::DataType::Trigger)
+            }
+            sqlparser::ast::DataType::AnyType => {
+                transformer.transform(self, sqlparser::ast::DataType::AnyType)
             }
         }
     }
@@ -2595,6 +2718,28 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::EmptyMatchesMode {
             }
             sqlparser::ast::EmptyMatchesMode::WithUnmatched => {
                 transformer.transform(self, sqlparser::ast::EmptyMatchesMode::WithUnmatched)
+            }
+        }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::EnumMember {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::EnumMember::Name(field0) => {
+                let transformed =
+                    sqlparser::ast::EnumMember::Name(field0.apply_transform(transformer)?);
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::EnumMember::NamedValue(field0, field1) => {
+                let transformed = sqlparser::ast::EnumMember::NamedValue(
+                    field0.apply_transform(transformer)?,
+                    field1.apply_transform(transformer)?,
+                );
+                transformer.transform(self, transformed)
             }
         }
     }
@@ -3058,6 +3203,11 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Expr {
                     sqlparser::ast::Expr::Function(field0.apply_transform(transformer)?);
                 transformer.transform(self, transformed)
             }
+            sqlparser::ast::Expr::Method(field0) => {
+                let transformed =
+                    sqlparser::ast::Expr::Method(field0.apply_transform(transformer)?);
+                transformer.transform(self, transformed)
+            }
             sqlparser::ast::Expr::Case {
                 operand,
                 conditions,
@@ -3153,12 +3303,16 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Expr {
                 };
                 transformer.transform(self, transformed)
             }
-            sqlparser::ast::Expr::Wildcard => {
-                transformer.transform(self, sqlparser::ast::Expr::Wildcard)
-            }
-            sqlparser::ast::Expr::QualifiedWildcard(field0) => {
+            sqlparser::ast::Expr::Wildcard(field0) => {
                 let transformed =
-                    sqlparser::ast::Expr::QualifiedWildcard(field0.apply_transform(transformer)?);
+                    sqlparser::ast::Expr::Wildcard(field0.apply_transform(transformer)?);
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::Expr::QualifiedWildcard(field0, field1) => {
+                let transformed = sqlparser::ast::Expr::QualifiedWildcard(
+                    field0.apply_transform(transformer)?,
+                    field1.apply_transform(transformer)?,
+                );
                 transformer.transform(self, transformed)
             }
             sqlparser::ast::Expr::OuterJoin(field0) => {
@@ -3515,6 +3669,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Function {
     {
         let Self {
             name,
+            uses_odbc_syntax,
             parameters,
             args,
             filter,
@@ -3524,6 +3679,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Function {
         } = self;
         let transformed = Self {
             name: name.apply_transform(transformer)?,
+            uses_odbc_syntax: uses_odbc_syntax.apply_transform(transformer)?,
             parameters: parameters.apply_transform(transformer)?,
             args: args.apply_transform(transformer)?,
             filter: filter.apply_transform(transformer)?,
@@ -3547,6 +3703,18 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::FunctionArg {
                 operator,
             } => {
                 let transformed = sqlparser::ast::FunctionArg::Named {
+                    name: name.apply_transform(transformer)?,
+                    arg: arg.apply_transform(transformer)?,
+                    operator: operator.apply_transform(transformer)?,
+                };
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::FunctionArg::ExprNamed {
+                name,
+                arg,
+                operator,
+            } => {
+                let transformed = sqlparser::ast::FunctionArg::ExprNamed {
                     name: name.apply_transform(transformer)?,
                     arg: arg.apply_transform(transformer)?,
                     operator: operator.apply_transform(transformer)?,
@@ -3601,6 +3769,12 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::FunctionArgOperator {
             sqlparser::ast::FunctionArgOperator::Assignment => {
                 transformer.transform(self, sqlparser::ast::FunctionArgOperator::Assignment)
             }
+            sqlparser::ast::FunctionArgOperator::Colon => {
+                transformer.transform(self, sqlparser::ast::FunctionArgOperator::Colon)
+            }
+            sqlparser::ast::FunctionArgOperator::Value => {
+                transformer.transform(self, sqlparser::ast::FunctionArgOperator::Value)
+            }
         }
     }
 }
@@ -3643,6 +3817,12 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::FunctionArgumentClause
             }
             sqlparser::ast::FunctionArgumentClause::Separator(field0) => {
                 let transformed = sqlparser::ast::FunctionArgumentClause::Separator(
+                    field0.apply_transform(transformer)?,
+                );
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::FunctionArgumentClause::JsonNullClause(field0) => {
+                let transformed = sqlparser::ast::FunctionArgumentClause::JsonNullClause(
                     field0.apply_transform(transformer)?,
                 );
                 transformer.transform(self, transformed)
@@ -4052,6 +4232,23 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::HiveIOFormat {
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::HiveLoadDataFormat {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self {
+            serde,
+            input_format,
+        } = self;
+        let transformed = Self {
+            serde: serde.apply_transform(transformer)?,
+            input_format: input_format.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqlparser::ast::HiveRowDelimiter {
     fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
     where
@@ -4107,10 +4304,15 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Ident {
     where
         T: crate::Transform<'ast>,
     {
-        let Self { value, quote_style } = self;
+        let Self {
+            value,
+            quote_style,
+            span,
+        } = self;
         let transformed = Self {
             value: value.apply_transform(transformer)?,
             quote_style: quote_style.apply_transform(transformer)?,
+            span: span.apply_transform(transformer)?,
         };
         transformer.transform(self, transformed)
     }
@@ -4454,6 +4656,11 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::JoinOperator {
             sqlparser::ast::JoinOperator::CrossJoin => {
                 transformer.transform(self, sqlparser::ast::JoinOperator::CrossJoin)
             }
+            sqlparser::ast::JoinOperator::Semi(field0) => {
+                let transformed =
+                    sqlparser::ast::JoinOperator::Semi(field0.apply_transform(transformer)?);
+                transformer.transform(self, transformed)
+            }
             sqlparser::ast::JoinOperator::LeftSemi(field0) => {
                 let transformed =
                     sqlparser::ast::JoinOperator::LeftSemi(field0.apply_transform(transformer)?);
@@ -4462,6 +4669,11 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::JoinOperator {
             sqlparser::ast::JoinOperator::RightSemi(field0) => {
                 let transformed =
                     sqlparser::ast::JoinOperator::RightSemi(field0.apply_transform(transformer)?);
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::JoinOperator::Anti(field0) => {
+                let transformed =
+                    sqlparser::ast::JoinOperator::Anti(field0.apply_transform(transformer)?);
                 transformer.transform(self, transformed)
             }
             sqlparser::ast::JoinOperator::LeftAnti(field0) => {
@@ -4489,6 +4701,22 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::JoinOperator {
                     constraint: constraint.apply_transform(transformer)?,
                 };
                 transformer.transform(self, transformed)
+            }
+        }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::JsonNullClause {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::JsonNullClause::NullOnNull => {
+                transformer.transform(self, sqlparser::ast::JsonNullClause::NullOnNull)
+            }
+            sqlparser::ast::JsonNullClause::AbsentOnNull => {
+                transformer.transform(self, sqlparser::ast::JsonNullClause::AbsentOnNull)
             }
         }
     }
@@ -4726,6 +4954,40 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::LockClause {
             nonblock: nonblock.apply_transform(transformer)?,
         };
         transformer.transform(self, transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::LockMode {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::LockMode::AccessShare => {
+                transformer.transform(self, sqlparser::ast::LockMode::AccessShare)
+            }
+            sqlparser::ast::LockMode::RowShare => {
+                transformer.transform(self, sqlparser::ast::LockMode::RowShare)
+            }
+            sqlparser::ast::LockMode::RowExclusive => {
+                transformer.transform(self, sqlparser::ast::LockMode::RowExclusive)
+            }
+            sqlparser::ast::LockMode::ShareUpdateExclusive => {
+                transformer.transform(self, sqlparser::ast::LockMode::ShareUpdateExclusive)
+            }
+            sqlparser::ast::LockMode::Share => {
+                transformer.transform(self, sqlparser::ast::LockMode::Share)
+            }
+            sqlparser::ast::LockMode::ShareRowExclusive => {
+                transformer.transform(self, sqlparser::ast::LockMode::ShareRowExclusive)
+            }
+            sqlparser::ast::LockMode::Exclusive => {
+                transformer.transform(self, sqlparser::ast::LockMode::Exclusive)
+            }
+            sqlparser::ast::LockMode::AccessExclusive => {
+                transformer.transform(self, sqlparser::ast::LockMode::AccessExclusive)
+            }
+        }
     }
 }
 #[automatically_derived]
@@ -5063,6 +5325,20 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::MergeInsertKind {
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Method {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self { expr, method_chain } = self;
+        let transformed = Self {
+            expr: expr.apply_transform(transformer)?,
+            method_chain: method_chain.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqlparser::ast::MinMaxValue {
     fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
     where
@@ -5185,6 +5461,25 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::NullTreatment {
             }
             sqlparser::ast::NullTreatment::RespectNulls => {
                 transformer.transform(self, sqlparser::ast::NullTreatment::RespectNulls)
+            }
+        }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::NullsDistinctOption {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::NullsDistinctOption::None => {
+                transformer.transform(self, sqlparser::ast::NullsDistinctOption::None)
+            }
+            sqlparser::ast::NullsDistinctOption::Distinct => {
+                transformer.transform(self, sqlparser::ast::NullsDistinctOption::Distinct)
+            }
+            sqlparser::ast::NullsDistinctOption::NotDistinct => {
+                transformer.transform(self, sqlparser::ast::NullsDistinctOption::NotDistinct)
             }
         }
     }
@@ -5345,6 +5640,27 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::OnInsert {
             }
             _ => unreachable!(),
         }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::OpenJsonTableColumn {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self {
+            name,
+            r#type,
+            path,
+            as_json,
+        } = self;
+        let transformed = Self {
+            name: name.apply_transform(transformer)?,
+            r#type: r#type.apply_transform(transformer)?,
+            path: path.apply_transform(transformer)?,
+            as_json: as_json.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
     }
 }
 #[automatically_derived]
@@ -5895,6 +6211,27 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::SearchModifier {
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::SecondaryRoles {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::SecondaryRoles::All => {
+                transformer.transform(self, sqlparser::ast::SecondaryRoles::All)
+            }
+            sqlparser::ast::SecondaryRoles::None => {
+                transformer.transform(self, sqlparser::ast::SecondaryRoles::None)
+            }
+            sqlparser::ast::SecondaryRoles::List(field0) => {
+                let transformed =
+                    sqlparser::ast::SecondaryRoles::List(field0.apply_transform(transformer)?);
+                transformer.transform(self, transformed)
+            }
+        }
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqlparser::ast::SecretOption {
     fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
     where
@@ -5915,6 +6252,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Select {
         T: crate::Transform<'ast>,
     {
         let Self {
+            select_token,
             distinct,
             top,
             top_before_distinct,
@@ -5936,6 +6274,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Select {
             connect_by,
         } = self;
         let transformed = Self {
+            select_token: select_token.apply_transform(transformer)?,
             distinct: distinct.apply_transform(transformer)?,
             top: top.apply_transform(transformer)?,
             top_before_distinct: top_before_distinct.apply_transform(transformer)?,
@@ -6195,22 +6534,6 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Setting {
     }
 }
 #[automatically_derived]
-impl<'ast> crate::Transformable<'ast> for sqlparser::ast::ShowClause {
-    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
-    where
-        T: crate::Transform<'ast>,
-    {
-        match self {
-            sqlparser::ast::ShowClause::IN => {
-                transformer.transform(self, sqlparser::ast::ShowClause::IN)
-            }
-            sqlparser::ast::ShowClause::FROM => {
-                transformer.transform(self, sqlparser::ast::ShowClause::FROM)
-            }
-        }
-    }
-}
-#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqlparser::ast::ShowCreateObject {
     fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
     where
@@ -6269,6 +6592,111 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::ShowStatementFilter {
                 transformer.transform(self, transformed)
             }
         }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::ShowStatementFilterPosition {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::ShowStatementFilterPosition::Infix(field0) => {
+                let transformed = sqlparser::ast::ShowStatementFilterPosition::Infix(
+                    field0.apply_transform(transformer)?,
+                );
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::ShowStatementFilterPosition::Suffix(field0) => {
+                let transformed = sqlparser::ast::ShowStatementFilterPosition::Suffix(
+                    field0.apply_transform(transformer)?,
+                );
+                transformer.transform(self, transformed)
+            }
+        }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::ShowStatementIn {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self {
+            clause,
+            parent_type,
+            parent_name,
+        } = self;
+        let transformed = Self {
+            clause: clause.apply_transform(transformer)?,
+            parent_type: parent_type.apply_transform(transformer)?,
+            parent_name: parent_name.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::ShowStatementInClause {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::ShowStatementInClause::IN => {
+                transformer.transform(self, sqlparser::ast::ShowStatementInClause::IN)
+            }
+            sqlparser::ast::ShowStatementInClause::FROM => {
+                transformer.transform(self, sqlparser::ast::ShowStatementInClause::FROM)
+            }
+        }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::ShowStatementInParentType {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::ShowStatementInParentType::Account => {
+                transformer.transform(self, sqlparser::ast::ShowStatementInParentType::Account)
+            }
+            sqlparser::ast::ShowStatementInParentType::Database => {
+                transformer.transform(self, sqlparser::ast::ShowStatementInParentType::Database)
+            }
+            sqlparser::ast::ShowStatementInParentType::Schema => {
+                transformer.transform(self, sqlparser::ast::ShowStatementInParentType::Schema)
+            }
+            sqlparser::ast::ShowStatementInParentType::Table => {
+                transformer.transform(self, sqlparser::ast::ShowStatementInParentType::Table)
+            }
+            sqlparser::ast::ShowStatementInParentType::View => {
+                transformer.transform(self, sqlparser::ast::ShowStatementInParentType::View)
+            }
+        }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::ShowStatementOptions {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self {
+            show_in,
+            starts_with,
+            limit,
+            limit_from,
+            filter_position,
+        } = self;
+        let transformed = Self {
+            show_in: show_in.apply_transform(transformer)?,
+            starts_with: starts_with.apply_transform(transformer)?,
+            limit: limit.apply_transform(transformer)?,
+            limit_from: limit_from.apply_transform(transformer)?,
+            filter_position: filter_position.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
     }
 }
 #[automatically_derived]
@@ -6350,6 +6778,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Statement {
                 cache_metadata,
                 noscan,
                 compute_statistics,
+                has_table_keyword,
             } => {
                 let transformed = sqlparser::ast::Statement::Analyze {
                     table_name: table_name.apply_transform(transformer)?,
@@ -6359,6 +6788,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Statement {
                     cache_metadata: cache_metadata.apply_transform(transformer)?,
                     noscan: noscan.apply_transform(transformer)?,
                     compute_statistics: compute_statistics.apply_transform(transformer)?,
+                    has_table_keyword: has_table_keyword.apply_transform(transformer)?,
                 };
                 transformer.transform(self, transformed)
             }
@@ -6493,6 +6923,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Statement {
                 from,
                 selection,
                 returning,
+                or,
             } => {
                 let transformed = sqlparser::ast::Statement::Update {
                     table: table.apply_transform(transformer)?,
@@ -6500,6 +6931,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Statement {
                     from: from.apply_transform(transformer)?,
                     selection: selection.apply_transform(transformer)?,
                     returning: returning.apply_transform(transformer)?,
+                    or: or.apply_transform(transformer)?,
                 };
                 transformer.transform(self, transformed)
             }
@@ -6963,56 +7395,66 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Statement {
             sqlparser::ast::Statement::ShowColumns {
                 extended,
                 full,
-                table_name,
-                filter,
+                show_options,
             } => {
                 let transformed = sqlparser::ast::Statement::ShowColumns {
                     extended: extended.apply_transform(transformer)?,
                     full: full.apply_transform(transformer)?,
-                    table_name: table_name.apply_transform(transformer)?,
-                    filter: filter.apply_transform(transformer)?,
+                    show_options: show_options.apply_transform(transformer)?,
                 };
                 transformer.transform(self, transformed)
             }
-            sqlparser::ast::Statement::ShowDatabases { filter } => {
+            sqlparser::ast::Statement::ShowDatabases {
+                terse,
+                history,
+                show_options,
+            } => {
                 let transformed = sqlparser::ast::Statement::ShowDatabases {
-                    filter: filter.apply_transform(transformer)?,
+                    terse: terse.apply_transform(transformer)?,
+                    history: history.apply_transform(transformer)?,
+                    show_options: show_options.apply_transform(transformer)?,
                 };
                 transformer.transform(self, transformed)
             }
-            sqlparser::ast::Statement::ShowSchemas { filter } => {
+            sqlparser::ast::Statement::ShowSchemas {
+                terse,
+                history,
+                show_options,
+            } => {
                 let transformed = sqlparser::ast::Statement::ShowSchemas {
-                    filter: filter.apply_transform(transformer)?,
+                    terse: terse.apply_transform(transformer)?,
+                    history: history.apply_transform(transformer)?,
+                    show_options: show_options.apply_transform(transformer)?,
                 };
                 transformer.transform(self, transformed)
             }
             sqlparser::ast::Statement::ShowTables {
+                terse,
+                history,
                 extended,
                 full,
-                clause,
-                db_name,
-                filter,
+                external,
+                show_options,
             } => {
                 let transformed = sqlparser::ast::Statement::ShowTables {
+                    terse: terse.apply_transform(transformer)?,
+                    history: history.apply_transform(transformer)?,
                     extended: extended.apply_transform(transformer)?,
                     full: full.apply_transform(transformer)?,
-                    clause: clause.apply_transform(transformer)?,
-                    db_name: db_name.apply_transform(transformer)?,
-                    filter: filter.apply_transform(transformer)?,
+                    external: external.apply_transform(transformer)?,
+                    show_options: show_options.apply_transform(transformer)?,
                 };
                 transformer.transform(self, transformed)
             }
             sqlparser::ast::Statement::ShowViews {
+                terse,
                 materialized,
-                clause,
-                db_name,
-                filter,
+                show_options,
             } => {
                 let transformed = sqlparser::ast::Statement::ShowViews {
+                    terse: terse.apply_transform(transformer)?,
                     materialized: materialized.apply_transform(transformer)?,
-                    clause: clause.apply_transform(transformer)?,
-                    db_name: db_name.apply_transform(transformer)?,
-                    filter: filter.apply_transform(transformer)?,
+                    show_options: show_options.apply_transform(transformer)?,
                 };
                 transformer.transform(self, transformed)
             }
@@ -7030,11 +7472,13 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Statement {
             sqlparser::ast::Statement::StartTransaction {
                 modes,
                 begin,
+                transaction,
                 modifier,
             } => {
                 let transformed = sqlparser::ast::Statement::StartTransaction {
                     modes: modes.apply_transform(transformer)?,
                     begin: begin.apply_transform(transformer)?,
+                    transaction: transaction.apply_transform(transformer)?,
                     modifier: modifier.apply_transform(transformer)?,
                 };
                 transformer.transform(self, transformed)
@@ -7102,40 +7546,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Statement {
                 };
                 transformer.transform(self, transformed)
             }
-            sqlparser::ast::Statement::CreateFunction {
-                or_replace,
-                temporary,
-                if_not_exists,
-                name,
-                args,
-                return_type,
-                function_body,
-                behavior,
-                called_on_null,
-                parallel,
-                using,
-                language,
-                determinism_specifier,
-                options,
-                remote_connection,
-            } => {
-                let transformed = sqlparser::ast::Statement::CreateFunction {
-                    or_replace: or_replace.apply_transform(transformer)?,
-                    temporary: temporary.apply_transform(transformer)?,
-                    if_not_exists: if_not_exists.apply_transform(transformer)?,
-                    name: name.apply_transform(transformer)?,
-                    args: args.apply_transform(transformer)?,
-                    return_type: return_type.apply_transform(transformer)?,
-                    function_body: function_body.apply_transform(transformer)?,
-                    behavior: behavior.apply_transform(transformer)?,
-                    called_on_null: called_on_null.apply_transform(transformer)?,
-                    parallel: parallel.apply_transform(transformer)?,
-                    using: using.apply_transform(transformer)?,
-                    language: language.apply_transform(transformer)?,
-                    determinism_specifier: determinism_specifier.apply_transform(transformer)?,
-                    options: options.apply_transform(transformer)?,
-                    remote_connection: remote_connection.apply_transform(transformer)?,
-                };
+            sqlparser::ast::Statement::CreateFunction(field0) => {
+                let transformed =
+                    sqlparser::ast::Statement::CreateFunction(field0.apply_transform(transformer)?);
                 transformer.transform(self, transformed)
             }
             sqlparser::ast::Statement::CreateTrigger {
@@ -7336,6 +7749,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Statement {
                 analyze,
                 verbose,
                 query_plan,
+                estimate,
                 statement,
                 format,
                 options,
@@ -7345,6 +7759,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Statement {
                     analyze: analyze.apply_transform(transformer)?,
                     verbose: verbose.apply_transform(transformer)?,
                     query_plan: query_plan.apply_transform(transformer)?,
+                    estimate: estimate.apply_transform(transformer)?,
                     statement: statement.apply_transform(transformer)?,
                     format: format.apply_transform(transformer)?,
                     options: options.apply_transform(transformer)?,
@@ -7441,6 +7856,22 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Statement {
                 };
                 transformer.transform(self, transformed)
             }
+            sqlparser::ast::Statement::LockTablesPG {
+                keyword_table,
+                keyword_only,
+                tables,
+                lock_mode,
+                keyword_nowait,
+            } => {
+                let transformed = sqlparser::ast::Statement::LockTablesPG {
+                    keyword_table: keyword_table.apply_transform(transformer)?,
+                    keyword_only: keyword_only.apply_transform(transformer)?,
+                    tables: tables.apply_transform(transformer)?,
+                    lock_mode: lock_mode.apply_transform(transformer)?,
+                    keyword_nowait: keyword_nowait.apply_transform(transformer)?,
+                };
+                transformer.transform(self, transformed)
+            }
             sqlparser::ast::Statement::LockTables { tables } => {
                 let transformed = sqlparser::ast::Statement::LockTables {
                     tables: tables.apply_transform(transformer)?,
@@ -7480,10 +7911,34 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Statement {
                 };
                 transformer.transform(self, transformed)
             }
+            sqlparser::ast::Statement::UNLISTEN { channel } => {
+                let transformed = sqlparser::ast::Statement::UNLISTEN {
+                    channel: channel.apply_transform(transformer)?,
+                };
+                transformer.transform(self, transformed)
+            }
             sqlparser::ast::Statement::NOTIFY { channel, payload } => {
                 let transformed = sqlparser::ast::Statement::NOTIFY {
                     channel: channel.apply_transform(transformer)?,
                     payload: payload.apply_transform(transformer)?,
+                };
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::Statement::LoadData {
+                local,
+                inpath,
+                overwrite,
+                table_name,
+                partitioned,
+                table_format,
+            } => {
+                let transformed = sqlparser::ast::Statement::LoadData {
+                    local: local.apply_transform(transformer)?,
+                    inpath: inpath.apply_transform(transformer)?,
+                    overwrite: overwrite.apply_transform(transformer)?,
+                    table_name: table_name.apply_transform(transformer)?,
+                    partitioned: partitioned.apply_transform(transformer)?,
+                    table_format: table_format.apply_transform(transformer)?,
                 };
                 transformer.transform(self, transformed)
             }
@@ -7597,6 +8052,20 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableAlias {
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableAliasColumnDef {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self { name, data_type } = self;
+        let transformed = Self {
+            name: name.apply_transform(transformer)?,
+            data_type: data_type.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableConstraint {
     fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
     where
@@ -7611,6 +8080,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableConstraint {
                 columns,
                 index_options,
                 characteristics,
+                nulls_distinct,
             } => {
                 let transformed = sqlparser::ast::TableConstraint::Unique {
                     name: name.apply_transform(transformer)?,
@@ -7620,6 +8090,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableConstraint {
                     columns: columns.apply_transform(transformer)?,
                     index_options: index_options.apply_transform(transformer)?,
                     characteristics: characteristics.apply_transform(transformer)?,
+                    nulls_distinct: nulls_distinct.apply_transform(transformer)?,
                 };
                 transformer.transform(self, transformed)
             }
@@ -7728,6 +8199,8 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableFactor {
                 version,
                 with_ordinality,
                 partitions,
+                json_path,
+                sample,
             } => {
                 let transformed = sqlparser::ast::TableFactor::Table {
                     name: name.apply_transform(transformer)?,
@@ -7737,6 +8210,8 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableFactor {
                     version: version.apply_transform(transformer)?,
                     with_ordinality: with_ordinality.apply_transform(transformer)?,
                     partitions: partitions.apply_transform(transformer)?,
+                    json_path: json_path.apply_transform(transformer)?,
+                    sample: sample.apply_transform(transformer)?,
                 };
                 transformer.transform(self, transformed)
             }
@@ -7796,6 +8271,20 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableFactor {
                 alias,
             } => {
                 let transformed = sqlparser::ast::TableFactor::JsonTable {
+                    json_expr: json_expr.apply_transform(transformer)?,
+                    json_path: json_path.apply_transform(transformer)?,
+                    columns: columns.apply_transform(transformer)?,
+                    alias: alias.apply_transform(transformer)?,
+                };
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::TableFactor::OpenJsonTable {
+                json_expr,
+                json_path,
+                columns,
+                alias,
+            } => {
+                let transformed = sqlparser::ast::TableFactor::OpenJsonTable {
                     json_expr: json_expr.apply_transform(transformer)?,
                     json_path: json_path.apply_transform(transformer)?,
                     columns: columns.apply_transform(transformer)?,
@@ -7910,6 +8399,171 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableOptionsClustered 
                     field0.apply_transform(transformer)?,
                 );
                 transformer.transform(self, transformed)
+            }
+        }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableSample {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self {
+            modifier,
+            name,
+            quantity,
+            seed,
+            bucket,
+            offset,
+        } = self;
+        let transformed = Self {
+            modifier: modifier.apply_transform(transformer)?,
+            name: name.apply_transform(transformer)?,
+            quantity: quantity.apply_transform(transformer)?,
+            seed: seed.apply_transform(transformer)?,
+            bucket: bucket.apply_transform(transformer)?,
+            offset: offset.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableSampleBucket {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self { bucket, total, on } = self;
+        let transformed = Self {
+            bucket: bucket.apply_transform(transformer)?,
+            total: total.apply_transform(transformer)?,
+            on: on.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableSampleKind {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::TableSampleKind::BeforeTableAlias(field0) => {
+                let transformed = sqlparser::ast::TableSampleKind::BeforeTableAlias(
+                    field0.apply_transform(transformer)?,
+                );
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::TableSampleKind::AfterTableAlias(field0) => {
+                let transformed = sqlparser::ast::TableSampleKind::AfterTableAlias(
+                    field0.apply_transform(transformer)?,
+                );
+                transformer.transform(self, transformed)
+            }
+        }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableSampleMethod {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::TableSampleMethod::Row => {
+                transformer.transform(self, sqlparser::ast::TableSampleMethod::Row)
+            }
+            sqlparser::ast::TableSampleMethod::Bernoulli => {
+                transformer.transform(self, sqlparser::ast::TableSampleMethod::Bernoulli)
+            }
+            sqlparser::ast::TableSampleMethod::System => {
+                transformer.transform(self, sqlparser::ast::TableSampleMethod::System)
+            }
+            sqlparser::ast::TableSampleMethod::Block => {
+                transformer.transform(self, sqlparser::ast::TableSampleMethod::Block)
+            }
+        }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableSampleModifier {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::TableSampleModifier::Sample => {
+                transformer.transform(self, sqlparser::ast::TableSampleModifier::Sample)
+            }
+            sqlparser::ast::TableSampleModifier::TableSample => {
+                transformer.transform(self, sqlparser::ast::TableSampleModifier::TableSample)
+            }
+        }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableSampleQuantity {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self {
+            parenthesized,
+            value,
+            unit,
+        } = self;
+        let transformed = Self {
+            parenthesized: parenthesized.apply_transform(transformer)?,
+            value: value.apply_transform(transformer)?,
+            unit: unit.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableSampleSeed {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self { modifier, value } = self;
+        let transformed = Self {
+            modifier: modifier.apply_transform(transformer)?,
+            value: value.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableSampleSeedModifier {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::TableSampleSeedModifier::Repeatable => {
+                transformer.transform(self, sqlparser::ast::TableSampleSeedModifier::Repeatable)
+            }
+            sqlparser::ast::TableSampleSeedModifier::Seed => {
+                transformer.transform(self, sqlparser::ast::TableSampleSeedModifier::Seed)
+            }
+        }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::TableSampleUnit {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        match self {
+            sqlparser::ast::TableSampleUnit::Rows => {
+                transformer.transform(self, sqlparser::ast::TableSampleUnit::Rows)
+            }
+            sqlparser::ast::TableSampleUnit::Percent => {
+                transformer.transform(self, sqlparser::ast::TableSampleUnit::Percent)
             }
         }
     }
@@ -8341,6 +8995,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::UnaryOperator {
             sqlparser::ast::UnaryOperator::PGAbs => {
                 transformer.transform(self, sqlparser::ast::UnaryOperator::PGAbs)
             }
+            sqlparser::ast::UnaryOperator::BangNot => {
+                transformer.transform(self, sqlparser::ast::UnaryOperator::BangNot)
+            }
         }
     }
 }
@@ -8385,6 +9042,15 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::Use {
             sqlparser::ast::Use::Warehouse(field0) => {
                 let transformed =
                     sqlparser::ast::Use::Warehouse(field0.apply_transform(transformer)?);
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::Use::Role(field0) => {
+                let transformed = sqlparser::ast::Use::Role(field0.apply_transform(transformer)?);
+                transformer.transform(self, transformed)
+            }
+            sqlparser::ast::Use::SecondaryRoles(field0) => {
+                let transformed =
+                    sqlparser::ast::Use::SecondaryRoles(field0.apply_transform(transformer)?);
                 transformer.transform(self, transformed)
             }
             sqlparser::ast::Use::Object(field0) => {
@@ -8634,6 +9300,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::WildcardAdditionalOpti
         T: crate::Transform<'ast>,
     {
         let Self {
+            wildcard_token,
             opt_ilike,
             opt_exclude,
             opt_except,
@@ -8641,6 +9308,7 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::WildcardAdditionalOpti
             opt_rename,
         } = self;
         let transformed = Self {
+            wildcard_token: wildcard_token.apply_transform(transformer)?,
             opt_ilike: opt_ilike.apply_transform(transformer)?,
             opt_exclude: opt_exclude.apply_transform(transformer)?,
             opt_except: opt_except.apply_transform(transformer)?,
@@ -8761,10 +9429,12 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::With {
         T: crate::Transform<'ast>,
     {
         let Self {
+            with_token,
             recursive,
             cte_tables,
         } = self;
         let transformed = Self {
+            with_token: with_token.apply_transform(transformer)?,
             recursive: recursive.apply_transform(transformer)?,
             cte_tables: cte_tables.apply_transform(transformer)?,
         };
@@ -8783,6 +9453,17 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::ast::WithFill {
             to: to.apply_transform(transformer)?,
             step: step.apply_transform(transformer)?,
         };
+        transformer.transform(self, transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::ast::helpers::attached_token::AttachedToken {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self(field0) = self;
+        let transformed = Self(field0.apply_transform(transformer)?);
         transformer.transform(self, transformed)
     }
 }
@@ -8915,11 +9596,17 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::ABS => {
                 transformer.transform(self, sqlparser::keywords::Keyword::ABS)
             }
+            sqlparser::keywords::Keyword::ABSENT => {
+                transformer.transform(self, sqlparser::keywords::Keyword::ABSENT)
+            }
             sqlparser::keywords::Keyword::ABSOLUTE => {
                 transformer.transform(self, sqlparser::keywords::Keyword::ABSOLUTE)
             }
             sqlparser::keywords::Keyword::ACCESS => {
                 transformer.transform(self, sqlparser::keywords::Keyword::ACCESS)
+            }
+            sqlparser::keywords::Keyword::ACCOUNT => {
+                transformer.transform(self, sqlparser::keywords::Keyword::ACCOUNT)
             }
             sqlparser::keywords::Keyword::ACTION => {
                 transformer.transform(self, sqlparser::keywords::Keyword::ACTION)
@@ -8965,6 +9652,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             }
             sqlparser::keywords::Keyword::ANY => {
                 transformer.transform(self, sqlparser::keywords::Keyword::ANY)
+            }
+            sqlparser::keywords::Keyword::APPLICATION => {
+                transformer.transform(self, sqlparser::keywords::Keyword::APPLICATION)
             }
             sqlparser::keywords::Keyword::APPLY => {
                 transformer.transform(self, sqlparser::keywords::Keyword::APPLY)
@@ -9044,6 +9734,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::BEGIN_PARTITION => {
                 transformer.transform(self, sqlparser::keywords::Keyword::BEGIN_PARTITION)
             }
+            sqlparser::keywords::Keyword::BERNOULLI => {
+                transformer.transform(self, sqlparser::keywords::Keyword::BERNOULLI)
+            }
             sqlparser::keywords::Keyword::BETWEEN => {
                 transformer.transform(self, sqlparser::keywords::Keyword::BETWEEN)
             }
@@ -9062,8 +9755,14 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::BINDING => {
                 transformer.transform(self, sqlparser::keywords::Keyword::BINDING)
             }
+            sqlparser::keywords::Keyword::BIT => {
+                transformer.transform(self, sqlparser::keywords::Keyword::BIT)
+            }
             sqlparser::keywords::Keyword::BLOB => {
                 transformer.transform(self, sqlparser::keywords::Keyword::BLOB)
+            }
+            sqlparser::keywords::Keyword::BLOCK => {
+                transformer.transform(self, sqlparser::keywords::Keyword::BLOCK)
             }
             sqlparser::keywords::Keyword::BLOOMFILTER => {
                 transformer.transform(self, sqlparser::keywords::Keyword::BLOOMFILTER)
@@ -9082,6 +9781,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             }
             sqlparser::keywords::Keyword::BTREE => {
                 transformer.transform(self, sqlparser::keywords::Keyword::BTREE)
+            }
+            sqlparser::keywords::Keyword::BUCKET => {
+                transformer.transform(self, sqlparser::keywords::Keyword::BUCKET)
             }
             sqlparser::keywords::Keyword::BUCKETS => {
                 transformer.transform(self, sqlparser::keywords::Keyword::BUCKETS)
@@ -9184,6 +9886,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             }
             sqlparser::keywords::Keyword::CLUSTERED => {
                 transformer.transform(self, sqlparser::keywords::Keyword::CLUSTERED)
+            }
+            sqlparser::keywords::Keyword::CLUSTERING => {
+                transformer.transform(self, sqlparser::keywords::Keyword::CLUSTERING)
             }
             sqlparser::keywords::Keyword::COALESCE => {
                 transformer.transform(self, sqlparser::keywords::Keyword::COALESCE)
@@ -9543,6 +10248,12 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::ENUM => {
                 transformer.transform(self, sqlparser::keywords::Keyword::ENUM)
             }
+            sqlparser::keywords::Keyword::ENUM16 => {
+                transformer.transform(self, sqlparser::keywords::Keyword::ENUM16)
+            }
+            sqlparser::keywords::Keyword::ENUM8 => {
+                transformer.transform(self, sqlparser::keywords::Keyword::ENUM8)
+            }
             sqlparser::keywords::Keyword::EPHEMERAL => {
                 transformer.transform(self, sqlparser::keywords::Keyword::EPHEMERAL)
             }
@@ -9560,6 +10271,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             }
             sqlparser::keywords::Keyword::ESCAPED => {
                 transformer.transform(self, sqlparser::keywords::Keyword::ESCAPED)
+            }
+            sqlparser::keywords::Keyword::ESTIMATE => {
+                transformer.transform(self, sqlparser::keywords::Keyword::ESTIMATE)
             }
             sqlparser::keywords::Keyword::EVENT => {
                 transformer.transform(self, sqlparser::keywords::Keyword::EVENT)
@@ -9674,6 +10388,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             }
             sqlparser::keywords::Keyword::FLUSH => {
                 transformer.transform(self, sqlparser::keywords::Keyword::FLUSH)
+            }
+            sqlparser::keywords::Keyword::FN => {
+                transformer.transform(self, sqlparser::keywords::Keyword::FN)
             }
             sqlparser::keywords::Keyword::FOLLOWING => {
                 transformer.transform(self, sqlparser::keywords::Keyword::FOLLOWING)
@@ -9857,6 +10574,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             }
             sqlparser::keywords::Keyword::INOUT => {
                 transformer.transform(self, sqlparser::keywords::Keyword::INOUT)
+            }
+            sqlparser::keywords::Keyword::INPATH => {
+                transformer.transform(self, sqlparser::keywords::Keyword::INPATH)
             }
             sqlparser::keywords::Keyword::INPUT => {
                 transformer.transform(self, sqlparser::keywords::Keyword::INPUT)
@@ -10044,6 +10764,12 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::LOGS => {
                 transformer.transform(self, sqlparser::keywords::Keyword::LOGS)
             }
+            sqlparser::keywords::Keyword::LONGBLOB => {
+                transformer.transform(self, sqlparser::keywords::Keyword::LONGBLOB)
+            }
+            sqlparser::keywords::Keyword::LONGTEXT => {
+                transformer.transform(self, sqlparser::keywords::Keyword::LONGTEXT)
+            }
             sqlparser::keywords::Keyword::LOWCARDINALITY => {
                 transformer.transform(self, sqlparser::keywords::Keyword::LOWCARDINALITY)
             }
@@ -10099,8 +10825,14 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::MEASURES => {
                 transformer.transform(self, sqlparser::keywords::Keyword::MEASURES)
             }
+            sqlparser::keywords::Keyword::MEDIUMBLOB => {
+                transformer.transform(self, sqlparser::keywords::Keyword::MEDIUMBLOB)
+            }
             sqlparser::keywords::Keyword::MEDIUMINT => {
                 transformer.transform(self, sqlparser::keywords::Keyword::MEDIUMINT)
+            }
+            sqlparser::keywords::Keyword::MEDIUMTEXT => {
+                transformer.transform(self, sqlparser::keywords::Keyword::MEDIUMTEXT)
             }
             sqlparser::keywords::Keyword::MEMBER => {
                 transformer.transform(self, sqlparser::keywords::Keyword::MEMBER)
@@ -10308,6 +11040,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             }
             sqlparser::keywords::Keyword::OPEN => {
                 transformer.transform(self, sqlparser::keywords::Keyword::OPEN)
+            }
+            sqlparser::keywords::Keyword::OPENJSON => {
+                transformer.transform(self, sqlparser::keywords::Keyword::OPENJSON)
             }
             sqlparser::keywords::Keyword::OPERATOR => {
                 transformer.transform(self, sqlparser::keywords::Keyword::OPERATOR)
@@ -10528,6 +11263,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::REAL => {
                 transformer.transform(self, sqlparser::keywords::Keyword::REAL)
             }
+            sqlparser::keywords::Keyword::RECLUSTER => {
+                transformer.transform(self, sqlparser::keywords::Keyword::RECLUSTER)
+            }
             sqlparser::keywords::Keyword::RECURSIVE => {
                 transformer.transform(self, sqlparser::keywords::Keyword::RECURSIVE)
             }
@@ -10630,6 +11368,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::RESULTSET => {
                 transformer.transform(self, sqlparser::keywords::Keyword::RESULTSET)
             }
+            sqlparser::keywords::Keyword::RESUME => {
+                transformer.transform(self, sqlparser::keywords::Keyword::RESUME)
+            }
             sqlparser::keywords::Keyword::RETAIN => {
                 transformer.transform(self, sqlparser::keywords::Keyword::RETAIN)
             }
@@ -10653,6 +11394,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             }
             sqlparser::keywords::Keyword::ROLE => {
                 transformer.transform(self, sqlparser::keywords::Keyword::ROLE)
+            }
+            sqlparser::keywords::Keyword::ROLES => {
+                transformer.transform(self, sqlparser::keywords::Keyword::ROLES)
             }
             sqlparser::keywords::Keyword::ROLLBACK => {
                 transformer.transform(self, sqlparser::keywords::Keyword::ROLLBACK)
@@ -10687,6 +11431,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::SAFE_CAST => {
                 transformer.transform(self, sqlparser::keywords::Keyword::SAFE_CAST)
             }
+            sqlparser::keywords::Keyword::SAMPLE => {
+                transformer.transform(self, sqlparser::keywords::Keyword::SAMPLE)
+            }
             sqlparser::keywords::Keyword::SAVEPOINT => {
                 transformer.transform(self, sqlparser::keywords::Keyword::SAVEPOINT)
             }
@@ -10708,11 +11455,17 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::SECOND => {
                 transformer.transform(self, sqlparser::keywords::Keyword::SECOND)
             }
+            sqlparser::keywords::Keyword::SECONDARY => {
+                transformer.transform(self, sqlparser::keywords::Keyword::SECONDARY)
+            }
             sqlparser::keywords::Keyword::SECRET => {
                 transformer.transform(self, sqlparser::keywords::Keyword::SECRET)
             }
             sqlparser::keywords::Keyword::SECURITY => {
                 transformer.transform(self, sqlparser::keywords::Keyword::SECURITY)
+            }
+            sqlparser::keywords::Keyword::SEED => {
+                transformer.transform(self, sqlparser::keywords::Keyword::SEED)
             }
             sqlparser::keywords::Keyword::SELECT => {
                 transformer.transform(self, sqlparser::keywords::Keyword::SELECT)
@@ -10825,6 +11578,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::START => {
                 transformer.transform(self, sqlparser::keywords::Keyword::START)
             }
+            sqlparser::keywords::Keyword::STARTS => {
+                transformer.transform(self, sqlparser::keywords::Keyword::STARTS)
+            }
             sqlparser::keywords::Keyword::STATEMENT => {
                 transformer.transform(self, sqlparser::keywords::Keyword::STATEMENT)
             }
@@ -10888,6 +11644,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::SUPERUSER => {
                 transformer.transform(self, sqlparser::keywords::Keyword::SUPERUSER)
             }
+            sqlparser::keywords::Keyword::SUSPEND => {
+                transformer.transform(self, sqlparser::keywords::Keyword::SUSPEND)
+            }
             sqlparser::keywords::Keyword::SWAP => {
                 transformer.transform(self, sqlparser::keywords::Keyword::SWAP)
             }
@@ -10933,6 +11692,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::TERMINATED => {
                 transformer.transform(self, sqlparser::keywords::Keyword::TERMINATED)
             }
+            sqlparser::keywords::Keyword::TERSE => {
+                transformer.transform(self, sqlparser::keywords::Keyword::TERSE)
+            }
             sqlparser::keywords::Keyword::TEXT => {
                 transformer.transform(self, sqlparser::keywords::Keyword::TEXT)
             }
@@ -10972,8 +11734,14 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             sqlparser::keywords::Keyword::TIMEZONE_REGION => {
                 transformer.transform(self, sqlparser::keywords::Keyword::TIMEZONE_REGION)
             }
+            sqlparser::keywords::Keyword::TINYBLOB => {
+                transformer.transform(self, sqlparser::keywords::Keyword::TINYBLOB)
+            }
             sqlparser::keywords::Keyword::TINYINT => {
                 transformer.transform(self, sqlparser::keywords::Keyword::TINYINT)
+            }
+            sqlparser::keywords::Keyword::TINYTEXT => {
+                transformer.transform(self, sqlparser::keywords::Keyword::TINYTEXT)
             }
             sqlparser::keywords::Keyword::TO => {
                 transformer.transform(self, sqlparser::keywords::Keyword::TO)
@@ -11073,6 +11841,9 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
             }
             sqlparser::keywords::Keyword::UNKNOWN => {
                 transformer.transform(self, sqlparser::keywords::Keyword::UNKNOWN)
+            }
+            sqlparser::keywords::Keyword::UNLISTEN => {
+                transformer.transform(self, sqlparser::keywords::Keyword::UNLISTEN)
             }
             sqlparser::keywords::Keyword::UNLOAD => {
                 transformer.transform(self, sqlparser::keywords::Keyword::UNLOAD)
@@ -11240,6 +12011,34 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::keywords::Keyword {
                 transformer.transform(self, sqlparser::keywords::Keyword::ZORDER)
             }
         }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::tokenizer::Location {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self { line, column } = self;
+        let transformed = Self {
+            line: line.apply_transform(transformer)?,
+            column: column.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::tokenizer::Span {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self { start, end } = self;
+        let transformed = Self {
+            start: start.apply_transform(transformer)?,
+            end: end.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
     }
 }
 #[automatically_derived]
@@ -11578,6 +12377,20 @@ impl<'ast> crate::Transformable<'ast> for sqlparser::tokenizer::Token {
                 transformer.transform(self, transformed)
             }
         }
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqlparser::tokenizer::TokenWithSpan {
+    fn apply_transform<T>(&'ast self, transformer: &mut T) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        let Self { token, span } = self;
+        let transformed = Self {
+            token: token.apply_transform(transformer)?,
+            span: span.apply_transform(transformer)?,
+        };
+        transformer.transform(self, transformed)
     }
 }
 #[automatically_derived]

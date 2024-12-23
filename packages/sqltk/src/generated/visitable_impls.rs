@@ -108,7 +108,10 @@ impl crate::Visitable for sqlparser::ast::AlterColumnOperation {
                         value.accept(visitor)?;
                     }
                     sqlparser::ast::AlterColumnOperation::DropDefault => {}
-                    sqlparser::ast::AlterColumnOperation::SetDataType { data_type, using } => {
+                    sqlparser::ast::AlterColumnOperation::SetDataType {
+                        data_type,
+                        using,
+                    } => {
                         data_type.accept(visitor)?;
                         using.accept(visitor)?;
                     }
@@ -265,7 +268,10 @@ impl crate::Visitable for sqlparser::ast::AlterTableOperation {
                         name.accept(visitor)?;
                         select.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::DropProjection { if_exists, name } => {
+                    sqlparser::ast::AlterTableOperation::DropProjection {
+                        if_exists,
+                        name,
+                    } => {
                         if_exists.accept(visitor)?;
                         name.accept(visitor)?;
                     }
@@ -312,10 +318,14 @@ impl crate::Visitable for sqlparser::ast::AlterTableOperation {
                         if_exists.accept(visitor)?;
                         cascade.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::AttachPartition { partition } => {
+                    sqlparser::ast::AlterTableOperation::AttachPartition {
+                        partition,
+                    } => {
                         partition.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::DetachPartition { partition } => {
+                    sqlparser::ast::AlterTableOperation::DetachPartition {
+                        partition,
+                    } => {
                         partition.accept(visitor)?;
                     }
                     sqlparser::ast::AlterTableOperation::FreezePartition {
@@ -336,13 +346,17 @@ impl crate::Visitable for sqlparser::ast::AlterTableOperation {
                     sqlparser::ast::AlterTableOperation::EnableAlwaysRule { name } => {
                         name.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::EnableAlwaysTrigger { name } => {
+                    sqlparser::ast::AlterTableOperation::EnableAlwaysTrigger {
+                        name,
+                    } => {
                         name.accept(visitor)?;
                     }
                     sqlparser::ast::AlterTableOperation::EnableReplicaRule { name } => {
                         name.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::EnableReplicaTrigger { name } => {
+                    sqlparser::ast::AlterTableOperation::EnableReplicaTrigger {
+                        name,
+                    } => {
                         name.accept(visitor)?;
                     }
                     sqlparser::ast::AlterTableOperation::EnableRowLevelSecurity => {}
@@ -414,19 +428,30 @@ impl crate::Visitable for sqlparser::ast::AlterTableOperation {
                         old_name.accept(visitor)?;
                         new_name.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::AlterColumn { column_name, op } => {
+                    sqlparser::ast::AlterTableOperation::AlterColumn {
+                        column_name,
+                        op,
+                    } => {
                         column_name.accept(visitor)?;
                         op.accept(visitor)?;
                     }
                     sqlparser::ast::AlterTableOperation::SwapWith { table_name } => {
                         table_name.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::SetTblProperties { table_properties } => {
+                    sqlparser::ast::AlterTableOperation::SetTblProperties {
+                        table_properties,
+                    } => {
                         table_properties.accept(visitor)?;
                     }
                     sqlparser::ast::AlterTableOperation::OwnerTo { new_owner } => {
                         new_owner.accept(visitor)?;
                     }
+                    sqlparser::ast::AlterTableOperation::ClusterBy { exprs } => {
+                        exprs.accept(visitor)?;
+                    }
+                    sqlparser::ast::AlterTableOperation::DropClusteringKey => {}
+                    sqlparser::ast::AlterTableOperation::SuspendRecluster => {}
+                    sqlparser::ast::AlterTableOperation::ResumeRecluster => {}
                 }
                 std::ops::ControlFlow::Continue(())
             },
@@ -604,6 +629,28 @@ impl crate::Visitable for sqlparser::ast::AttachDuckDBDatabaseOption {
 }
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::AttachDuckDBDatabaseOption {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::BeginTransactionKind {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::BeginTransactionKind::Transaction => {}
+                    sqlparser::ast::BeginTransactionKind::Work => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::BeginTransactionKind {}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::BinaryOperator {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1096,6 +1143,10 @@ impl crate::Visitable for sqlparser::ast::CommentObject {
                     sqlparser::ast::CommentObject::Column => {}
                     sqlparser::ast::CommentObject::Table => {}
                     sqlparser::ast::CommentObject::Extension => {}
+                    sqlparser::ast::CommentObject::Schema => {}
+                    sqlparser::ast::CommentObject::Database => {}
+                    sqlparser::ast::CommentObject::User => {}
+                    sqlparser::ast::CommentObject::Role => {}
                 }
                 std::ops::ControlFlow::Continue(())
             },
@@ -1322,10 +1373,7 @@ impl crate::Visitable for sqlparser::ast::CopySource {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqlparser::ast::CopySource::Table {
-                        table_name,
-                        columns,
-                    } => {
+                    sqlparser::ast::CopySource::Table { table_name, columns } => {
                         table_name.accept(visitor)?;
                         columns.accept(visitor)?;
                     }
@@ -1368,6 +1416,39 @@ impl crate::Visitable for sqlparser::ast::CopyTarget {
 }
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::CopyTarget {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::CreateFunction {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.or_replace.accept(visitor)?;
+                self.temporary.accept(visitor)?;
+                self.if_not_exists.accept(visitor)?;
+                self.name.accept(visitor)?;
+                self.args.accept(visitor)?;
+                self.return_type.accept(visitor)?;
+                self.function_body.accept(visitor)?;
+                self.behavior.accept(visitor)?;
+                self.called_on_null.accept(visitor)?;
+                self.parallel.accept(visitor)?;
+                self.using.accept(visitor)?;
+                self.language.accept(visitor)?;
+                self.determinism_specifier.accept(visitor)?;
+                self.options.accept(visitor)?;
+                self.remote_connection.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::CreateFunction {}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CreateFunctionBody {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1605,6 +1686,7 @@ impl crate::Visitable for sqlparser::ast::Cte {
                 self.query.accept(visitor)?;
                 self.from.accept(visitor)?;
                 self.materialized.accept(visitor)?;
+                self.closing_paren_token.accept(visitor)?;
                 std::ops::ControlFlow::Continue(())
             },
         )
@@ -1683,6 +1765,9 @@ impl crate::Visitable for sqlparser::ast::DataType {
                     sqlparser::ast::DataType::Blob(field0) => {
                         field0.accept(visitor)?;
                     }
+                    sqlparser::ast::DataType::TinyBlob => {}
+                    sqlparser::ast::DataType::MediumBlob => {}
+                    sqlparser::ast::DataType::LongBlob => {}
                     sqlparser::ast::DataType::Bytes(field0) => {
                         field0.accept(visitor)?;
                     }
@@ -1774,7 +1859,9 @@ impl crate::Visitable for sqlparser::ast::DataType {
                     sqlparser::ast::DataType::Float64 => {}
                     sqlparser::ast::DataType::Real => {}
                     sqlparser::ast::DataType::Float8 => {}
-                    sqlparser::ast::DataType::Double => {}
+                    sqlparser::ast::DataType::Double(field0) => {
+                        field0.accept(visitor)?;
+                    }
                     sqlparser::ast::DataType::DoublePrecision => {}
                     sqlparser::ast::DataType::Bool => {}
                     sqlparser::ast::DataType::Boolean => {}
@@ -1800,6 +1887,9 @@ impl crate::Visitable for sqlparser::ast::DataType {
                     sqlparser::ast::DataType::JSONB => {}
                     sqlparser::ast::DataType::Regclass => {}
                     sqlparser::ast::DataType::Text => {}
+                    sqlparser::ast::DataType::TinyText => {}
+                    sqlparser::ast::DataType::MediumText => {}
+                    sqlparser::ast::DataType::LongText => {}
                     sqlparser::ast::DataType::String(field0) => {
                         field0.accept(visitor)?;
                     }
@@ -1807,6 +1897,12 @@ impl crate::Visitable for sqlparser::ast::DataType {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::DataType::Bytea => {}
+                    sqlparser::ast::DataType::Bit(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqlparser::ast::DataType::BitVarying(field0) => {
+                        field0.accept(visitor)?;
+                    }
                     sqlparser::ast::DataType::Custom(field0, field1) => {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
@@ -1824,8 +1920,9 @@ impl crate::Visitable for sqlparser::ast::DataType {
                     sqlparser::ast::DataType::Nested(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::DataType::Enum(field0) => {
+                    sqlparser::ast::DataType::Enum(field0, field1) => {
                         field0.accept(visitor)?;
+                        field1.accept(visitor)?;
                     }
                     sqlparser::ast::DataType::Set(field0) => {
                         field0.accept(visitor)?;
@@ -1845,6 +1942,7 @@ impl crate::Visitable for sqlparser::ast::DataType {
                     }
                     sqlparser::ast::DataType::Unspecified => {}
                     sqlparser::ast::DataType::Trigger => {}
+                    sqlparser::ast::DataType::AnyType => {}
                 }
                 std::ops::ControlFlow::Continue(())
             },
@@ -2247,6 +2345,33 @@ impl crate::Visitable for sqlparser::ast::EmptyMatchesMode {
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::EmptyMatchesMode {}
 #[automatically_derived]
+impl crate::Visitable for sqlparser::ast::EnumMember {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::EnumMember::Name(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqlparser::ast::EnumMember::NamedValue(field0, field1) => {
+                        field0.accept(visitor)?;
+                        field1.accept(visitor)?;
+                    }
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::EnumMember {}
+#[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ExactNumberInfo {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -2262,7 +2387,10 @@ impl crate::Visitable for sqlparser::ast::ExactNumberInfo {
                     sqlparser::ast::ExactNumberInfo::Precision(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::ExactNumberInfo::PrecisionAndScale(field0, field1) => {
+                    sqlparser::ast::ExactNumberInfo::PrecisionAndScale(
+                        field0,
+                        field1,
+                    ) => {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
                     }
@@ -2378,39 +2506,22 @@ impl crate::Visitable for sqlparser::ast::Expr {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::InList {
-                        expr,
-                        list,
-                        negated,
-                    } => {
+                    sqlparser::ast::Expr::InList { expr, list, negated } => {
                         expr.accept(visitor)?;
                         list.accept(visitor)?;
                         negated.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::InSubquery {
-                        expr,
-                        subquery,
-                        negated,
-                    } => {
+                    sqlparser::ast::Expr::InSubquery { expr, subquery, negated } => {
                         expr.accept(visitor)?;
                         subquery.accept(visitor)?;
                         negated.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::InUnnest {
-                        expr,
-                        array_expr,
-                        negated,
-                    } => {
+                    sqlparser::ast::Expr::InUnnest { expr, array_expr, negated } => {
                         expr.accept(visitor)?;
                         array_expr.accept(visitor)?;
                         negated.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::Between {
-                        expr,
-                        negated,
-                        low,
-                        high,
-                    } => {
+                    sqlparser::ast::Expr::Between { expr, negated, low, high } => {
                         expr.accept(visitor)?;
                         negated.accept(visitor)?;
                         low.accept(visitor)?;
@@ -2458,33 +2569,19 @@ impl crate::Visitable for sqlparser::ast::Expr {
                         pattern.accept(visitor)?;
                         escape_char.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::RLike {
-                        negated,
-                        expr,
-                        pattern,
-                        regexp,
-                    } => {
+                    sqlparser::ast::Expr::RLike { negated, expr, pattern, regexp } => {
                         negated.accept(visitor)?;
                         expr.accept(visitor)?;
                         pattern.accept(visitor)?;
                         regexp.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::AnyOp {
-                        left,
-                        compare_op,
-                        right,
-                        is_some,
-                    } => {
+                    sqlparser::ast::Expr::AnyOp { left, compare_op, right, is_some } => {
                         left.accept(visitor)?;
                         compare_op.accept(visitor)?;
                         right.accept(visitor)?;
                         is_some.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::AllOp {
-                        left,
-                        compare_op,
-                        right,
-                    } => {
+                    sqlparser::ast::Expr::AllOp { left, compare_op, right } => {
                         left.accept(visitor)?;
                         compare_op.accept(visitor)?;
                         right.accept(visitor)?;
@@ -2508,29 +2605,17 @@ impl crate::Visitable for sqlparser::ast::Expr {
                         target_before_value.accept(visitor)?;
                         styles.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::Cast {
-                        kind,
-                        expr,
-                        data_type,
-                        format,
-                    } => {
+                    sqlparser::ast::Expr::Cast { kind, expr, data_type, format } => {
                         kind.accept(visitor)?;
                         expr.accept(visitor)?;
                         data_type.accept(visitor)?;
                         format.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::AtTimeZone {
-                        timestamp,
-                        time_zone,
-                    } => {
+                    sqlparser::ast::Expr::AtTimeZone { timestamp, time_zone } => {
                         timestamp.accept(visitor)?;
                         time_zone.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::Extract {
-                        field,
-                        syntax,
-                        expr,
-                    } => {
+                    sqlparser::ast::Expr::Extract { field, syntax, expr } => {
                         field.accept(visitor)?;
                         syntax.accept(visitor)?;
                         expr.accept(visitor)?;
@@ -2605,6 +2690,9 @@ impl crate::Visitable for sqlparser::ast::Expr {
                     sqlparser::ast::Expr::Function(field0) => {
                         field0.accept(visitor)?;
                     }
+                    sqlparser::ast::Expr::Method(field0) => {
+                        field0.accept(visitor)?;
+                    }
                     sqlparser::ast::Expr::Case {
                         operand,
                         conditions,
@@ -2668,9 +2756,12 @@ impl crate::Visitable for sqlparser::ast::Expr {
                         match_value.accept(visitor)?;
                         opt_search_modifier.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::Wildcard => {}
-                    sqlparser::ast::Expr::QualifiedWildcard(field0) => {
+                    sqlparser::ast::Expr::Wildcard(field0) => {
                         field0.accept(visitor)?;
+                    }
+                    sqlparser::ast::Expr::QualifiedWildcard(field0, field1) => {
+                        field0.accept(visitor)?;
+                        field1.accept(visitor)?;
                     }
                     sqlparser::ast::Expr::OuterJoin(field0) => {
                         field0.accept(visitor)?;
@@ -3033,6 +3124,7 @@ impl crate::Visitable for sqlparser::ast::Function {
             #[allow(unused_variables)]
             |visitor| {
                 self.name.accept(visitor)?;
+                self.uses_odbc_syntax.accept(visitor)?;
                 self.parameters.accept(visitor)?;
                 self.args.accept(visitor)?;
                 self.filter.accept(visitor)?;
@@ -3058,11 +3150,12 @@ impl crate::Visitable for sqlparser::ast::FunctionArg {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqlparser::ast::FunctionArg::Named {
-                        name,
-                        arg,
-                        operator,
-                    } => {
+                    sqlparser::ast::FunctionArg::Named { name, arg, operator } => {
+                        name.accept(visitor)?;
+                        arg.accept(visitor)?;
+                        operator.accept(visitor)?;
+                    }
+                    sqlparser::ast::FunctionArg::ExprNamed { name, arg, operator } => {
                         name.accept(visitor)?;
                         arg.accept(visitor)?;
                         operator.accept(visitor)?;
@@ -3120,6 +3213,8 @@ impl crate::Visitable for sqlparser::ast::FunctionArgOperator {
                     sqlparser::ast::FunctionArgOperator::Equals => {}
                     sqlparser::ast::FunctionArgOperator::RightArrow => {}
                     sqlparser::ast::FunctionArgOperator::Assignment => {}
+                    sqlparser::ast::FunctionArgOperator::Colon => {}
+                    sqlparser::ast::FunctionArgOperator::Value => {}
                 }
                 std::ops::ControlFlow::Continue(())
             },
@@ -3140,7 +3235,9 @@ impl crate::Visitable for sqlparser::ast::FunctionArgumentClause {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqlparser::ast::FunctionArgumentClause::IgnoreOrRespectNulls(field0) => {
+                    sqlparser::ast::FunctionArgumentClause::IgnoreOrRespectNulls(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::FunctionArgumentClause::OrderBy(field0) => {
@@ -3156,6 +3253,9 @@ impl crate::Visitable for sqlparser::ast::FunctionArgumentClause {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::FunctionArgumentClause::Separator(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqlparser::ast::FunctionArgumentClause::JsonNullClause(field0) => {
                         field0.accept(visitor)?;
                     }
                 }
@@ -3631,6 +3731,26 @@ impl crate::Visitable for sqlparser::ast::HiveIOFormat {
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::HiveIOFormat {}
 #[automatically_derived]
+impl crate::Visitable for sqlparser::ast::HiveLoadDataFormat {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.serde.accept(visitor)?;
+                self.input_format.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::HiveLoadDataFormat {}
+#[automatically_derived]
 impl crate::Visitable for sqlparser::ast::HiveRowDelimiter {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -3709,6 +3829,7 @@ impl crate::Visitable for sqlparser::ast::Ident {
             |visitor| {
                 self.value.accept(visitor)?;
                 self.quote_style.accept(visitor)?;
+                self.span.accept(visitor)?;
                 std::ops::ControlFlow::Continue(())
             },
         )
@@ -3791,7 +3912,9 @@ impl crate::Visitable for sqlparser::ast::IdentityPropertyFormatKind {
                     sqlparser::ast::IdentityPropertyFormatKind::FunctionCall(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::IdentityPropertyFormatKind::StartAndIncrement(field0) => {
+                    sqlparser::ast::IdentityPropertyFormatKind::StartAndIncrement(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                 }
@@ -4107,10 +4230,16 @@ impl crate::Visitable for sqlparser::ast::JoinOperator {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::JoinOperator::CrossJoin => {}
+                    sqlparser::ast::JoinOperator::Semi(field0) => {
+                        field0.accept(visitor)?;
+                    }
                     sqlparser::ast::JoinOperator::LeftSemi(field0) => {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::JoinOperator::RightSemi(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqlparser::ast::JoinOperator::Anti(field0) => {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::JoinOperator::LeftAnti(field0) => {
@@ -4136,6 +4265,28 @@ impl crate::Visitable for sqlparser::ast::JoinOperator {
 }
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::JoinOperator {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::JsonNullClause {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::JsonNullClause::NullOnNull => {}
+                    sqlparser::ast::JsonNullClause::AbsentOnNull => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::JsonNullClause {}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::JsonPath {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4381,7 +4532,10 @@ impl crate::Visitable for sqlparser::ast::ListAggOnOverflow {
             |visitor| {
                 match self {
                     sqlparser::ast::ListAggOnOverflow::Error => {}
-                    sqlparser::ast::ListAggOnOverflow::Truncate { filler, with_count } => {
+                    sqlparser::ast::ListAggOnOverflow::Truncate {
+                        filler,
+                        with_count,
+                    } => {
                         filler.accept(visitor)?;
                         with_count.accept(visitor)?;
                     }
@@ -4414,6 +4568,34 @@ impl crate::Visitable for sqlparser::ast::LockClause {
 }
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::LockClause {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::LockMode {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::LockMode::AccessShare => {}
+                    sqlparser::ast::LockMode::RowShare => {}
+                    sqlparser::ast::LockMode::RowExclusive => {}
+                    sqlparser::ast::LockMode::ShareUpdateExclusive => {}
+                    sqlparser::ast::LockMode::Share => {}
+                    sqlparser::ast::LockMode::ShareRowExclusive => {}
+                    sqlparser::ast::LockMode::Exclusive => {}
+                    sqlparser::ast::LockMode::AccessExclusive => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::LockMode {}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::LockTable {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4640,7 +4822,10 @@ impl crate::Visitable for sqlparser::ast::MatchRecognizePattern {
                     sqlparser::ast::MatchRecognizePattern::Alternation(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::MatchRecognizePattern::Repetition(field0, field1) => {
+                    sqlparser::ast::MatchRecognizePattern::Repetition(
+                        field0,
+                        field1,
+                    ) => {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
                     }
@@ -4814,6 +4999,26 @@ impl crate::Visitable for sqlparser::ast::MergeInsertKind {
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::MergeInsertKind {}
 #[automatically_derived]
+impl crate::Visitable for sqlparser::ast::Method {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.expr.accept(visitor)?;
+                self.method_chain.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::Method {}
+#[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MinMaxValue {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -4975,6 +5180,29 @@ impl crate::Visitable for sqlparser::ast::NullTreatment {
 }
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::NullTreatment {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::NullsDistinctOption {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::NullsDistinctOption::None => {}
+                    sqlparser::ast::NullsDistinctOption::Distinct => {}
+                    sqlparser::ast::NullsDistinctOption::NotDistinct => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::NullsDistinctOption {}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ObjectName {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5160,6 +5388,28 @@ impl crate::Visitable for sqlparser::ast::OnInsert {
 }
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::OnInsert {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::OpenJsonTableColumn {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.name.accept(visitor)?;
+                self.r#type.accept(visitor)?;
+                self.path.accept(visitor)?;
+                self.as_json.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::OpenJsonTableColumn {}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::OperateFunctionArg {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5369,9 +5619,7 @@ impl crate::Visitable for sqlparser::ast::Privileges {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqlparser::ast::Privileges::All {
-                        with_privileges_keyword,
-                    } => {
+                    sqlparser::ast::Privileges::All { with_privileges_keyword } => {
                         with_privileges_keyword.accept(visitor)?;
                     }
                     sqlparser::ast::Privileges::Actions(field0) => {
@@ -5755,6 +6003,31 @@ impl crate::Visitable for sqlparser::ast::SearchModifier {
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::SearchModifier {}
 #[automatically_derived]
+impl crate::Visitable for sqlparser::ast::SecondaryRoles {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::SecondaryRoles::All => {}
+                    sqlparser::ast::SecondaryRoles::None => {}
+                    sqlparser::ast::SecondaryRoles::List(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::SecondaryRoles {}
+#[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SecretOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -5786,6 +6059,7 @@ impl crate::Visitable for sqlparser::ast::Select {
             #[allow(unused_variables)]
             |visitor| {
                 self.from.accept(visitor)?;
+                self.select_token.accept(visitor)?;
                 self.distinct.accept(visitor)?;
                 self.top.accept(visitor)?;
                 self.top_before_distinct.accept(visitor)?;
@@ -6051,28 +6325,6 @@ impl crate::Visitable for sqlparser::ast::Setting {
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::Setting {}
 #[automatically_derived]
-impl crate::Visitable for sqlparser::ast::ShowClause {
-    fn accept<'ast, V: crate::Visitor<'ast>>(
-        &'ast self,
-        visitor: &mut V,
-    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
-        visit(
-            self,
-            visitor,
-            #[allow(unused_variables)]
-            |visitor| {
-                match self {
-                    sqlparser::ast::ShowClause::IN => {}
-                    sqlparser::ast::ShowClause::FROM => {}
-                }
-                std::ops::ControlFlow::Continue(())
-            },
-        )
-    }
-}
-#[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ShowClause {}
-#[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ShowCreateObject {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -6130,6 +6382,123 @@ impl crate::Visitable for sqlparser::ast::ShowStatementFilter {
 }
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::ShowStatementFilter {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::ShowStatementFilterPosition {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::ShowStatementFilterPosition::Infix(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqlparser::ast::ShowStatementFilterPosition::Suffix(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::ShowStatementFilterPosition {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::ShowStatementIn {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.clause.accept(visitor)?;
+                self.parent_type.accept(visitor)?;
+                self.parent_name.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::ShowStatementIn {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::ShowStatementInClause {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::ShowStatementInClause::IN => {}
+                    sqlparser::ast::ShowStatementInClause::FROM => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::ShowStatementInClause {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::ShowStatementInParentType {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::ShowStatementInParentType::Account => {}
+                    sqlparser::ast::ShowStatementInParentType::Database => {}
+                    sqlparser::ast::ShowStatementInParentType::Schema => {}
+                    sqlparser::ast::ShowStatementInParentType::Table => {}
+                    sqlparser::ast::ShowStatementInParentType::View => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::ShowStatementInParentType {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::ShowStatementOptions {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.show_in.accept(visitor)?;
+                self.starts_with.accept(visitor)?;
+                self.limit.accept(visitor)?;
+                self.limit_from.accept(visitor)?;
+                self.filter_position.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::ShowStatementOptions {}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SqlOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -6214,6 +6583,7 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         cache_metadata,
                         noscan,
                         compute_statistics,
+                        has_table_keyword,
                     } => {
                         table_name.accept(visitor)?;
                         partitions.accept(visitor)?;
@@ -6222,6 +6592,7 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         cache_metadata.accept(visitor)?;
                         noscan.accept(visitor)?;
                         compute_statistics.accept(visitor)?;
+                        has_table_keyword.accept(visitor)?;
                     }
                     sqlparser::ast::Statement::Truncate {
                         table_names,
@@ -6324,12 +6695,14 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         from,
                         selection,
                         returning,
+                        or,
                     } => {
                         table.accept(visitor)?;
                         from.accept(visitor)?;
                         assignments.accept(visitor)?;
                         selection.accept(visitor)?;
                         returning.accept(visitor)?;
+                        or.accept(visitor)?;
                     }
                     sqlparser::ast::Statement::Delete(field0) => {
                         field0.accept(visitor)?;
@@ -6598,11 +6971,7 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         schema.accept(visitor)?;
                         version.accept(visitor)?;
                     }
-                    sqlparser::ast::Statement::Fetch {
-                        name,
-                        direction,
-                        into,
-                    } => {
+                    sqlparser::ast::Statement::Fetch { name, direction, into } => {
                         name.accept(visitor)?;
                         direction.accept(visitor)?;
                         into.accept(visitor)?;
@@ -6686,43 +7055,53 @@ impl crate::Visitable for sqlparser::ast::Statement {
                     sqlparser::ast::Statement::ShowColumns {
                         extended,
                         full,
-                        table_name,
-                        filter,
+                        show_options,
                     } => {
                         extended.accept(visitor)?;
                         full.accept(visitor)?;
-                        table_name.accept(visitor)?;
-                        filter.accept(visitor)?;
+                        show_options.accept(visitor)?;
                     }
-                    sqlparser::ast::Statement::ShowDatabases { filter } => {
-                        filter.accept(visitor)?;
+                    sqlparser::ast::Statement::ShowDatabases {
+                        terse,
+                        history,
+                        show_options,
+                    } => {
+                        terse.accept(visitor)?;
+                        history.accept(visitor)?;
+                        show_options.accept(visitor)?;
                     }
-                    sqlparser::ast::Statement::ShowSchemas { filter } => {
-                        filter.accept(visitor)?;
+                    sqlparser::ast::Statement::ShowSchemas {
+                        terse,
+                        history,
+                        show_options,
+                    } => {
+                        terse.accept(visitor)?;
+                        history.accept(visitor)?;
+                        show_options.accept(visitor)?;
                     }
                     sqlparser::ast::Statement::ShowTables {
+                        terse,
+                        history,
                         extended,
                         full,
-                        clause,
-                        db_name,
-                        filter,
+                        external,
+                        show_options,
                     } => {
+                        terse.accept(visitor)?;
+                        history.accept(visitor)?;
                         extended.accept(visitor)?;
                         full.accept(visitor)?;
-                        clause.accept(visitor)?;
-                        db_name.accept(visitor)?;
-                        filter.accept(visitor)?;
+                        external.accept(visitor)?;
+                        show_options.accept(visitor)?;
                     }
                     sqlparser::ast::Statement::ShowViews {
+                        terse,
                         materialized,
-                        clause,
-                        db_name,
-                        filter,
+                        show_options,
                     } => {
+                        terse.accept(visitor)?;
                         materialized.accept(visitor)?;
-                        clause.accept(visitor)?;
-                        db_name.accept(visitor)?;
-                        filter.accept(visitor)?;
+                        show_options.accept(visitor)?;
                     }
                     sqlparser::ast::Statement::ShowCollation { filter } => {
                         filter.accept(visitor)?;
@@ -6733,10 +7112,12 @@ impl crate::Visitable for sqlparser::ast::Statement {
                     sqlparser::ast::Statement::StartTransaction {
                         modes,
                         begin,
+                        transaction,
                         modifier,
                     } => {
                         modes.accept(visitor)?;
                         begin.accept(visitor)?;
+                        transaction.accept(visitor)?;
                         modifier.accept(visitor)?;
                     }
                     sqlparser::ast::Statement::SetTransaction {
@@ -6784,38 +7165,8 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         location.accept(visitor)?;
                         managed_location.accept(visitor)?;
                     }
-                    sqlparser::ast::Statement::CreateFunction {
-                        or_replace,
-                        temporary,
-                        if_not_exists,
-                        name,
-                        args,
-                        return_type,
-                        function_body,
-                        behavior,
-                        called_on_null,
-                        parallel,
-                        using,
-                        language,
-                        determinism_specifier,
-                        options,
-                        remote_connection,
-                    } => {
-                        or_replace.accept(visitor)?;
-                        temporary.accept(visitor)?;
-                        if_not_exists.accept(visitor)?;
-                        name.accept(visitor)?;
-                        args.accept(visitor)?;
-                        return_type.accept(visitor)?;
-                        function_body.accept(visitor)?;
-                        behavior.accept(visitor)?;
-                        called_on_null.accept(visitor)?;
-                        parallel.accept(visitor)?;
-                        using.accept(visitor)?;
-                        language.accept(visitor)?;
-                        determinism_specifier.accept(visitor)?;
-                        options.accept(visitor)?;
-                        remote_connection.accept(visitor)?;
+                    sqlparser::ast::Statement::CreateFunction(field0) => {
+                        field0.accept(visitor)?;
                     }
                     sqlparser::ast::Statement::CreateTrigger {
                         or_replace,
@@ -6976,6 +7327,7 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         analyze,
                         verbose,
                         query_plan,
+                        estimate,
                         statement,
                         format,
                         options,
@@ -6985,6 +7337,7 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         analyze.accept(visitor)?;
                         verbose.accept(visitor)?;
                         query_plan.accept(visitor)?;
+                        estimate.accept(visitor)?;
                         format.accept(visitor)?;
                         options.accept(visitor)?;
                     }
@@ -7020,10 +7373,7 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         options.accept(visitor)?;
                         query.accept(visitor)?;
                     }
-                    sqlparser::ast::Statement::UNCache {
-                        table_name,
-                        if_exists,
-                    } => {
+                    sqlparser::ast::Statement::UNCache { table_name, if_exists } => {
                         table_name.accept(visitor)?;
                         if_exists.accept(visitor)?;
                     }
@@ -7042,10 +7392,7 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         sequence_options.accept(visitor)?;
                         owned_by.accept(visitor)?;
                     }
-                    sqlparser::ast::Statement::CreateType {
-                        name,
-                        representation,
-                    } => {
+                    sqlparser::ast::Statement::CreateType { name, representation } => {
                         name.accept(visitor)?;
                         representation.accept(visitor)?;
                     }
@@ -7053,6 +7400,19 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         name.accept(visitor)?;
                         value.accept(visitor)?;
                         is_eq.accept(visitor)?;
+                    }
+                    sqlparser::ast::Statement::LockTablesPG {
+                        keyword_table,
+                        keyword_only,
+                        tables,
+                        lock_mode,
+                        keyword_nowait,
+                    } => {
+                        keyword_table.accept(visitor)?;
+                        keyword_only.accept(visitor)?;
+                        tables.accept(visitor)?;
+                        lock_mode.accept(visitor)?;
+                        keyword_nowait.accept(visitor)?;
                     }
                     sqlparser::ast::Statement::LockTables { tables } => {
                         tables.accept(visitor)?;
@@ -7079,9 +7439,27 @@ impl crate::Visitable for sqlparser::ast::Statement {
                     sqlparser::ast::Statement::LISTEN { channel } => {
                         channel.accept(visitor)?;
                     }
+                    sqlparser::ast::Statement::UNLISTEN { channel } => {
+                        channel.accept(visitor)?;
+                    }
                     sqlparser::ast::Statement::NOTIFY { channel, payload } => {
                         channel.accept(visitor)?;
                         payload.accept(visitor)?;
+                    }
+                    sqlparser::ast::Statement::LoadData {
+                        local,
+                        inpath,
+                        overwrite,
+                        table_name,
+                        partitioned,
+                        table_format,
+                    } => {
+                        local.accept(visitor)?;
+                        inpath.accept(visitor)?;
+                        overwrite.accept(visitor)?;
+                        table_name.accept(visitor)?;
+                        partitioned.accept(visitor)?;
+                        table_format.accept(visitor)?;
                     }
                 }
                 std::ops::ControlFlow::Continue(())
@@ -7226,6 +7604,26 @@ impl crate::Visitable for sqlparser::ast::TableAlias {
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::TableAlias {}
 #[automatically_derived]
+impl crate::Visitable for sqlparser::ast::TableAliasColumnDef {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.name.accept(visitor)?;
+                self.data_type.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::TableAliasColumnDef {}
+#[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TableConstraint {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -7245,6 +7643,7 @@ impl crate::Visitable for sqlparser::ast::TableConstraint {
                         columns,
                         index_options,
                         characteristics,
+                        nulls_distinct,
                     } => {
                         name.accept(visitor)?;
                         index_name.accept(visitor)?;
@@ -7253,6 +7652,7 @@ impl crate::Visitable for sqlparser::ast::TableConstraint {
                         columns.accept(visitor)?;
                         index_options.accept(visitor)?;
                         characteristics.accept(visitor)?;
+                        nulls_distinct.accept(visitor)?;
                     }
                     sqlparser::ast::TableConstraint::PrimaryKey {
                         name,
@@ -7360,6 +7760,8 @@ impl crate::Visitable for sqlparser::ast::TableFactor {
                         version,
                         with_ordinality,
                         partitions,
+                        json_path,
+                        sample,
                     } => {
                         name.accept(visitor)?;
                         alias.accept(visitor)?;
@@ -7368,6 +7770,8 @@ impl crate::Visitable for sqlparser::ast::TableFactor {
                         version.accept(visitor)?;
                         with_ordinality.accept(visitor)?;
                         partitions.accept(visitor)?;
+                        json_path.accept(visitor)?;
+                        sample.accept(visitor)?;
                     }
                     sqlparser::ast::TableFactor::Derived {
                         lateral,
@@ -7407,6 +7811,17 @@ impl crate::Visitable for sqlparser::ast::TableFactor {
                         with_ordinality.accept(visitor)?;
                     }
                     sqlparser::ast::TableFactor::JsonTable {
+                        json_expr,
+                        json_path,
+                        columns,
+                        alias,
+                    } => {
+                        json_expr.accept(visitor)?;
+                        json_path.accept(visitor)?;
+                        columns.accept(visitor)?;
+                        alias.accept(visitor)?;
+                    }
+                    sqlparser::ast::TableFactor::OpenJsonTable {
                         json_expr,
                         json_path,
                         columns,
@@ -7514,7 +7929,9 @@ impl crate::Visitable for sqlparser::ast::TableOptionsClustered {
             |visitor| {
                 match self {
                     sqlparser::ast::TableOptionsClustered::ColumnstoreIndex => {}
-                    sqlparser::ast::TableOptionsClustered::ColumnstoreIndexOrder(field0) => {
+                    sqlparser::ast::TableOptionsClustered::ColumnstoreIndexOrder(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::TableOptionsClustered::Index(field0) => {
@@ -7528,6 +7945,208 @@ impl crate::Visitable for sqlparser::ast::TableOptionsClustered {
 }
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::TableOptionsClustered {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::TableSample {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.modifier.accept(visitor)?;
+                self.name.accept(visitor)?;
+                self.quantity.accept(visitor)?;
+                self.seed.accept(visitor)?;
+                self.bucket.accept(visitor)?;
+                self.offset.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::TableSample {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::TableSampleBucket {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.bucket.accept(visitor)?;
+                self.total.accept(visitor)?;
+                self.on.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::TableSampleBucket {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::TableSampleKind {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::TableSampleKind::BeforeTableAlias(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqlparser::ast::TableSampleKind::AfterTableAlias(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::TableSampleKind {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::TableSampleMethod {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::TableSampleMethod::Row => {}
+                    sqlparser::ast::TableSampleMethod::Bernoulli => {}
+                    sqlparser::ast::TableSampleMethod::System => {}
+                    sqlparser::ast::TableSampleMethod::Block => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::TableSampleMethod {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::TableSampleModifier {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::TableSampleModifier::Sample => {}
+                    sqlparser::ast::TableSampleModifier::TableSample => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::TableSampleModifier {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::TableSampleQuantity {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.parenthesized.accept(visitor)?;
+                self.value.accept(visitor)?;
+                self.unit.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::TableSampleQuantity {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::TableSampleSeed {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.modifier.accept(visitor)?;
+                self.value.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::TableSampleSeed {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::TableSampleSeedModifier {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::TableSampleSeedModifier::Repeatable => {}
+                    sqlparser::ast::TableSampleSeedModifier::Seed => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::TableSampleSeedModifier {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::ast::TableSampleUnit {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqlparser::ast::TableSampleUnit::Rows => {}
+                    sqlparser::ast::TableSampleUnit::Percent => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::TableSampleUnit {}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TableVersion {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8040,6 +8659,7 @@ impl crate::Visitable for sqlparser::ast::UnaryOperator {
                     sqlparser::ast::UnaryOperator::PGPostfixFactorial => {}
                     sqlparser::ast::UnaryOperator::PGPrefixFactorial => {}
                     sqlparser::ast::UnaryOperator::PGAbs => {}
+                    sqlparser::ast::UnaryOperator::BangNot => {}
                 }
                 std::ops::ControlFlow::Continue(())
             },
@@ -8092,6 +8712,12 @@ impl crate::Visitable for sqlparser::ast::Use {
                     sqlparser::ast::Use::Warehouse(field0) => {
                         field0.accept(visitor)?;
                     }
+                    sqlparser::ast::Use::Role(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqlparser::ast::Use::SecondaryRoles(field0) => {
+                        field0.accept(visitor)?;
+                    }
                     sqlparser::ast::Use::Object(field0) => {
                         field0.accept(visitor)?;
                     }
@@ -8137,7 +8763,9 @@ impl crate::Visitable for sqlparser::ast::UserDefinedTypeRepresentation {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqlparser::ast::UserDefinedTypeRepresentation::Composite { attributes } => {
+                    sqlparser::ast::UserDefinedTypeRepresentation::Composite {
+                        attributes,
+                    } => {
                         attributes.accept(visitor)?;
                     }
                     sqlparser::ast::UserDefinedTypeRepresentation::Enum { labels } => {
@@ -8211,10 +8839,14 @@ impl crate::Visitable for sqlparser::ast::Value {
                     sqlparser::ast::Value::DoubleQuotedByteStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::Value::TripleSingleQuotedByteStringLiteral(field0) => {
+                    sqlparser::ast::Value::TripleSingleQuotedByteStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::Value::TripleDoubleQuotedByteStringLiteral(field0) => {
+                    sqlparser::ast::Value::TripleDoubleQuotedByteStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::Value::SingleQuotedRawStringLiteral(field0) => {
@@ -8223,10 +8855,14 @@ impl crate::Visitable for sqlparser::ast::Value {
                     sqlparser::ast::Value::DoubleQuotedRawStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::Value::TripleSingleQuotedRawStringLiteral(field0) => {
+                    sqlparser::ast::Value::TripleSingleQuotedRawStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::Value::TripleDoubleQuotedRawStringLiteral(field0) => {
+                    sqlparser::ast::Value::TripleDoubleQuotedRawStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::Value::NationalStringLiteral(field0) => {
@@ -8327,6 +8963,7 @@ impl crate::Visitable for sqlparser::ast::WildcardAdditionalOptions {
             visitor,
             #[allow(unused_variables)]
             |visitor| {
+                self.wildcard_token.accept(visitor)?;
                 self.opt_ilike.accept(visitor)?;
                 self.opt_exclude.accept(visitor)?;
                 self.opt_except.accept(visitor)?;
@@ -8469,6 +9106,7 @@ impl crate::Visitable for sqlparser::ast::With {
             visitor,
             #[allow(unused_variables)]
             |visitor| {
+                self.with_token.accept(visitor)?;
                 self.recursive.accept(visitor)?;
                 self.cte_tables.accept(visitor)?;
                 std::ops::ControlFlow::Continue(())
@@ -8500,6 +9138,25 @@ impl crate::Visitable for sqlparser::ast::WithFill {
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::WithFill {}
 #[automatically_derived]
+impl crate::Visitable for sqlparser::ast::helpers::attached_token::AttachedToken {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.0.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::ast::helpers::attached_token::AttachedToken {}
+#[automatically_derived]
 impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -8521,7 +9178,8 @@ impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::DataLoadin
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOption {}
 #[automatically_derived]
-impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptionType {
+impl crate::Visitable
+for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptionType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
         visitor: &mut V,
@@ -8542,9 +9200,11 @@ impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::DataLoadin
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptionType {}
+impl crate::Semantic
+for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptionType {}
 #[automatically_derived]
-impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptions {
+impl crate::Visitable
+for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptions {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
         visitor: &mut V,
@@ -8563,7 +9223,8 @@ impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::DataLoadin
 #[automatically_derived]
 impl crate::Semantic for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptions {}
 #[automatically_derived]
-impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::StageLoadSelectItem {
+impl crate::Visitable
+for sqlparser::ast::helpers::stmt_data_loading::StageLoadSelectItem {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
         visitor: &mut V,
@@ -8583,7 +9244,8 @@ impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::StageLoadS
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::helpers::stmt_data_loading::StageLoadSelectItem {}
+impl crate::Semantic
+for sqlparser::ast::helpers::stmt_data_loading::StageLoadSelectItem {}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::StageParamsObject {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8622,8 +9284,10 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::NoKeyword => {}
                     sqlparser::keywords::Keyword::ABORT => {}
                     sqlparser::keywords::Keyword::ABS => {}
+                    sqlparser::keywords::Keyword::ABSENT => {}
                     sqlparser::keywords::Keyword::ABSOLUTE => {}
                     sqlparser::keywords::Keyword::ACCESS => {}
+                    sqlparser::keywords::Keyword::ACCOUNT => {}
                     sqlparser::keywords::Keyword::ACTION => {}
                     sqlparser::keywords::Keyword::ADD => {}
                     sqlparser::keywords::Keyword::ADMIN => {}
@@ -8639,6 +9303,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::AND => {}
                     sqlparser::keywords::Keyword::ANTI => {}
                     sqlparser::keywords::Keyword::ANY => {}
+                    sqlparser::keywords::Keyword::APPLICATION => {}
                     sqlparser::keywords::Keyword::APPLY => {}
                     sqlparser::keywords::Keyword::ARCHIVE => {}
                     sqlparser::keywords::Keyword::ARE => {}
@@ -8665,19 +9330,23 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::BEGIN => {}
                     sqlparser::keywords::Keyword::BEGIN_FRAME => {}
                     sqlparser::keywords::Keyword::BEGIN_PARTITION => {}
+                    sqlparser::keywords::Keyword::BERNOULLI => {}
                     sqlparser::keywords::Keyword::BETWEEN => {}
                     sqlparser::keywords::Keyword::BIGDECIMAL => {}
                     sqlparser::keywords::Keyword::BIGINT => {}
                     sqlparser::keywords::Keyword::BIGNUMERIC => {}
                     sqlparser::keywords::Keyword::BINARY => {}
                     sqlparser::keywords::Keyword::BINDING => {}
+                    sqlparser::keywords::Keyword::BIT => {}
                     sqlparser::keywords::Keyword::BLOB => {}
+                    sqlparser::keywords::Keyword::BLOCK => {}
                     sqlparser::keywords::Keyword::BLOOMFILTER => {}
                     sqlparser::keywords::Keyword::BOOL => {}
                     sqlparser::keywords::Keyword::BOOLEAN => {}
                     sqlparser::keywords::Keyword::BOTH => {}
                     sqlparser::keywords::Keyword::BROWSE => {}
                     sqlparser::keywords::Keyword::BTREE => {}
+                    sqlparser::keywords::Keyword::BUCKET => {}
                     sqlparser::keywords::Keyword::BUCKETS => {}
                     sqlparser::keywords::Keyword::BY => {}
                     sqlparser::keywords::Keyword::BYPASSRLS => {}
@@ -8712,6 +9381,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::CLOSE => {}
                     sqlparser::keywords::Keyword::CLUSTER => {}
                     sqlparser::keywords::Keyword::CLUSTERED => {}
+                    sqlparser::keywords::Keyword::CLUSTERING => {}
                     sqlparser::keywords::Keyword::COALESCE => {}
                     sqlparser::keywords::Keyword::COLLATE => {}
                     sqlparser::keywords::Keyword::COLLATION => {}
@@ -8830,12 +9500,15 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::ENFORCED => {}
                     sqlparser::keywords::Keyword::ENGINE => {}
                     sqlparser::keywords::Keyword::ENUM => {}
+                    sqlparser::keywords::Keyword::ENUM16 => {}
+                    sqlparser::keywords::Keyword::ENUM8 => {}
                     sqlparser::keywords::Keyword::EPHEMERAL => {}
                     sqlparser::keywords::Keyword::EPOCH => {}
                     sqlparser::keywords::Keyword::EQUALS => {}
                     sqlparser::keywords::Keyword::ERROR => {}
                     sqlparser::keywords::Keyword::ESCAPE => {}
                     sqlparser::keywords::Keyword::ESCAPED => {}
+                    sqlparser::keywords::Keyword::ESTIMATE => {}
                     sqlparser::keywords::Keyword::EVENT => {}
                     sqlparser::keywords::Keyword::EVERY => {}
                     sqlparser::keywords::Keyword::EXCEPT => {}
@@ -8874,6 +9547,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::FLOAT8 => {}
                     sqlparser::keywords::Keyword::FLOOR => {}
                     sqlparser::keywords::Keyword::FLUSH => {}
+                    sqlparser::keywords::Keyword::FN => {}
                     sqlparser::keywords::Keyword::FOLLOWING => {}
                     sqlparser::keywords::Keyword::FOR => {}
                     sqlparser::keywords::Keyword::FORCE => {}
@@ -8935,6 +9609,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::INITIALLY => {}
                     sqlparser::keywords::Keyword::INNER => {}
                     sqlparser::keywords::Keyword::INOUT => {}
+                    sqlparser::keywords::Keyword::INPATH => {}
                     sqlparser::keywords::Keyword::INPUT => {}
                     sqlparser::keywords::Keyword::INPUTFORMAT => {}
                     sqlparser::keywords::Keyword::INSENSITIVE => {}
@@ -8997,6 +9672,8 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::LOCKED => {}
                     sqlparser::keywords::Keyword::LOGIN => {}
                     sqlparser::keywords::Keyword::LOGS => {}
+                    sqlparser::keywords::Keyword::LONGBLOB => {}
+                    sqlparser::keywords::Keyword::LONGTEXT => {}
                     sqlparser::keywords::Keyword::LOWCARDINALITY => {}
                     sqlparser::keywords::Keyword::LOWER => {}
                     sqlparser::keywords::Keyword::LOW_PRIORITY => {}
@@ -9015,7 +9692,9 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::MAXVALUE => {}
                     sqlparser::keywords::Keyword::MAX_DATA_EXTENSION_TIME_IN_DAYS => {}
                     sqlparser::keywords::Keyword::MEASURES => {}
+                    sqlparser::keywords::Keyword::MEDIUMBLOB => {}
                     sqlparser::keywords::Keyword::MEDIUMINT => {}
+                    sqlparser::keywords::Keyword::MEDIUMTEXT => {}
                     sqlparser::keywords::Keyword::MEMBER => {}
                     sqlparser::keywords::Keyword::MERGE => {}
                     sqlparser::keywords::Keyword::METADATA => {}
@@ -9085,6 +9764,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::ONE => {}
                     sqlparser::keywords::Keyword::ONLY => {}
                     sqlparser::keywords::Keyword::OPEN => {}
+                    sqlparser::keywords::Keyword::OPENJSON => {}
                     sqlparser::keywords::Keyword::OPERATOR => {}
                     sqlparser::keywords::Keyword::OPTIMIZE => {}
                     sqlparser::keywords::Keyword::OPTIMIZER_COSTS => {}
@@ -9158,6 +9838,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::READS => {}
                     sqlparser::keywords::Keyword::READ_ONLY => {}
                     sqlparser::keywords::Keyword::REAL => {}
+                    sqlparser::keywords::Keyword::RECLUSTER => {}
                     sqlparser::keywords::Keyword::RECURSIVE => {}
                     sqlparser::keywords::Keyword::REF => {}
                     sqlparser::keywords::Keyword::REFERENCES => {}
@@ -9192,6 +9873,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::RESTRICTIVE => {}
                     sqlparser::keywords::Keyword::RESULT => {}
                     sqlparser::keywords::Keyword::RESULTSET => {}
+                    sqlparser::keywords::Keyword::RESUME => {}
                     sqlparser::keywords::Keyword::RETAIN => {}
                     sqlparser::keywords::Keyword::RETURN => {}
                     sqlparser::keywords::Keyword::RETURNING => {}
@@ -9200,6 +9882,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::RIGHT => {}
                     sqlparser::keywords::Keyword::RLIKE => {}
                     sqlparser::keywords::Keyword::ROLE => {}
+                    sqlparser::keywords::Keyword::ROLES => {}
                     sqlparser::keywords::Keyword::ROLLBACK => {}
                     sqlparser::keywords::Keyword::ROLLUP => {}
                     sqlparser::keywords::Keyword::ROOT => {}
@@ -9211,6 +9894,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::RUN => {}
                     sqlparser::keywords::Keyword::SAFE => {}
                     sqlparser::keywords::Keyword::SAFE_CAST => {}
+                    sqlparser::keywords::Keyword::SAMPLE => {}
                     sqlparser::keywords::Keyword::SAVEPOINT => {}
                     sqlparser::keywords::Keyword::SCHEMA => {}
                     sqlparser::keywords::Keyword::SCHEMAS => {}
@@ -9218,8 +9902,10 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::SCROLL => {}
                     sqlparser::keywords::Keyword::SEARCH => {}
                     sqlparser::keywords::Keyword::SECOND => {}
+                    sqlparser::keywords::Keyword::SECONDARY => {}
                     sqlparser::keywords::Keyword::SECRET => {}
                     sqlparser::keywords::Keyword::SECURITY => {}
+                    sqlparser::keywords::Keyword::SEED => {}
                     sqlparser::keywords::Keyword::SELECT => {}
                     sqlparser::keywords::Keyword::SEMI => {}
                     sqlparser::keywords::Keyword::SENSITIVE => {}
@@ -9257,6 +9943,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::STABLE => {}
                     sqlparser::keywords::Keyword::STAGE => {}
                     sqlparser::keywords::Keyword::START => {}
+                    sqlparser::keywords::Keyword::STARTS => {}
                     sqlparser::keywords::Keyword::STATEMENT => {}
                     sqlparser::keywords::Keyword::STATIC => {}
                     sqlparser::keywords::Keyword::STATISTICS => {}
@@ -9278,6 +9965,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::SUM => {}
                     sqlparser::keywords::Keyword::SUPER => {}
                     sqlparser::keywords::Keyword::SUPERUSER => {}
+                    sqlparser::keywords::Keyword::SUSPEND => {}
                     sqlparser::keywords::Keyword::SWAP => {}
                     sqlparser::keywords::Keyword::SYMMETRIC => {}
                     sqlparser::keywords::Keyword::SYNC => {}
@@ -9293,6 +9981,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::TEMP => {}
                     sqlparser::keywords::Keyword::TEMPORARY => {}
                     sqlparser::keywords::Keyword::TERMINATED => {}
+                    sqlparser::keywords::Keyword::TERSE => {}
                     sqlparser::keywords::Keyword::TEXT => {}
                     sqlparser::keywords::Keyword::TEXTFILE => {}
                     sqlparser::keywords::Keyword::THEN => {}
@@ -9306,7 +9995,9 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::TIMEZONE_HOUR => {}
                     sqlparser::keywords::Keyword::TIMEZONE_MINUTE => {}
                     sqlparser::keywords::Keyword::TIMEZONE_REGION => {}
+                    sqlparser::keywords::Keyword::TINYBLOB => {}
                     sqlparser::keywords::Keyword::TINYINT => {}
+                    sqlparser::keywords::Keyword::TINYTEXT => {}
                     sqlparser::keywords::Keyword::TO => {}
                     sqlparser::keywords::Keyword::TOP => {}
                     sqlparser::keywords::Keyword::TOTALS => {}
@@ -9340,6 +10031,7 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
                     sqlparser::keywords::Keyword::UNION => {}
                     sqlparser::keywords::Keyword::UNIQUE => {}
                     sqlparser::keywords::Keyword::UNKNOWN => {}
+                    sqlparser::keywords::Keyword::UNLISTEN => {}
                     sqlparser::keywords::Keyword::UNLOAD => {}
                     sqlparser::keywords::Keyword::UNLOCK => {}
                     sqlparser::keywords::Keyword::UNLOGGED => {}
@@ -9404,6 +10096,46 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
 #[automatically_derived]
 impl crate::Semantic for sqlparser::keywords::Keyword {}
 #[automatically_derived]
+impl crate::Visitable for sqlparser::tokenizer::Location {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.line.accept(visitor)?;
+                self.column.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::tokenizer::Location {}
+#[automatically_derived]
+impl crate::Visitable for sqlparser::tokenizer::Span {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.start.accept(visitor)?;
+                self.end.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::tokenizer::Span {}
+#[automatically_derived]
 impl crate::Visitable for sqlparser::tokenizer::Token {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -9441,28 +10173,44 @@ impl crate::Visitable for sqlparser::tokenizer::Token {
                     sqlparser::tokenizer::Token::DollarQuotedString(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::SingleQuotedByteStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::SingleQuotedByteStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::DoubleQuotedByteStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::DoubleQuotedByteStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::TripleSingleQuotedByteStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::TripleSingleQuotedByteStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::TripleDoubleQuotedByteStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::TripleDoubleQuotedByteStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::SingleQuotedRawStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::SingleQuotedRawStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::DoubleQuotedRawStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::DoubleQuotedRawStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::TripleSingleQuotedRawStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::TripleSingleQuotedRawStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::TripleDoubleQuotedRawStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::TripleDoubleQuotedRawStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                     sqlparser::tokenizer::Token::NationalStringLiteral(field0) => {
@@ -9557,6 +10305,26 @@ impl crate::Visitable for sqlparser::tokenizer::Token {
 #[automatically_derived]
 impl crate::Semantic for sqlparser::tokenizer::Token {}
 #[automatically_derived]
+impl crate::Visitable for sqlparser::tokenizer::TokenWithSpan {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.token.accept(visitor)?;
+                self.span.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::Semantic for sqlparser::tokenizer::TokenWithSpan {}
+#[automatically_derived]
 impl crate::Visitable for sqlparser::tokenizer::Whitespace {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -9571,7 +10339,10 @@ impl crate::Visitable for sqlparser::tokenizer::Whitespace {
                     sqlparser::tokenizer::Whitespace::Space => {}
                     sqlparser::tokenizer::Whitespace::Newline => {}
                     sqlparser::tokenizer::Whitespace::Tab => {}
-                    sqlparser::tokenizer::Whitespace::SingleLineComment { comment, prefix } => {
+                    sqlparser::tokenizer::Whitespace::SingleLineComment {
+                        comment,
+                        prefix,
+                    } => {
                         comment.accept(visitor)?;
                         prefix.accept(visitor)?;
                     }
@@ -9617,7 +10388,7 @@ impl crate::Visitable for bigdecimal::BigDecimal {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
@@ -9633,7 +10404,7 @@ impl crate::Visitable for bool {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
@@ -9649,7 +10420,7 @@ impl crate::Visitable for char {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
@@ -9665,7 +10436,7 @@ impl crate::Visitable for i16 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
@@ -9681,7 +10452,7 @@ impl crate::Visitable for i32 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
@@ -9697,7 +10468,7 @@ impl crate::Visitable for i64 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
@@ -9713,7 +10484,7 @@ impl crate::Visitable for i8 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
@@ -9729,7 +10500,7 @@ impl crate::Visitable for String {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
@@ -9745,7 +10516,7 @@ impl crate::Visitable for u16 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
@@ -9761,7 +10532,7 @@ impl crate::Visitable for u32 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
@@ -9777,7 +10548,7 @@ impl crate::Visitable for u64 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
@@ -9793,7 +10564,7 @@ impl crate::Visitable for u8 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
