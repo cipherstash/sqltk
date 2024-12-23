@@ -12,3 +12,10 @@ repository = "https://github.com/cipherstash/sqltk"
 homepage = "https://cipherstash.com"
 keywords = ["sqlparser", "database", "sql"]
 categories = ["sql", "database"]
+
+
+[workspace.dependencies]
+bigdecimal = { version = "^0.4" }
+sqlparser = { git = "https://github.com/cipherstash/datafusion-sqlparser-rs", branch = "main", features = [
+  "bigdecimal",
+] }

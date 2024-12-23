@@ -26,5 +26,5 @@ quote = { version = "^1" }
 prettyplease = "^0.2"
 cargo_metadata = "^0.19"
 Inflector = "^0.11"
-bigdecimal = { version = "^0.4" }
-sqlparser = { version = "^0.52", features = ["bigdecimal"] }
+bigdecimal = { workspace = true }
+sqlparser = { workspace = true }
