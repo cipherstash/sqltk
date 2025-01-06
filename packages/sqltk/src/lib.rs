@@ -7,10 +7,10 @@
 //! ## Key features
 //!
 //! 1. Full coverage of all AST node types from `sqlparser` (including all field types and container types (`Vec`,
-//! `Option` & `Box`)) and terminal nodes.
+//!    `Option` & `Box`)) and terminal nodes.
 //!
 //! 2. [`Transform`] trait methods do not receive a mutable node argument which means that non-mutable references AST
-//! nodes can be retained in your own data structures from previous analysis passes.
+//!    nodes can be retained in your own data structures from previous analysis passes.
 //!
 //! ## Installation
 //!
@@ -75,7 +75,11 @@ mod transform;
 mod transformable_impls;
 mod visitable_impls;
 
-use sqlparser::ast::{Expr, ObjectName, Statement};
+#[doc(inline)]
+pub use sqlparser::{self};
+
+use crate::sqlparser::ast::{Expr, ObjectName, Statement};
+
 pub use transform::*;
 
 use core::fmt::Debug;
