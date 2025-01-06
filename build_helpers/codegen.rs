@@ -2,30 +2,27 @@ use super::meta::{AstNode, SqlParserMetaQuery};
 use super::reachability::Reachability;
 use super::transformable_trait_impls::TransformableImpl;
 use super::{sqlparser_node_extractor, visitable_trait_impls::VisitableImpl};
+use cargo_metadata::Package;
 use proc_macro2::TokenStream;
 
 use quote::{quote, ToTokens, TokenStreamExt};
 
-use std::{collections::HashSet, fs::File, io::Write, path::PathBuf};
+use std::fs::File;
+use std::io::Write;
+use std::{collections::HashSet, path::PathBuf};
 
 pub struct Codegen {
     meta: SqlParserMetaQuery,
 }
 
-impl Default for Codegen {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl Codegen {
-    pub fn new() -> Self {
+    pub fn new(sqlparser_pkg: Package) -> Self {
         Self {
-            meta: SqlParserMetaQuery::from(sqlparser_node_extractor::extract(vec![])),
+            meta: SqlParserMetaQuery::from(sqlparser_node_extractor::extract(&sqlparser_pkg)),
         }
     }
 
-    pub fn generate_apply_transform_impls(&self, dest_file: &PathBuf) {
+    pub fn generate_transformable_impls(&self, dest_file: &PathBuf) {
         let mut generated_code = TokenStream::new();
 
         let main_nodes = self.meta.main_nodes();
@@ -115,7 +112,7 @@ impl Codegen {
             });
 
         generated_code.append_all(quote! {
-            use crate::visitable_impls::visit;
+            use crate::visitor_helper::visit;
 
             #(#visitable_impls_for_main_nodes)*
             #(#visitable_impls_for_terminal_nodes)*

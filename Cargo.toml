@@ -1,18 +1,47 @@
-[workspace]
+[package]
+name = "sqltk"
 resolver = "2"
-members = ["packages/*"]
-
-[workspace.package]
+description = "Enhanced Visitor implementation for sqlparser"
+version = "0.3.0"
+publish = true
 edition = "2021"
 authors = [
-  "James Sadler <james@cipherstash.com>",
-  "Robin Howard <robin@cipherstash.com>",
+    "James Sadler <james@cipherstash.com>",
+    "Robin Howard <robin@cipherstash.com>",
 ]
+homepage = "https://github.com/cipherstash/sqltk"
+documentation = "https://docs.rs/sqltk/"
+keywords = ["sql", "visitor", "transform", "analyze", "cipherstash"]
 repository = "https://github.com/cipherstash/sqltk"
-homepage = "https://cipherstash.com"
-keywords = ["sqlparser", "database", "sql"]
-categories = ["sql", "database"]
+license = "MIT"
+readme = "README.md"
+include = [
+    "build.rs",
+    "build_helpers/**/*.rs",
+    "src/**/*.rs",
+    "Cargo.toml",
+    # "Cargo.lock",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "README.md",
+]
 
-[workspace.dependencies]
-bigdecimal = { version = "^0.4" }
-sqlparser = { git = "https://github.com/cipherstash/datafusion-sqlparser-rs.git", commit = "10664409c4b82853647f50f4178d0c914b73fc41", features = ["bigdecimal"] }
+[lib]
+name = "sqltk"
+path = "src/lib.rs"
+
+[dependencies]
+bigdecimal = "0.4.7"
+sqlparser = { version = "^0.53.0" }
+
+[build-dependencies]
+syn = { version = "^2.0", features = ["full", "extra-traits", "printing"] }
+proc-macro2 = { version = "^1.0", features = ["span-locations"] }
+quote = { version = "^1" }
+prettyplease = "0.2.27"
+Inflector = "^0.11"
+cargo_metadata = "0.19.1"
+serde = "1.0.217"
+serde_json = "1.0.135"
+tempfile = "3.15.0"
+

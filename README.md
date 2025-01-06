@@ -36,22 +36,19 @@ Transformation begins at the leaf nodes of the AST (AKA depth-first) and ends at
 
 Add `sqltk` to your Cargo project
 
-`$ cargo add sqltk`
+```shell
+cargo add sqltk
+```
 
-If you plan to hack on `sqltk` itself then you will need to install `cargo-expand` if you plan on running the code generator.
+## build.rs
 
-`$ cargo install cargo-expand`
+The `build.rs` derives implementations of the `Visitable`, `Visitor`, `Transformable`, `Transform` & `Semantic` traits.
 
-  > NOTE: `cargo-expand` invokes Rust *nightly* to do its job. Therefore a nightly Rust toolchain must be installed. However, `sqltk`'s generated code does not require a nightly compiler.
+Regular derive macros cannot derive code on foreign crates.
 
-## `sqltk-codegen`
+The build installs `cargo-expand` which requires a nightly Rust toolchain in order to do its job.
 
-Analyses `sqlparser` source code and generates:
-
-- Analyzes the `sqlparser` AST in order to determine an AST traversal order for single-pass semantic analysis workloads
-- Generates the `Visitable` trait implementations for all AST node types
-- Generates the `Transformer` trait implementations for all AST node types
-- Generates the `Semantic` trait implementations
+Note that all code is compiled on the stable toolchain, not nightly.
 
 ## About
 
