@@ -79,6 +79,9 @@ fn locate_sqlparser_dep() -> Option<Package> {
     // to publish with `--no-verify`. This way, we isolate any changes to the temp dir and they are discarded.
     let metadata = MetadataCommand::new()
         .current_dir(temp_dir.as_ref())
+        .other_options(vec![
+            "--offline".into()
+        ])
         .exec()
         .expect("Failed to fetch cargo metadata");
 
