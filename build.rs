@@ -6,7 +6,12 @@ use std::{path::PathBuf, process::Command};
 use tempfile::Builder;
 
 fn main() -> std::io::Result<()> {
-    ensure_cargo_expand_is_installed();
+    match std::env::var("DOCS_RS") {
+        // assume cargo-expand is available on docs.rs.
+        // docs.rs does not allow network access in build.rs.
+        Ok(_) => {},
+        Err(_) => ensure_cargo_expand_is_installed(),
+    }
 
     if let Some(sqlparser_pkg) = locate_sqlparser_dep() {
         let codegen = Codegen::new(sqlparser_pkg);
