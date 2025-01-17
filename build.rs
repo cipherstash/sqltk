@@ -9,7 +9,7 @@ fn main() -> std::io::Result<()> {
     match std::env::var("DOCS_RS") {
         // assume cargo-expand is available on docs.rs.
         // docs.rs does not allow network access in build.rs.
-        Ok(_) => {},
+        Ok(_) => {}
         Err(_) => ensure_cargo_expand_is_installed(),
     }
 
@@ -57,33 +57,38 @@ fn ensure_cargo_expand_is_installed() {
 }
 
 fn locate_sqlparser_dep() -> Option<Package> {
-    let temp_dir = Builder::new()
-        .prefix("sqltk-source")
-        .tempdir_in(std::env::var("OUT_DIR").expect("OUT_DIR not set"))
-        .expect("could not make temp dir");
+    let metadata = if std::env::var("SQLTK_PUBLISH").is_ok() {
+        let temp_dir = Builder::new()
+            .prefix("sqltk-source")
+            .tempdir_in(std::env::var("OUT_DIR").expect("OUT_DIR not set"))
+            .expect("could not make temp dir");
 
-    let src_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
-    let cargo_toml = PathBuf::from(src_dir).join("Cargo.toml");
-    let target_file = temp_dir.path().join("Cargo.toml");
+        let src_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let cargo_toml = PathBuf::from(src_dir).join("Cargo.toml");
+        let target_file = temp_dir.path().join("Cargo.toml");
 
-    std::fs::copy(&cargo_toml, &target_file).unwrap_or_else(|_| {
-        panic!(
-            "cannot copy from {} to {}",
-            cargo_toml.to_string_lossy(),
-            target_file.to_string_lossy()
-        )
-    });
+        std::fs::copy(&cargo_toml, &target_file).unwrap_or_else(|_| {
+            panic!(
+                "cannot copy from {} to {}",
+                cargo_toml.to_string_lossy(),
+                target_file.to_string_lossy()
+            )
+        });
 
-    // Fetch the metadata of the current project in order to discover where the local copy of sqlparser lives.
-    // We run this command in a temporary directory because it always wants to change Cargo.lock which would force use
-    // to publish with `--no-verify`. This way, we isolate any changes to the temp dir and they are discarded.
-    let metadata = MetadataCommand::new()
-        .current_dir(temp_dir.as_ref())
-        .other_options(vec![
-            "--offline".into()
-        ])
-        .exec()
-        .expect("Failed to fetch cargo metadata");
+        // Fetch the metadata of the current project in order to discover where the local copy of sqlparser lives.
+        // We run this command in a temporary directory because it always wants to change Cargo.lock which would force use
+        // to publish with `--no-verify`. This way, we isolate any changes to the temp dir and they are discarded.
+        MetadataCommand::new()
+            .current_dir(temp_dir.as_ref())
+            .other_options(vec!["--offline".into()])
+            .exec()
+            .expect("Failed to fetch cargo metadata")
+    } else {
+        MetadataCommand::new()
+            .other_options(vec!["--offline".into()])
+            .exec()
+            .expect("Failed to fetch cargo metadata")
+    };
 
     // Iterate over dependencies to find the one you're interested in
     if let Some(sql_parser_pkg) = metadata.packages.iter().find(|p| p.name == "sqlparser") {
