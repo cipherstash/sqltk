@@ -5,7 +5,7 @@ use std::{collections::HashSet, hash::Hash};
 use super::meta::{
     ContainerNode, SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn, TerminalNode,
 };
-use crate::generics::{
+use super::generics::{
     compose_generic_type, container_type, decompose_generic_type, expect_type_path,
     is_generic_type, ContainerType,
 };

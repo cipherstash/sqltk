@@ -2,7 +2,7 @@
 //! This crate implements an enhanced Visitor implementation suitable for
 //! semantic analysis of SQL.
 //!
-//! The AST is provided by the `sqlparser` crate - which this crate re-exports.
+//! The AST is provided by the `sqlparser` crate.
 //!
 //! ## Key features
 //!
@@ -70,20 +70,51 @@
 //
 // No functionality should be created here (beyond simply re-exporting).
 
-mod generated;
-mod transform;
-mod transformable_impls;
-mod visitable_impls;
+mod transformable_blanket_impls;
+mod visitable_blanket_impls;
+mod visitor_helper;
 
-#[doc(inline)]
-pub use sqlparser::{self};
+use sqlparser::ast::{Expr, ObjectName, Statement};
 
-use crate::sqlparser::ast::{Expr, ObjectName, Statement};
+use std::{any::Any, error::Error, fmt::Debug, ops::ControlFlow};
 
-pub use transform::*;
+/// Marker trait for AST nodes that are semantically interesting. Every type that implements `Visitable` is semantically
+/// interesting except for `Box<T: Visitable>` and `Option<T: Visitable>`
+///
+/// For example, `Box<Expr>` and `Option<Expr>` are not  semantically interesting, but `Expr` is.
+///
+/// This is a useful trait when performing semantic analysis where tagging the wrong nodes by mistake could result in
+/// broken analysis, such as tagging a `Box<Expr>` when the intent was `Expr`.
+pub trait Semantic: Visitable {}
 
-use core::fmt::Debug;
-use std::{any::Any, ops::ControlFlow};
+/// Type used to signal abnormal control flow from a [`Visitor`] during AST traversal.
+#[derive(Debug)]
+pub enum Break<E> {
+    /// Do not visit child nodes of the current node and resume traversal from the next sibling of the current node.
+    /// This is useful to save CPU cycles when an exhaustive traversal of an AST is not required.
+    ///
+    /// This variant has no effect when returned from [`Visitor::exit`]; instead it is treated the same as `Continue`.
+    SkipChildren,
+
+    /// Ends traversal entirely but completes successfully. Useful to force an early return when an exhaustive traversal
+    /// of the AST is unnecessary.  An example use-case would be implementing a search over the AST that returns as soon
+    /// as the target has been found.
+    Finished,
+
+    /// An error occurred. Traversal will be aborted.
+    Err(E),
+}
+
+impl<E> PartialEq for Break<E> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::SkipChildren, Self::SkipChildren) => true,
+            (Self::Finished, Self::Finished) => true,
+            (Self::Err(_), Self::Err(_)) => false,
+            _ => false,
+        }
+    }
+}
 
 /// Trait for types that can visit any `sqlparser` AST node.
 ///
@@ -104,11 +135,7 @@ use std::{any::Any, ops::ControlFlow};
 ///
 /// ## `'ast`
 ///
-/// The lifetime of the abstract syntax tree.
-///
-/// ## `'a`
-///
-/// The lifetime of the borrow of `self` on [`Visitor::enter`] and [`Visitor::exit`].
+/// The lifetime of the borrow of `node` on [`Visitor::enter`] and [`Visitor::exit`].
 ///
 /// # The `N: Visitable` bound
 ///
@@ -164,31 +191,46 @@ where
     }
 }
 
-/// Marker trait for AST nodes that are semantically interesting. Every type that implements `Visitable` is semantically
-/// interesting except for `Box<T: Visitable>` and `Option<T: Visitable>`
+/// Trait for applying a [`Transform`] to an AST to produce an edited version.
 ///
-/// For example, `Box<Expr>` and `Option<Expr>` are not  semantically interesting, but `Expr` is.
-///
-/// This is a useful trait when performing semantic analysis where tagging the wrong nodes by mistake could result in
-/// broken analysis, such as tagging a `Box<Expr>` when the intent was `Expr`.
-pub trait Semantic: Visitable {}
-
-/// Type used to signal abnormal control flow from a [`Visitor`] during AST traversal.
-#[derive(Debug)]
-pub enum Break<E> {
-    /// Do not visit child nodes of the current node and resume traversal from the next sibling of the current node.
-    /// This is useful to save CPU cycles when an exhaustive traversal of an AST is not required.
+/// Implementations are provided for all AST node types in `sqlparser`.
+pub trait Transformable<'ast>
+where
+    Self: Sized,
+{
+    /// Recursively applies `transform` to `self` returning `Ok(Self)` when
+    /// successful or `Err(T::Error)` if unsuccessful.
     ///
-    /// This variant has no effect when returned from [`Visitor::exit`]; instead it is treated the same as `Continue`.
-    SkipChildren,
+    /// The `transform` is applied depth-first before finally being applied to
+    /// `self`.
+    fn apply_transform<T>(&'ast self, transform: &mut T) -> Result<Self, T::Error>
+    where
+        T: Transform<'ast>;
+}
 
-    /// Ends traversal entirely but completes successfully. Useful to force an early return when an exhaustive traversal
-    /// of the AST is unnecessary.  An example use-case would be implementing a search over the AST that returns as soon
-    /// as the target has been found.
-    Finished,
+/// Trait for producing a new AST node from an existing one by applying edits.
+pub trait Transform<'ast> {
+    /// The error type returned by this [`Transform`].
+    type Error: Error + Debug;
 
-    /// An error occurred. Traversal will be aborted.
-    Err(E),
+    /// Applies edits to an AST node.
+    ///
+    /// `original_node` is a read-only reference to the node without any edits applied.
+    ///
+    /// `new_node` is an owned node to which the edits will be applied.
+    ///
+    /// Transformations are applied from the leaf nodes towards to the root node. Therefore any edits to child nodes of
+    /// `new_node` will have already been applied therefore care must be taken by implementors of this trait to not undo
+    /// edits that have already been applied.
+    ///
+    /// Returns `Ok(new_node)` when transformation is successful, else `Err(Self::Error)`.
+    ///
+    /// An error during transformation will immediatly terminatate the entire transformation process of the AST.
+    fn transform<N: Visitable>(
+        &mut self,
+        original_node: &'ast N,
+        new_node: N,
+    ) -> Result<N, Self::Error>;
 }
 
 /// Converts a `Result<(), E>` into a `ControlFlow<Break<E>, ()>`.
@@ -219,17 +261,6 @@ pub fn into_result<E>(flow: ControlFlow<Break<E>>) -> Result<(), E> {
         ControlFlow::Break(Break::SkipChildren) => Ok(()),
         ControlFlow::Break(Break::Finished) => Ok(()),
         ControlFlow::Break(Break::Err(err)) => Err(err),
-    }
-}
-
-impl<E> PartialEq for Break<E> {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::SkipChildren, Self::SkipChildren) => true,
-            (Self::Finished, Self::Finished) => true,
-            (Self::Err(_), Self::Err(_)) => false,
-            _ => false,
-        }
     }
 }
 
@@ -332,6 +363,9 @@ where
     }
 }
 
+include!(concat!(env!("OUT_DIR"), "/generated/visitable_impls.rs"));
+include!(concat!(env!("OUT_DIR"), "/generated/transformable_impls.rs"));
+
 #[cfg(test)]
 mod test {
     use std::{
@@ -342,10 +376,12 @@ mod test {
         rc::Rc,
     };
 
-    use super::{into_result, Break, Visitable, Visitor};
+    use super::{into_result, Break, Transform, Visitable, Visitor, Transformable};
+
     use sqlparser::{
-        ast::{Expr, SelectItem, TableWithJoins, With},
-        dialect, parser,
+        ast::{Expr, Ident, SelectItem, TableWithJoins, With},
+        dialect::{self, PostgreSqlDialect},
+        parser::{self, Parser, ParserError},
     };
 
     #[test]
@@ -562,5 +598,150 @@ mod test {
             Ok(()) => assert!(visitor.check_balanced.borrow().is_balanced),
             Err(err) => panic!("{:?}", err),
         };
+    }
+
+    #[test]
+    fn direct_invocation_of_transform() {
+        pub struct UpcaseStrings;
+
+        impl<'ast> Transform<'ast> for UpcaseStrings {
+            type Error = Infallible;
+
+            fn transform<N: Visitable>(
+                &mut self,
+                _: &'ast N,
+                mut new_node: N,
+            ) -> Result<N, Self::Error> {
+                if let Some(string) = new_node.downcast_mut::<String>() {
+                    string.make_ascii_uppercase();
+                }
+                Ok(new_node)
+            }
+        }
+
+        let a = String::from("hello");
+        assert_eq!(
+            UpcaseStrings.transform(&a, a.clone()),
+            Ok(String::from("HELLO"))
+        );
+    }
+
+    #[test]
+    fn transform_sql_statement() {
+        pub struct UpcaseIdents;
+
+        impl<'ast> Transform<'ast> for UpcaseIdents {
+            type Error = Infallible;
+
+            fn transform<N: Visitable>(
+                &mut self,
+                _: &'ast N,
+                mut new_node: N,
+            ) -> Result<N, Self::Error> {
+                if let Some(ident) = new_node.downcast_mut::<Ident>() {
+                    ident.value.make_ascii_uppercase();
+                }
+                Ok(new_node)
+            }
+        }
+
+        let ast = Parser::parse_sql(
+            &PostgreSqlDialect {},
+            "SELECT users.name, users.email FROM users;",
+        )
+        .unwrap();
+
+        match ast.apply_transform(&mut UpcaseIdents) {
+            Ok(statements) => {
+                let statement = statements.first().unwrap();
+                assert_eq!(
+                    statement.to_string(),
+                    "SELECT USERS.NAME, USERS.EMAIL FROM USERS"
+                );
+            }
+            Err(err) => panic!("Oops: {:?}", err),
+        }
+    }
+
+    #[test]
+    fn transform_sql_statement_reverse_vec() {
+        pub struct ReverseProjectionColumns;
+
+        impl<'ast> Transform<'ast> for ReverseProjectionColumns {
+            type Error = Infallible;
+
+            fn transform<N: Visitable>(
+                &mut self,
+                _: &'ast N,
+                mut new_node: N,
+            ) -> Result<N, Self::Error> {
+                if let Some(items) = new_node.downcast_mut::<Vec<SelectItem>>() {
+                    items.reverse();
+                }
+                Ok(new_node)
+            }
+        }
+
+        let ast = Parser::parse_sql(
+            &PostgreSqlDialect {},
+            "SELECT users.name, users.email FROM users;",
+        )
+        .unwrap();
+
+        match ast.apply_transform(&mut ReverseProjectionColumns) {
+            Ok(statements) => {
+                let statement = statements.first().unwrap();
+                assert_eq!(
+                    statement.to_string(),
+                    "SELECT users.email, users.name FROM users",
+                );
+            }
+            Err(err) => panic!("Oops: {:?}", err),
+        }
+    }
+
+    #[test]
+    fn transform_sql_statement_add_select_item() {
+        pub struct InsertSelectItem;
+
+        impl<'ast> Transform<'ast> for InsertSelectItem {
+            type Error = Infallible;
+
+            fn transform<N: Visitable>(
+                &mut self,
+                _: &'ast N,
+                mut new_node: N,
+            ) -> Result<N, Self::Error> {
+                if let Some(items) = new_node.downcast_mut::<Vec<SelectItem>>() {
+                    let select_item = parser_for("(now() - users.dob) as age")
+                        .unwrap()
+                        .parse_select_item()
+                        .unwrap();
+                    items.insert(1, select_item);
+                }
+                Ok(new_node)
+            }
+        }
+
+        let ast = Parser::parse_sql(
+            &PostgreSqlDialect {},
+            "SELECT users.name, users.email FROM users;",
+        )
+        .unwrap();
+
+        match ast.apply_transform(&mut InsertSelectItem) {
+            Ok(statements) => {
+                let statement = statements.first().unwrap();
+                assert_eq!(
+                    statement.to_string(),
+                    "SELECT users.name, (now() - users.dob) AS age, users.email FROM users",
+                );
+            }
+            Err(err) => panic!("Oops: {:?}", err),
+        }
+    }
+
+    fn parser_for(sql: &str) -> Result<Parser, ParserError> {
+        Parser::new(&PostgreSqlDialect {}).try_with_sql(sql)
     }
 }
