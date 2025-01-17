@@ -364,7 +364,10 @@ where
 }
 
 include!(concat!(env!("OUT_DIR"), "/generated/visitable_impls.rs"));
-include!(concat!(env!("OUT_DIR"), "/generated/transformable_impls.rs"));
+include!(concat!(
+    env!("OUT_DIR"),
+    "/generated/transformable_impls.rs"
+));
 
 #[cfg(test)]
 mod test {
@@ -376,7 +379,7 @@ mod test {
         rc::Rc,
     };
 
-    use super::{into_result, Break, Transform, Visitable, Visitor, Transformable};
+    use super::{into_result, Break, Transform, Transformable, Visitable, Visitor};
 
     use sqlparser::{
         ast::{Expr, Ident, SelectItem, TableWithJoins, With},

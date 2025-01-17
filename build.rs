@@ -51,7 +51,7 @@ fn ensure_cargo_expand_is_installed() {
     }
 }
 
-fn locate_sqlparser_dep<'a>() -> Option<Package> {
+fn locate_sqlparser_dep() -> Option<Package> {
     let temp_dir = Builder::new()
         .prefix("sqltk-source")
         .tempdir_in(std::env::var("OUT_DIR").expect("OUT_DIR not set"))
@@ -61,11 +61,13 @@ fn locate_sqlparser_dep<'a>() -> Option<Package> {
     let cargo_toml = PathBuf::from(src_dir).join("Cargo.toml");
     let target_file = temp_dir.path().join("Cargo.toml");
 
-    std::fs::copy(&cargo_toml, &target_file).expect(&format!(
-        "cannot copy from {} to {}",
-        cargo_toml.to_string_lossy(),
-        target_file.to_string_lossy()
-    ));
+    std::fs::copy(&cargo_toml, &target_file).unwrap_or_else(|_| {
+        panic!(
+            "cannot copy from {} to {}",
+            cargo_toml.to_string_lossy(),
+            target_file.to_string_lossy()
+        )
+    });
 
     // Fetch the metadata of the current project in order to discover where the local copy of sqlparser lives.
     // We run this command in a temporary directory because it always wants to change Cargo.lock which would force use
@@ -77,10 +79,7 @@ fn locate_sqlparser_dep<'a>() -> Option<Package> {
 
     // Iterate over dependencies to find the one you're interested in
     if let Some(sql_parser_pkg) = metadata.packages.iter().find(|p| p.name == "sqlparser") {
-        println!(
-            "cargo:rerun-if-changed={}",
-            sql_parser_pkg.manifest_path.to_string()
-        );
+        println!("cargo:rerun-if-changed={}", sql_parser_pkg.manifest_path);
         println!(
             "Dependency 'sqlparser' is located at: {}",
             sql_parser_pkg.manifest_path

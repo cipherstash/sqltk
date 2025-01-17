@@ -20,7 +20,6 @@ include = [
     "build_helpers/**/*.rs",
     "src/**/*.rs",
     "Cargo.toml",
-    # "Cargo.lock",
     "CONTRIBUTING.md",
     "LICENSE",
     "README.md",

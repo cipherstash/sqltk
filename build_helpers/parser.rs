@@ -2,12 +2,12 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::{collections::HashSet, hash::Hash};
 
-use super::meta::{
-    ContainerNode, SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn, TerminalNode,
-};
 use super::generics::{
     compose_generic_type, container_type, decompose_generic_type, expect_type_path,
     is_generic_type, ContainerType,
+};
+use super::meta::{
+    ContainerNode, SqlParserMeta, SqlParserTypeDef, SqlParserTypeDefKind, Syn, TerminalNode,
 };
 use proc_macro2::Span;
 use syn::{
