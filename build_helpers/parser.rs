@@ -17,8 +17,8 @@ use syn::{
 
 use quote::quote;
 
-/// The fully qualified path of a sqlparser type.  In some cases this will be
-/// different to the fully-qualified public export of the type.
+/// The fully qualified path of a sqlparser type.  In some cases this will be different to the fully-qualified public
+/// export of the type.
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 struct InternalTypePath(TypePath);
 
@@ -205,16 +205,12 @@ impl SqlParserAstAnalyser {
     }
 
     fn finish(&mut self) -> SqlParserMeta {
-        // 1. Forget about all types that are not part of the AST. We use
-        // `has_visit_impl` as a proxy for this.
+        // 1. Forget about all types that are not part of the AST. We use `has_visit_impl` as a proxy for this.
         //
-        // Ideally, types not marked as #[derive(Visit)] would not be added to
-        // `internal_types` at all, but because we rely on `cargo expand` those
-        // attributes are elided. Instead we look for the expanded derivation of
-        // `Visit`, but when we parse the type, we have not yet seen the impl.
-        // That means we consider all the parsed types as merely candidates
-        // until we see a `Visit` impl and we need to cleanup at the end of the
-        // parse.
+        // Ideally, types not marked as #[derive(Visit)] would not be added to `internal_types` at all, but because we
+        // rely on macro-expanded source those attributes are elided. Instead we look for the expanded derivation of
+        // `Visit`, but when we parse the type, we have not yet seen the impl.  That means we consider all the parsed
+        // types as merely candidates until we see a `Visit` impl and we need to cleanup at the end of the parse.
 
         self.internal_types.retain(|_, ty| ty.has_visit_impl);
 
@@ -222,9 +218,8 @@ impl SqlParserAstAnalyser {
             sqlparser::ast::helpers::stmt_create_table::CreateTableBuilder
         )));
 
-        // 2. For every type, go through fields and variants expanding generic
-        // types so that they refer to the fully qualified public sqlparser type.
-        // e.g. Vec<Expr> should be rewritten as Vec<sqlparser::ast::Expr>
+        // 2. For every type, go through fields and variants expanding generic types so that they refer to the fully
+        // qualified public sqlparser type.  e.g. Vec<Expr> should be rewritten as Vec<sqlparser::ast::Expr>
 
         let mut internal_types = self.internal_types.clone();
 
@@ -337,7 +332,7 @@ fn is_non_exhaustive(attrs: &[Attribute]) -> bool {
             return path
                 .segments
                 .first()
-                .map_or(false, |segment| segment.ident == "non_exhaustive");
+                .is_some_and(|segment| segment.ident == "non_exhaustive");
         }
         false
     })
