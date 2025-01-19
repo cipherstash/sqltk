@@ -2,7 +2,6 @@ use super::meta::{AstNode, SqlParserMetaQuery};
 use super::reachability::Reachability;
 use super::transformable_trait_impls::TransformableImpl;
 use super::{sqlparser_node_extractor, visitable_trait_impls::VisitableImpl};
-use cargo_metadata::Package;
 use proc_macro2::TokenStream;
 
 use quote::{quote, ToTokens, TokenStreamExt};
@@ -16,9 +15,12 @@ pub struct Codegen {
 }
 
 impl Codegen {
-    pub fn new(sqlparser_pkg: Package) -> Self {
+    pub fn new(sqlparser_path: PathBuf, sqlparser_features: Vec<String>) -> Self {
         Self {
-            meta: SqlParserMetaQuery::from(sqlparser_node_extractor::extract(&sqlparser_pkg)),
+            meta: SqlParserMetaQuery::from(sqlparser_node_extractor::extract(
+                &sqlparser_path,
+                &sqlparser_features,
+            )),
         }
     }
 

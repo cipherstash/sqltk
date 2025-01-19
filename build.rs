@@ -1,30 +1,55 @@
 mod build_helpers;
 
 use build_helpers::codegen::*;
-use cargo_metadata::{MetadataCommand, Package};
-use std::path::PathBuf;
+use cargo_metadata::MetadataCommand;
+use std::{path::PathBuf, process::ExitCode};
 use tempfile::Builder;
 
-fn main() -> std::io::Result<()> {
-    if let Some(sqlparser_pkg) = locate_sqlparser_dep() {
-        let codegen = Codegen::new(sqlparser_pkg);
+fn main() -> ExitCode {
+    let path = output_path();
+
+    if let Some((sqlparser_path, sqlparser_features)) = resolve_sqlparser_dependency() {
+        let codegen = Codegen::new(sqlparser_path, sqlparser_features);
 
         if !output_path().exists() {
-            std::fs::create_dir(output_path()).unwrap();
+            std::fs::create_dir(&path).unwrap();
         }
 
-        codegen.generate_visitable_impls(&output_path().join("visitable_impls.rs"), None);
-        codegen.generate_transformable_impls(&output_path().join("transformable_impls.rs"));
+        codegen.generate_visitable_impls(&path.join("visitable_impls.rs"), None);
+        codegen.generate_transformable_impls(&path.join("transformable_impls.rs"));
+
+        return ExitCode::SUCCESS;
     }
 
-    Ok(())
+    println!("cargo:warning=failed to resolve sqlparser dependency");
+    ExitCode::FAILURE
 }
 
 fn output_path() -> PathBuf {
     PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR to be present")).join("generated")
 }
 
-fn locate_sqlparser_dep() -> Option<Package> {
+/// Resolves the *concrete* sqlparser version and enabled sqlparser features.
+///
+/// The concrete version must be precisely known because sqltk generates trait implementations from sqlparser's source,
+/// which have to compile successfully.
+///
+/// This will *not* (necessarily) be the version of specified in sqltk's Cargo.toml - but a version that satisfies
+/// some-crate's and sqltk's mutual semver constraints.
+///
+/// Imagine this dependency tree:
+///
+/// some-crate
+///     sqlparser
+///     sqktk
+///         sqlparser
+///
+/// Both some-crate and sqltk depend on sqlparser. This will find the post-cargo-dependency-resolution version of
+/// sqlparser that sqltk depends on, which *should* be precisely the same version as what some-crate depends on, so long
+/// as they are semver compatible.
+fn resolve_sqlparser_dependency() -> Option<(PathBuf, Vec<String>)> {
+    // When publishing sqltk we need to jump through some hoops to avoid writing to OUT_DIR
+    // otherwise `cargo publish` (or `cargo package`) will produce verification error.
     let metadata = if std::env::var("SQLTK_PUBLISH").is_ok() {
         let temp_dir = Builder::new()
             .prefix("sqltk-source")
@@ -53,21 +78,29 @@ fn locate_sqlparser_dep() -> Option<Package> {
             .expect("Failed to fetch cargo metadata")
     } else {
         MetadataCommand::new()
-            // .other_options(vec!["--offline".into()])
+            .other_options(vec!["--offline".into()])
             .exec()
             .expect("Failed to fetch cargo metadata")
     };
 
-    // Iterate over dependencies to find the one you're interested in
-    if let Some(sql_parser_pkg) = metadata.packages.iter().find(|p| p.name == "sqlparser") {
-        println!("cargo:rerun-if-changed={}", sql_parser_pkg.manifest_path);
-        println!(
-            "Dependency 'sqlparser' is located at: {}",
-            sql_parser_pkg.manifest_path
-        );
-
-        return Some(sql_parser_pkg.clone());
-    };
+    if let Some(resolve) = metadata.resolve {
+        for node in resolve.nodes {
+            if let Some(sqlparser_pkg) = metadata
+                .packages
+                .iter()
+                .find(|p| p.id == node.id && p.name == "sqlparser")
+            {
+                println!("Dependency: {}", sqlparser_pkg.name);
+                println!("Enabled Features: {:?}", node.features);
+                println!("cargo:rerun-if-changed={}", sqlparser_pkg.manifest_path);
+                return Some((
+                    sqlparser_pkg.manifest_path.parent().unwrap().into(),
+                    node.features.clone(),
+                ));
+            }
+        }
+        return None;
+    }
 
     None
 }

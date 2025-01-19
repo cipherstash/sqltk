@@ -65,11 +65,6 @@
 //! };
 //! ```
 
-// This module re-exports sqltk-core and is where the
-// crate-level tests live.
-//
-// No functionality should be created here (beyond simply re-exporting).
-
 mod transformable_blanket_impls;
 mod visitable_blanket_impls;
 mod visitor_helper;

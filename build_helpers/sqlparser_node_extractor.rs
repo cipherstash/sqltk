@@ -1,12 +1,12 @@
-use cargo_metadata::Package;
 use parser::SqlParserAstAnalyser;
+use std::path::PathBuf;
 use std::process::Command;
 
 use super::meta::SqlParserMeta;
 
 use super::*;
 
-pub fn extract(sqlparser_pkg: &Package) -> SqlParserMeta {
+pub fn extract(sqlparser_path: &PathBuf, sqlparser_features: &[String]) -> SqlParserMeta {
     let output = Command::new("rustup")
         .env_remove("RUSTC")
         // .env("RUSTUP_TOOLCHAIN", "nightly")
@@ -16,14 +16,10 @@ pub fn extract(sqlparser_pkg: &Package) -> SqlParserMeta {
         .arg("rustc")
         .arg("--profile=check")
         .arg("--features=visitor,bigdecimal")
+        .arg(format!("--features={}", sqlparser_features.join(",")))
         .arg("--")
         .arg("-Zunpretty=expanded")
-        .current_dir(
-            sqlparser_pkg
-                .manifest_path
-                .parent()
-                .expect("could not get parent directory of sqlparser's Cargo.toml"),
-        )
+        .current_dir(sqlparser_path)
         .output()
         .expect("Failed to execute command");
 
