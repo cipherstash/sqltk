@@ -2,7 +2,7 @@ mod build_helpers;
 
 use build_helpers::codegen::*;
 use cargo_metadata::MetadataCommand;
-use std::{path::PathBuf, process::ExitCode};
+use std::{env, path::PathBuf, process::ExitCode};
 use tempfile::Builder;
 
 fn main() -> ExitCode {
@@ -78,6 +78,7 @@ fn resolve_sqlparser_dependency() -> Option<(PathBuf, Vec<String>)> {
             .expect("Failed to fetch cargo metadata")
     } else {
         MetadataCommand::new()
+            .current_dir(env::var("CARGO_MANIFEST_DIR").unwrap())
             .other_options(vec!["--offline".into()])
             .exec()
             .expect("Failed to fetch cargo metadata")
