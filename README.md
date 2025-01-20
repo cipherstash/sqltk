@@ -44,11 +44,9 @@ cargo add sqltk
 
 The `build.rs` derives implementations of the `Visitable`, `Visitor`, `Transformable`, `Transform` & `Semantic` traits.
 
-Regular derive macros cannot derive code on foreign crates.
+It works by analysing the source of the `sqlparser` crate and extracting metadata about all of the AST types.
 
-The build installs `cargo-expand` which requires a nightly Rust toolchain in order to do its job.
-
-Note that all code is compiled on the stable toolchain, not nightly.
+Regular derive macros cannot derive code for foreign types, which means this unidiomatic approach is needed.
 
 ## About
 

@@ -34,7 +34,7 @@ pub fn extract(sqlparser_path: &PathBuf, sqlparser_features: &[String]) -> SqlPa
     assert!(!content.trim().is_empty());
 
     let syntax_tree = syn::parse_file(
-        &String::from_utf8(output.stdout).expect("Could not parse output of cargo-expand as UTF8"),
+        &String::from_utf8(output.stdout).expect("Could not parse output of macro-expanded Rust code"),
     )
     .expect("Failed to parse sqlparser source code");
 
