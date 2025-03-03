@@ -53,6 +53,22 @@ Analyses `sqlparser` source code and generates:
 - Generates the `Transformer` trait implementations for all AST node types
 - Generates the `Semantic` trait implementations
 
+To update:
+
+```bash
+# Run the code generation
+(cd packages/sqltk-codegen && cargo run sqltk-codegen)
+
+# Commit the changes
+git add packages/sqltk-codegen/packages/
+git commit -m 'updates from running `cargo run sqltk-codegen`'
+```
+
+You will need to do this whenever:
+
+- You are updating sqlparser, and
+- Any AST handling in sqlparser has changed
+
 ## About
 
 `sqltk` is maintained by CipherStash and is a core component of [Proxy](https://cipherstash.com/products/cipherstash-proxy), our encryption-in-use database proxy.
