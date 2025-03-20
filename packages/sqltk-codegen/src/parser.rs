@@ -337,7 +337,7 @@ fn is_non_exhaustive(attrs: &[Attribute]) -> bool {
             return path
                 .segments
                 .first()
-                .map_or(false, |segment| segment.ident == "non_exhaustive");
+                .is_some_and(|segment| segment.ident == "non_exhaustive");
         }
         false
     })

@@ -6,11 +6,9 @@
 //!
 //! ## Key features
 //!
-//! 1. Full coverage of all AST node types from `sqlparser` (including all field types and container types (`Vec`,
-//! `Option` & `Box`)) and terminal nodes.
+//! 1. Full coverage of all AST node types from `sqlparser` (including all field types and container types (`Vec` `Option` & `Box`)) and terminal nodes.
 //!
-//! 2. [`Transform`] trait methods do not receive a mutable node argument which means that non-mutable references AST
-//! nodes can be retained in your own data structures from previous analysis passes.
+//! 2. [`Transform`] trait methods do not receive a mutable node argument which means that non-mutable references AST nodes can be retained in your own data structures from previous analysis passes.
 //!
 //! ## Installation
 //!

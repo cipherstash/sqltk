@@ -32,7 +32,7 @@ impl ToTokens for TransformableImpl {
 
                 (
                     &self.path,
-                    quote!(transformer.transform(self, #copy_or_clone)),
+                    quote!(transformer.transform(#copy_or_clone, self, context)?),
                 )
             }
         };
@@ -40,14 +40,18 @@ impl ToTokens for TransformableImpl {
         tokens.append_all(quote! {
             #[automatically_derived]
             impl<'ast> crate::Transformable<'ast> for #path {
-                fn apply_transform<T>(
+                fn apply_transform_with_path<T>(
                     &'ast self,
-                    transformer: &mut T
+                    transformer: &mut T,
+                    context: &mut crate::Context<'ast>,
                 ) -> Result<Self, T::Error>
                 where
                     T: crate::Transform<'ast>
                 {
-                    #body
+                    context.push(self as &'ast dyn std::any::Any);
+                    let transformed = { #body };
+                    context.pop();
+                    transformer.transform(transformed, self, context)
                 }
             }
         })
@@ -69,17 +73,13 @@ impl TransformableImpl {
 
                 let transformed_fields = field_names.clone().map(|field_name| {
                     quote! {
-                        #field_name: #field_name.apply_transform(transformer)?
+                        #field_name: #field_name.apply_transform_with_path(transformer, context)?
                     }
                 });
 
                 tokens.append_all(quote! {
                     let Self { #(#field_names,)* } = self;
-                    let transformed = Self { #(#transformed_fields,)* };
-                    transformer.transform(
-                        self,
-                        transformed
-                    )
+                    Self { #(#transformed_fields,)* }
                 });
             }
             Fields::Unnamed(unnamed) => {
@@ -91,17 +91,13 @@ impl TransformableImpl {
 
                 let transformed_field_params = field_params.clone().map(|field_param| {
                     quote! {
-                        #field_param.apply_transform(transformer)?
+                        #field_param.apply_transform_with_path(transformer, context)?
                     }
                 });
 
                 tokens.append_all(quote! {
                     let Self(#(#field_params,)*) = self;
-                    let transformed = Self(#(#transformed_field_params,)*);
-                    transformer.transform(
-                        self,
-                        transformed
-                    )
+                    Self(#(#transformed_field_params,)*)
                 });
             }
             Fields::Unit => tokens.append_all(quote!(Ok(Self))),
@@ -123,17 +119,13 @@ impl TransformableImpl {
 
                     let transformed_fields = field_names.clone().map(|field_name| {
                         quote! {
-                            #field_name: #field_name.apply_transform(transformer)?
+                            #field_name: #field_name.apply_transform_with_path(transformer, context)?
                         }
                     });
 
                     tokens.append_all(quote! {
                         #path::#ident { #(#field_names,)* } => {
-                            let transformed = #path::#ident { #(#transformed_fields,)* };
-                            transformer.transform(
-                                self,
-                                transformed
-                            )
+                            #path::#ident { #(#transformed_fields,)* }
                         }
                     });
                 }
@@ -146,22 +138,24 @@ impl TransformableImpl {
 
                     let transformed_field_params = field_params.clone().map(|field_param| {
                         quote! {
-                            #field_param.apply_transform(transformer)?
+                            #field_param.apply_transform_with_path(transformer, context)?
                         }
                     });
 
                     tokens.append_all(quote! {
                         #path::#ident( #(#field_params,)* ) => {
-                            let transformed = #path::#ident( #(#transformed_field_params,)* );
-                            transformer.transform(
-                                self,
-                                transformed
-                            )
+                            #path::#ident( #(#transformed_field_params,)* )
                         }
                     });
                 }
                 Fields::Unit => tokens.append_all(quote! {
-                    #path::#ident => transformer.transform(self, #path::#ident),
+                    #path::#ident => {
+                        transformer.transform(
+                            #path::#ident,
+                            self,
+                            context
+                        )?
+                    }
                 }),
             }
         }

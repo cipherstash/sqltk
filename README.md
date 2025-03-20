@@ -57,11 +57,11 @@ To update:
 
 ```bash
 # Run the code generation
-(cd packages/sqltk-codegen && cargo run sqltk-codegen)
+cargo run -p sqltk-codegen
 
 # Commit the changes
-git add packages/sqltk-codegen/packages/
-git commit -m 'updates from running `cargo run sqltk-codegen`'
+git a packages/sqltk/src/generated
+git commit -m 'Re-generated trait implementations with `cargo run -p sqltk-codegen`'
 ```
 
 You will need to do this whenever:
