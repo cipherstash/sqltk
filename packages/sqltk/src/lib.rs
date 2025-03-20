@@ -21,7 +21,6 @@
 //! Count the number of Expr nodes in an AST.
 //!
 //! ```
-//! use std::cell::Cell;
 //! use std::convert::Infallible;
 //! use std::ops::ControlFlow;
 //! use sqltk::{Visitor, Visitable, into_result, Break};
@@ -36,14 +35,14 @@
 //!
 //! let ast = Parser::parse_sql(&dialect, sql).unwrap();
 //!
-//! struct CountOfExprNodes{ count: Cell<usize> };
+//! struct CountOfExprNodes{ count: usize };
 //!
 //! impl<'ast> Visitor<'ast> for CountOfExprNodes {
 //!     type Error = Infallible;
 //!
 //!     fn enter<N: Visitable>(&mut self, node: &'ast N) -> ControlFlow<Break<Self::Error>> {
 //!         if let Some(expr) = node.downcast_ref::<Expr>() {
-//!            self.count.set(self.count.get() + 1);
+//!            self.count += 1;
 //!         }
 //!         ControlFlow::Continue(())
 //!     }
@@ -55,10 +54,10 @@
 //! //   In the ORDER BY clause: a, b
 //! // Total: 14
 //!
-//! let mut visitor = CountOfExprNodes{ count: Cell::new(0) };
+//! let mut visitor = CountOfExprNodes{ count: 0 };
 //!
 //! match into_result(ast.accept(&mut visitor)) {
-//!     Ok(()) => assert_eq!(14, visitor.count.get()),
+//!     Ok(()) => assert_eq!(14, visitor.count),
 //!     err => panic!("{:#?}", err)
 //! };
 //! ```
@@ -82,28 +81,13 @@ use std::{any::Any, ops::ControlFlow};
 
 /// Trait for types that can visit any `sqlparser` AST node.
 ///
-/// No method in `Visitor` accepts `&mut self` - which means that any useful implementation *must* use internal
-/// mutabality (for example `Cell<_>` or `Rc<RefCell<_>>` or `Arc<_>`).
-///
 /// The reason for this is to support implementations that can store a reference to an AST node: `&'ast N` and also
 /// support recursive AST traversal. With a `&mut self` the former can be supported but the latter cannot because the
 /// a mutable borrow would be required to have the lifetime of `'ast` which prevents recursion.
 ///
-/// # Lifetimes
-///
-/// The `'ast` and `'a` lifetimes are provided so that implementations of `Visitor` can relate the trait lifetimes to
-/// bounds on their own types.
-///
-/// Though `Visitor` does not enforce it on the trait, implementations can define a bound that `'ast` outlives `'a`
-/// (like this: `'ast: 'a`) if required.
-///
 /// ## `'ast`
 ///
 /// The lifetime of the abstract syntax tree.
-///
-/// ## `'a`
-///
-/// The lifetime of the borrow of `self` on [`Visitor::enter`] and [`Visitor::exit`].
 ///
 /// # The `N: Visitable` bound
 ///
@@ -139,16 +123,12 @@ where
     /// [`Visitor::exit`] as nodes are entered and exiting respectively.
     fn accept<'ast, V: Visitor<'ast>>(&'ast self, visitor: &mut V) -> ControlFlow<Break<V::Error>>;
 
-    /// Tries to downcast `&Self` as `&Target`.
-    ///
-    /// Returns `Some(&Target)` when `Self == Target`, else `None`.
+    /// Tries to downcast `self` as `&Target`.
     fn downcast_ref<Target: Visitable>(&self) -> Option<&Target> {
         (self as &dyn Any).downcast_ref::<Target>()
     }
 
-    /// Tries to downcast `&mut Self` as `&mut Target`.
-    ///
-    /// Returns `Some(&mut Target)` when `Self == Target`, else `None`.
+    /// Tries to downcast `self` as `&mut Target`.
     fn downcast_mut<Target: Visitable>(&mut self) -> Option<&mut Target> {
         (self as &mut dyn Any).downcast_mut::<Target>()
     }
@@ -339,13 +319,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::{
-        cell::{Cell, RefCell},
-        convert::Infallible,
-        fmt::Debug,
-        ops::ControlFlow,
-        rc::Rc,
-    };
+    use std::{cell::RefCell, convert::Infallible, fmt::Debug, ops::ControlFlow, rc::Rc};
 
     use super::{into_result, Break, Visitable, Visitor};
     use sqlparser::{
@@ -365,20 +339,20 @@ mod test {
         let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
         #[derive(Debug)]
-        struct TestVisitor(Cell<usize>);
+        struct TestVisitor(usize);
 
         impl<'ast> Visitor<'ast> for TestVisitor {
             type Error = Infallible;
 
             fn enter<N: Visitable>(&mut self, node: &'ast N) -> ControlFlow<Break<Self::Error>> {
                 if node.is::<Expr>() {
-                    self.0.set(self.0.get() + 1);
+                    self.0 += 1;
                 }
                 ControlFlow::Continue(())
             }
         }
 
-        let mut visitor = TestVisitor(Cell::new(0));
+        let mut visitor = TestVisitor(0);
 
         // The expressions are:
         // In the SELECT projection: a, b, 123, myfunc(b), b
@@ -386,7 +360,7 @@ mod test {
         // In the ORDER BY clause: a, b
         // Total: 14
         match into_result(ast.accept(&mut visitor)) {
-            Ok(()) => assert_eq!(visitor.0.get(), 14),
+            Ok(()) => assert_eq!(visitor.0, 14),
             _ => panic!(),
         };
     }
@@ -397,44 +371,41 @@ mod test {
         let sql = "SELECT 1 as a WHERE a > 0";
         let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
-        struct TestVisitor(RefCell<Vec<String>>);
+        struct TestVisitor(Vec<String>);
 
         impl<'ast> Visitor<'ast> for TestVisitor {
             type Error = Infallible;
 
             fn enter<N: Visitable>(&mut self, node: &'ast N) -> ControlFlow<Break<Self::Error>> {
-                let mut state = self.0.borrow_mut();
-
                 // Types that should _not_ be visited because we know it'll be
                 // None/empty with the `sql` expression below.
                 if node.is::<Option<With>>() {
-                    state.push("Option<With>".into());
+                    self.0.push("Option<With>".into());
                 }
                 if node.is::<Vec<TableWithJoins>>() {
-                    state.push("Vec<TableWithJoins>".into());
+                    self.0.push("Vec<TableWithJoins>".into());
                 }
 
                 // Types that _should_ be visited because we know they'll be present
                 // after parsing the `sql` expression below.
                 if node.is::<Option<Expr>>() {
-                    state.push("Option<Expr>".into());
+                    self.0.push("Option<Expr>".into());
                 }
                 if node.is::<Vec<SelectItem>>() {
-                    state.push("Vec<SelectItem>".into());
+                    self.0.push("Vec<SelectItem>".into());
                 }
 
                 ControlFlow::Continue(())
             }
         }
 
-        let mut visitor = TestVisitor(RefCell::new(Vec::new()));
+        let mut visitor = TestVisitor(Vec::new());
 
         match into_result(ast.accept(&mut visitor)) {
             Ok(()) => {
-                let mut state = visitor.0.take();
-                state.sort();
+                visitor.0.sort();
                 assert_eq!(
-                    &state,
+                    &visitor.0,
                     &["Option<Expr>".to_string(), "Vec<SelectItem>".to_string()]
                 )
             }
@@ -445,13 +416,13 @@ mod test {
     #[test]
     fn source_node_reachable_fields_are_visited_first() {
         #[derive(Debug)]
-        struct TestVisitor(RefCell<Vec<&'static str>>);
+        struct TestVisitor(Vec<&'static str>);
 
         impl<'ast> Visitor<'ast> for TestVisitor {
             type Error = Infallible;
 
             fn enter<N: 'static>(&mut self, _node: &'ast N) -> ControlFlow<Break<Self::Error>> {
-                self.0.borrow_mut().push(std::any::type_name::<N>());
+                self.0.push(std::any::type_name::<N>());
                 ControlFlow::Continue(())
             }
         }
@@ -465,11 +436,11 @@ mod test {
 
         let ast = parser::Parser::parse_sql(&dialect, sql).unwrap();
 
-        let mut visitor = TestVisitor(RefCell::new(Vec::new()));
+        let mut visitor = TestVisitor(Vec::new());
 
         match into_result(ast.accept(&mut visitor)) {
             Ok(()) => assert_eq!(
-                visitor.0.borrow()[0..9],
+                visitor.0[0..9],
                 [
                     "alloc::vec::Vec<sqlparser::ast::Statement>",
                     "sqlparser::ast::Statement",
