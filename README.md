@@ -51,7 +51,7 @@ Analyses `sqlparser` source code and generates:
 - Analyzes the `sqlparser` AST in order to determine an AST traversal order for single-pass semantic analysis workloads
 - Generates the `Visitable` trait implementations for all AST node types
 - Generates the `Transformer` trait implementations for all AST node types
-- Generates the `Semantic` trait implementations
+- Generates the `AsNodeKey` trait implementations
 
 To update:
 

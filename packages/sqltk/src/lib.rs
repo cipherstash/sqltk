@@ -68,6 +68,7 @@
 // No functionality should be created here (beyond simply re-exporting).
 
 mod generated;
+mod node_key;
 mod transform;
 mod transformable_impls;
 mod visitable_impls;
@@ -117,7 +118,7 @@ where
 /// All required implementations of this trait (every `sqlparser` AST node type) are provided.
 pub trait Visitable
 where
-    Self: 'static + Sized,
+    Self: 'static + Sized + AsNodeKey,
 {
     /// Accepts a borrowed [`Visitor`] and traverses the AST starting at `self` invoking [`Visitor::enter`] and
     /// [`Visitor::exit`] as nodes are entered and exiting respectively.
@@ -139,15 +140,6 @@ where
     }
 }
 
-/// Marker trait for AST nodes that are semantically interesting. Every type that implements `Visitable` is semantically
-/// interesting except for `Box<T: Visitable>` and `Option<T: Visitable>`
-///
-/// For example, `Box<Expr>` and `Option<Expr>` are not  semantically interesting, but `Expr` is.
-///
-/// This is a useful trait when performing semantic analysis where tagging the wrong nodes by mistake could result in
-/// broken analysis, such as tagging a `Box<Expr>` when the intent was `Expr`.
-pub trait Semantic: Visitable {}
-
 /// Type used to signal abnormal control flow from a [`Visitor`] during AST traversal.
 #[derive(Debug)]
 pub enum Break<E> {
@@ -166,8 +158,11 @@ pub enum Break<E> {
     Err(E),
 }
 
-impl<E1> Break<E1>  {
-    pub fn convert<E2>(self) -> Break<E2> where E2: From<E1> {
+impl<E1> Break<E1> {
+    pub fn convert<E2>(self) -> Break<E2>
+    where
+        E2: From<E1>,
+    {
         match self {
             Break::SkipChildren => Break::SkipChildren,
             Break::Finished => Break::Finished,

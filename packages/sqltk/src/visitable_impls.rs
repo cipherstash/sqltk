@@ -20,10 +20,6 @@ where
     }
 }
 
-/// A `Vec<N: Visitable>` is semantically interesting.
-impl<N> Semantic for Vec<N> where N: Visitable {}
-
-/// Does not implement `Semantic` because `N` is the semantically interesting type.
 impl<N> Visitable for Box<N>
 where
     N: Visitable,
@@ -33,7 +29,6 @@ where
     }
 }
 
-/// Does not implement `Semantic` because `N` is the semantically interesting type.
 impl<N> Visitable for Option<N>
 where
     N: Visitable,
@@ -57,7 +52,6 @@ impl<N: 'static> AsNodeKey for OneOrManyWithParens<N> {
 }
 
 /// Manual implementaton because sqltk-codegen cannot handle generics.
-/// Does not implement `Semantic`.
 impl<N> Visitable for OneOrManyWithParens<N>
 where
     N: 'static + Visitable,
@@ -77,7 +71,6 @@ impl<N: 'static> AsNodeKey for WrappedCollection<N> {
 }
 
 /// Manual implementaton because sqltk-codegen cannot handle generics.
-/// Does not implement `Semantic`.
 impl<N> Visitable for WrappedCollection<N>
 where
     N: 'static + Visitable,
