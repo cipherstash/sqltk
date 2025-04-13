@@ -46,7 +46,11 @@ impl ToTokens for VisitableImpl {
             }
 
             #[automatically_derived]
-            impl crate::Semantic for #path {}
+            impl crate::AsNodeKey for #path {
+                fn as_node_key(&self) -> crate::NodeKey<'_> {
+                    crate::NodeKey::new(self)
+                }
+            }
         })
     }
 }

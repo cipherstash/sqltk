@@ -9,61 +9,123 @@ pub trait Transform<'ast> {
 
     /// Applies edits to an AST node.
     ///
-    /// `new_node` is an owned node to which the edits will be applied. Because AST transformation happens bottom-up,
-    /// child nodes of `new_node` may have already been edited - which implies that `&new_node == original_node` does
+    /// `target_node` is an owned node to which the edits will be applied. Because AST transformation happens bottom-up,
+    /// child nodes of `target_node` may have already been edited - which implies that `&target_node == original_node` does
     /// not hold true in general.
     ///
     /// `original_node` is a read-only reference to the node without any edits applied.
     ///
-    /// `context` is a slice containing references to all of the ancestors of `original_node`. This is useful for
+    /// `node_path` is a slice containing references to all of the ancestors of `original_node`. This is useful for
     /// performing contextual transformations (rather than just type-based) such as transforming an `Expr` in a
     /// projection differently to an `Expr` in a `WHERE` clause.
     ///
     /// Transformations are applied from the leaf nodes towards to the root node. Therefore any edits to child nodes of
-    /// `new_node` will have already been applied therefore care must be taken by implementors of this trait to not undo
+    /// `target_node` will have already been applied therefore care must be taken by implementors of this trait to not undo
     /// edits that have already been applied.
     ///
-    /// Returns `Ok(new_node)` when transformation is successful, else `Err(Self::Error)`.
+    /// Returns `Ok(target_node)` when transformation is successful, else `Err(Self::Error)`.
     ///
     /// An error during transformation will immediatly terminatate the entire transformation process of the AST.
     fn transform<N: Visitable>(
         &mut self,
-        new_node: N,
-        original_node: &'ast N,
-        context: &Context<'ast>,
+        node_path: &NodePath<'ast>,
+        target_node: N,
     ) -> Result<N, Self::Error>;
+
+    fn check_postcondition(&self) -> Result<(), Self::Error> {
+        Ok(())
+    }
 }
 
 #[derive(Default)]
-pub struct Context<'ast> {
-    context: Vec<&'ast dyn Any>,
+pub struct NodePath<'ast> {
+    node_path: Vec<&'ast dyn Any>,
 }
 
-impl<'ast> Context<'ast> {
+impl<'ast> NodePath<'ast> {
     // Used only in generated code
     #[doc(hidden)]
     pub fn push(&mut self, node: &'ast dyn Any) {
-        self.context.push(node);
+        self.node_path.push(node);
     }
 
     // Used only in generated code
     #[doc(hidden)]
     pub fn pop(&mut self) {
-        self.context.pop();
+        self.node_path.pop();
     }
 
-    pub fn nth_last_as<T: 'static>(&self, nth: usize) -> Option<&'ast T> {
-        if self.context.is_empty() {
-            None
+    /// Returns the current node if the path has at least 1 node in it.
+    ///
+    /// `source_node` is an alias for [`Self::last_1`].
+    pub fn source_node_as<N: Visitable>(&self) -> Option<(&'ast N,)> {
+        self.last_1_as()
+    }
+
+    /// Returns the current node if the path has at least 1 node in it.
+    ///
+    /// `last_1` is an alias for [`Self::source_node`].
+    pub fn last_1_as<N: Visitable>(&self) -> Option<(&'ast N,)> {
+        Some((self.nth_last_as(0)?,))
+    }
+
+    /// Returns the last 2 nodes in the path. The leftmost node in the tuple is the shallowest ancestor and the
+    /// rightmost node is the current node.
+    ///
+    /// Returns `Some(nodes)` on success, `None` if there are less than 2 nodes in the path.
+    pub fn last_2_as<B, A>(&self) -> Option<(&'ast B, &'ast A)>
+    where
+        B: Visitable,
+        A: Visitable,
+    {
+        Some((self.nth_last_as(1)?, self.nth_last_as(0)?))
+    }
+
+    /// Returns the last 3 nodes in the path. The leftmost node in the tuple is the shallowest ancestor and the
+    /// rightmost node is the current node.
+    ///
+    /// Returns `Some(nodes)` on success, `None` if there are less than 3 nodes in the path.
+    pub fn last_3_as<C, B, A>(&self) -> Option<(&'ast C, &'ast B, &'ast A)>
+    where
+        C: Visitable,
+        B: Visitable,
+        A: Visitable,
+    {
+        Some((
+            self.nth_last_as(2)?,
+            self.nth_last_as(1)?,
+            self.nth_last_as(0)?,
+        ))
+    }
+
+    /// Returns the last 4 nodes in the path. The leftmost node in the tuple is the shallowest ancestor and the
+    /// rightmost node is the current node.
+    ///
+    /// Returns `Some(nodes)` on success, `None` if there are less than 4 nodes in the path.
+    pub fn last_4_as<D, C, B, A>(&self) -> Option<(&'ast D, &'ast C, &'ast B, &'ast A)>
+    where
+        D: Visitable,
+        C: Visitable,
+        B: Visitable,
+        A: Visitable,
+    {
+        Some((
+            self.nth_last_as(3)?,
+            self.nth_last_as(2)?,
+            self.nth_last_as(1)?,
+            self.nth_last_as(0)?,
+        ))
+    }
+
+    pub fn nth_last_as<N: Visitable>(&self, nth: usize) -> Option<&'ast N> {
+        let len = self.node_path.len();
+        if len > nth {
+            self.node_path
+                .get((self.node_path.len() - 1) - nth)
+                .and_then(|node| node.downcast_ref::<N>())
         } else {
-            self.context
-                .get(self.context.len() - 1 - nth)
-                .and_then(|node| node.downcast_ref::<T>())
+            None
         }
-    }
-
-    pub fn last_as<T: 'static>(&self) -> Option<&'ast T> {
-        self.nth_last_as(0)
     }
 }
 
@@ -83,7 +145,7 @@ where
     where
         T: Transform<'ast>,
     {
-        self.apply_transform_with_path(transform, &mut Context::default())
+        self.apply_transform_with_path(transform, &mut NodePath::default())
     }
 
     /// Recursively applies `transform` to `self` returning `Ok(Self)` when
@@ -94,7 +156,7 @@ where
     fn apply_transform_with_path<T>(
         &'ast self,
         transform: &mut T,
-        context: &mut Context<'ast>,
+        node_path: &mut NodePath<'ast>,
     ) -> Result<Self, T::Error>
     where
         T: Transform<'ast>;
@@ -108,7 +170,7 @@ mod tests {
         parser::{Parser, ParserError},
     };
 
-    use crate::Context;
+    use crate::NodePath;
 
     use super::*;
     use std::convert::Infallible;
@@ -122,20 +184,19 @@ mod tests {
 
             fn transform<N: Visitable>(
                 &mut self,
-                mut new_node: N,
-                _: &'ast N,
-                _: &Context<'ast>,
+                _: &NodePath<'ast>,
+                mut target_node: N,
             ) -> Result<N, Self::Error> {
-                if let Some(string) = new_node.downcast_mut::<String>() {
+                if let Some(string) = target_node.downcast_mut::<String>() {
                     string.make_ascii_uppercase();
                 }
-                Ok(new_node)
+                Ok(target_node)
             }
         }
 
         let a = String::from("hello");
         assert_eq!(
-            UpcaseStrings.transform(a.clone(), &a, &Context::default()),
+            UpcaseStrings.transform(&NodePath::default(), a.clone()),
             Ok(String::from("HELLO"))
         );
     }
@@ -149,14 +210,13 @@ mod tests {
 
             fn transform<N: Visitable>(
                 &mut self,
-                mut new_node: N,
-                _: &'ast N,
-                _: &Context<'ast>,
+                _: &NodePath<'ast>,
+                mut target_node: N,
             ) -> Result<N, Self::Error> {
-                if let Some(ident) = new_node.downcast_mut::<Ident>() {
+                if let Some(ident) = target_node.downcast_mut::<Ident>() {
                     ident.value.make_ascii_uppercase();
                 }
-                Ok(new_node)
+                Ok(target_node)
             }
         }
 
@@ -187,14 +247,13 @@ mod tests {
 
             fn transform<N: Visitable>(
                 &mut self,
-                mut new_node: N,
-                _: &'ast N,
-                _: &Context<'ast>,
+                _: &NodePath<'ast>,
+                mut target_node: N,
             ) -> Result<N, Self::Error> {
-                if let Some(items) = new_node.downcast_mut::<Vec<SelectItem>>() {
+                if let Some(items) = target_node.downcast_mut::<Vec<SelectItem>>() {
                     items.reverse();
                 }
-                Ok(new_node)
+                Ok(target_node)
             }
         }
 
@@ -225,18 +284,17 @@ mod tests {
 
             fn transform<N: Visitable>(
                 &mut self,
-                mut new_node: N,
-                _: &'ast N,
-                _: &Context<'ast>,
+                _: &NodePath<'ast>,
+                mut target_node: N,
             ) -> Result<N, Self::Error> {
-                if let Some(items) = new_node.downcast_mut::<Vec<SelectItem>>() {
+                if let Some(items) = target_node.downcast_mut::<Vec<SelectItem>>() {
                     let select_item = parser_for("(now() - users.dob) as age")
                         .unwrap()
                         .parse_select_item()
                         .unwrap();
                     items.insert(1, select_item);
                 }
-                Ok(new_node)
+                Ok(target_node)
             }
         }
 
@@ -269,22 +327,16 @@ mod tests {
 
             fn transform<N: Visitable>(
                 &mut self,
-                new_node: N,
-                original_node: &'ast N,
-                context: &Context<'ast>,
+                node_path: &NodePath<'ast>,
+                target_node: N,
             ) -> Result<N, Self::Error> {
-                // We are looking for Expr nodes that are immediate children of Assignment nodes. The following asserts
-                // that the parent node is an Assignment and the original node is Expr.
-                if let (Some(_), Some(expr)) = (
-                    context.last_as::<Assignment>(),
-                    original_node.downcast_ref::<Expr>(),
-                ) {
+                if let Some((_assignment, expr)) = node_path.last_2_as::<Assignment, Expr>() {
                     if !matches!(expr, Expr::Value(_)) {
                         return Err(OnlyValuesInUpdate);
                     }
                 }
 
-                Ok(new_node)
+                Ok(target_node)
             }
         }
 

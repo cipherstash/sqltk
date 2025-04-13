@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::fmt::Debug;
 
 use sqlparser::ast::{OneOrManyWithParens, WrappedCollection};
 
@@ -11,21 +11,23 @@ where
     fn apply_transform_with_path<T>(
         &'ast self,
         transformer: &mut T,
-        path: &mut crate::Context<'ast>,
+        path: &mut crate::NodePath<'ast>,
     ) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
-        path.push(self as &'ast dyn Any);
+        path.push(self);
 
         let items = self
             .iter()
             .map(|item| item.apply_transform_with_path(transformer, path))
             .collect::<Result<Vec<N>, T::Error>>()?;
 
+        let transformed = transformer.transform(path, items)?;
+
         path.pop();
 
-        transformer.transform(items, self, path)
+        Ok(transformed)
     }
 }
 
@@ -36,21 +38,23 @@ where
     fn apply_transform_with_path<T>(
         &'ast self,
         transformer: &mut T,
-        path: &mut crate::Context<'ast>,
+        path: &mut crate::NodePath<'ast>,
     ) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
-        path.push(self as &'ast dyn Any);
+        path.push(self);
 
         let item = self
             .as_ref()
             .map(|item| item.apply_transform_with_path(transformer, path))
             .transpose()?;
 
+        let transformed = transformer.transform(path, item)?;
+
         path.pop();
 
-        transformer.transform(item, self, path)
+        Ok(transformed)
     }
 }
 
@@ -61,20 +65,20 @@ where
     fn apply_transform_with_path<T>(
         &'ast self,
         transformer: &mut T,
-        path: &mut crate::Context<'ast>,
+        path: &mut crate::NodePath<'ast>,
     ) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
-        path.push(self as &'ast dyn Any);
+        // NOTE: there is no push/pop of the path for Box<N>.
 
-        let item = (**self)
+        let transformed = (**self)
             .apply_transform_with_path(transformer, path)
             .map(Box::new)?;
 
-        path.pop();
+        // let transformed = transformer.transform(path, item)?;
 
-        transformer.transform(item, self, path)
+        Ok(transformed)
     }
 }
 
@@ -82,19 +86,19 @@ where
 
 impl<'ast, N> Transformable<'ast> for OneOrManyWithParens<N>
 where
-    N: Visitable + Transformable<'ast>,
+    N: Visitable + Debug + Transformable<'ast>,
 {
     fn apply_transform_with_path<T>(
         &'ast self,
         transformer: &mut T,
-        path: &mut crate::Context<'ast>,
+        path: &mut crate::NodePath<'ast>,
     ) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
-        path.push(self as &'ast dyn Any);
+        path.push(self);
 
-        let result = match self {
+        let transformed = match self {
             OneOrManyWithParens::One(node) => {
                 OneOrManyWithParens::One(node.apply_transform_with_path(transformer, path)?)
             }
@@ -105,7 +109,7 @@ where
 
         path.pop();
 
-        Ok(result)
+        Ok(transformed)
     }
 }
 
@@ -116,14 +120,14 @@ where
     fn apply_transform_with_path<T>(
         &'ast self,
         transformer: &mut T,
-        path: &mut crate::Context<'ast>,
+        path: &mut crate::NodePath<'ast>,
     ) -> Result<Self, T::Error>
     where
         T: Transform<'ast>,
     {
-        path.push(self as &'ast dyn Any);
+        path.push(self);
 
-        let result = match self {
+        let transformed = match self {
             WrappedCollection::NoWrapping(nodes) => {
                 WrappedCollection::NoWrapping(nodes.apply_transform_with_path(transformer, path)?)
             }
@@ -134,6 +138,6 @@ where
 
         path.pop();
 
-        Ok(result)
+        Ok(transformed)
     }
 }

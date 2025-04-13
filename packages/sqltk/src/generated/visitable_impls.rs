@@ -38,7 +38,11 @@ impl crate::Visitable for sqlparser::ast::Action {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Action {}
+impl crate::AsNodeKey for sqlparser::ast::Action {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::AddDropSync {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -61,7 +65,11 @@ impl crate::Visitable for sqlparser::ast::AddDropSync {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::AddDropSync {}
+impl crate::AsNodeKey for sqlparser::ast::AddDropSync {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::AfterMatchSkip {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -89,7 +97,11 @@ impl crate::Visitable for sqlparser::ast::AfterMatchSkip {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::AfterMatchSkip {}
+impl crate::AsNodeKey for sqlparser::ast::AfterMatchSkip {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::AlterColumnOperation {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -108,7 +120,10 @@ impl crate::Visitable for sqlparser::ast::AlterColumnOperation {
                         value.accept(visitor)?;
                     }
                     sqlparser::ast::AlterColumnOperation::DropDefault => {}
-                    sqlparser::ast::AlterColumnOperation::SetDataType { data_type, using } => {
+                    sqlparser::ast::AlterColumnOperation::SetDataType {
+                        data_type,
+                        using,
+                    } => {
                         data_type.accept(visitor)?;
                         using.accept(visitor)?;
                     }
@@ -126,7 +141,11 @@ impl crate::Visitable for sqlparser::ast::AlterColumnOperation {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::AlterColumnOperation {}
+impl crate::AsNodeKey for sqlparser::ast::AlterColumnOperation {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::AlterIndexOperation {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -149,7 +168,11 @@ impl crate::Visitable for sqlparser::ast::AlterIndexOperation {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::AlterIndexOperation {}
+impl crate::AsNodeKey for sqlparser::ast::AlterIndexOperation {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::AlterPolicyOperation {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -181,7 +204,11 @@ impl crate::Visitable for sqlparser::ast::AlterPolicyOperation {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::AlterPolicyOperation {}
+impl crate::AsNodeKey for sqlparser::ast::AlterPolicyOperation {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::AlterRoleOperation {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -229,7 +256,11 @@ impl crate::Visitable for sqlparser::ast::AlterRoleOperation {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::AlterRoleOperation {}
+impl crate::AsNodeKey for sqlparser::ast::AlterRoleOperation {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::AlterTableOperation {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -265,7 +296,10 @@ impl crate::Visitable for sqlparser::ast::AlterTableOperation {
                         name.accept(visitor)?;
                         select.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::DropProjection { if_exists, name } => {
+                    sqlparser::ast::AlterTableOperation::DropProjection {
+                        if_exists,
+                        name,
+                    } => {
                         if_exists.accept(visitor)?;
                         name.accept(visitor)?;
                     }
@@ -312,10 +346,14 @@ impl crate::Visitable for sqlparser::ast::AlterTableOperation {
                         if_exists.accept(visitor)?;
                         cascade.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::AttachPartition { partition } => {
+                    sqlparser::ast::AlterTableOperation::AttachPartition {
+                        partition,
+                    } => {
                         partition.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::DetachPartition { partition } => {
+                    sqlparser::ast::AlterTableOperation::DetachPartition {
+                        partition,
+                    } => {
                         partition.accept(visitor)?;
                     }
                     sqlparser::ast::AlterTableOperation::FreezePartition {
@@ -336,13 +374,17 @@ impl crate::Visitable for sqlparser::ast::AlterTableOperation {
                     sqlparser::ast::AlterTableOperation::EnableAlwaysRule { name } => {
                         name.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::EnableAlwaysTrigger { name } => {
+                    sqlparser::ast::AlterTableOperation::EnableAlwaysTrigger {
+                        name,
+                    } => {
                         name.accept(visitor)?;
                     }
                     sqlparser::ast::AlterTableOperation::EnableReplicaRule { name } => {
                         name.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::EnableReplicaTrigger { name } => {
+                    sqlparser::ast::AlterTableOperation::EnableReplicaTrigger {
+                        name,
+                    } => {
                         name.accept(visitor)?;
                     }
                     sqlparser::ast::AlterTableOperation::EnableRowLevelSecurity => {}
@@ -414,14 +456,19 @@ impl crate::Visitable for sqlparser::ast::AlterTableOperation {
                         old_name.accept(visitor)?;
                         new_name.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::AlterColumn { column_name, op } => {
+                    sqlparser::ast::AlterTableOperation::AlterColumn {
+                        column_name,
+                        op,
+                    } => {
                         column_name.accept(visitor)?;
                         op.accept(visitor)?;
                     }
                     sqlparser::ast::AlterTableOperation::SwapWith { table_name } => {
                         table_name.accept(visitor)?;
                     }
-                    sqlparser::ast::AlterTableOperation::SetTblProperties { table_properties } => {
+                    sqlparser::ast::AlterTableOperation::SetTblProperties {
+                        table_properties,
+                    } => {
                         table_properties.accept(visitor)?;
                     }
                     sqlparser::ast::AlterTableOperation::OwnerTo { new_owner } => {
@@ -434,7 +481,11 @@ impl crate::Visitable for sqlparser::ast::AlterTableOperation {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::AlterTableOperation {}
+impl crate::AsNodeKey for sqlparser::ast::AlterTableOperation {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::AnalyzeFormat {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -457,7 +508,11 @@ impl crate::Visitable for sqlparser::ast::AnalyzeFormat {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::AnalyzeFormat {}
+impl crate::AsNodeKey for sqlparser::ast::AnalyzeFormat {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ArgMode {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -480,7 +535,11 @@ impl crate::Visitable for sqlparser::ast::ArgMode {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ArgMode {}
+impl crate::AsNodeKey for sqlparser::ast::ArgMode {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Array {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -500,7 +559,11 @@ impl crate::Visitable for sqlparser::ast::Array {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Array {}
+impl crate::AsNodeKey for sqlparser::ast::Array {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ArrayElemTypeDef {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -531,7 +594,11 @@ impl crate::Visitable for sqlparser::ast::ArrayElemTypeDef {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ArrayElemTypeDef {}
+impl crate::AsNodeKey for sqlparser::ast::ArrayElemTypeDef {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Assignment {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -551,7 +618,11 @@ impl crate::Visitable for sqlparser::ast::Assignment {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Assignment {}
+impl crate::AsNodeKey for sqlparser::ast::Assignment {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::AssignmentTarget {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -577,7 +648,11 @@ impl crate::Visitable for sqlparser::ast::AssignmentTarget {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::AssignmentTarget {}
+impl crate::AsNodeKey for sqlparser::ast::AssignmentTarget {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::AttachDuckDBDatabaseOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -603,7 +678,11 @@ impl crate::Visitable for sqlparser::ast::AttachDuckDBDatabaseOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::AttachDuckDBDatabaseOption {}
+impl crate::AsNodeKey for sqlparser::ast::AttachDuckDBDatabaseOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::BinaryOperator {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -676,7 +755,11 @@ impl crate::Visitable for sqlparser::ast::BinaryOperator {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::BinaryOperator {}
+impl crate::AsNodeKey for sqlparser::ast::BinaryOperator {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CastFormat {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -703,7 +786,11 @@ impl crate::Visitable for sqlparser::ast::CastFormat {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CastFormat {}
+impl crate::AsNodeKey for sqlparser::ast::CastFormat {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CastKind {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -727,7 +814,11 @@ impl crate::Visitable for sqlparser::ast::CastKind {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CastKind {}
+impl crate::AsNodeKey for sqlparser::ast::CastKind {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CeilFloorKind {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -753,7 +844,11 @@ impl crate::Visitable for sqlparser::ast::CeilFloorKind {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CeilFloorKind {}
+impl crate::AsNodeKey for sqlparser::ast::CeilFloorKind {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CharLengthUnits {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -775,7 +870,11 @@ impl crate::Visitable for sqlparser::ast::CharLengthUnits {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CharLengthUnits {}
+impl crate::AsNodeKey for sqlparser::ast::CharLengthUnits {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CharacterLength {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -800,7 +899,11 @@ impl crate::Visitable for sqlparser::ast::CharacterLength {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CharacterLength {}
+impl crate::AsNodeKey for sqlparser::ast::CharacterLength {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CloseCursor {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -824,7 +927,11 @@ impl crate::Visitable for sqlparser::ast::CloseCursor {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CloseCursor {}
+impl crate::AsNodeKey for sqlparser::ast::CloseCursor {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ClusteredBy {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -845,7 +952,11 @@ impl crate::Visitable for sqlparser::ast::ClusteredBy {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ClusteredBy {}
+impl crate::AsNodeKey for sqlparser::ast::ClusteredBy {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ClusteredIndex {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -865,7 +976,11 @@ impl crate::Visitable for sqlparser::ast::ClusteredIndex {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ClusteredIndex {}
+impl crate::AsNodeKey for sqlparser::ast::ClusteredIndex {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ColumnDef {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -887,7 +1002,11 @@ impl crate::Visitable for sqlparser::ast::ColumnDef {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ColumnDef {}
+impl crate::AsNodeKey for sqlparser::ast::ColumnDef {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ColumnOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -984,7 +1103,11 @@ impl crate::Visitable for sqlparser::ast::ColumnOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ColumnOption {}
+impl crate::AsNodeKey for sqlparser::ast::ColumnOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ColumnOptionDef {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1004,7 +1127,11 @@ impl crate::Visitable for sqlparser::ast::ColumnOptionDef {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ColumnOptionDef {}
+impl crate::AsNodeKey for sqlparser::ast::ColumnOptionDef {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ColumnPolicy {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1030,7 +1157,11 @@ impl crate::Visitable for sqlparser::ast::ColumnPolicy {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ColumnPolicy {}
+impl crate::AsNodeKey for sqlparser::ast::ColumnPolicy {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ColumnPolicyProperty {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1051,7 +1182,11 @@ impl crate::Visitable for sqlparser::ast::ColumnPolicyProperty {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ColumnPolicyProperty {}
+impl crate::AsNodeKey for sqlparser::ast::ColumnPolicyProperty {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CommentDef {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1080,7 +1215,11 @@ impl crate::Visitable for sqlparser::ast::CommentDef {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CommentDef {}
+impl crate::AsNodeKey for sqlparser::ast::CommentDef {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CommentObject {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1103,7 +1242,11 @@ impl crate::Visitable for sqlparser::ast::CommentObject {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CommentObject {}
+impl crate::AsNodeKey for sqlparser::ast::CommentObject {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ConflictTarget {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1129,7 +1272,11 @@ impl crate::Visitable for sqlparser::ast::ConflictTarget {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ConflictTarget {}
+impl crate::AsNodeKey for sqlparser::ast::ConflictTarget {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ConnectBy {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1149,7 +1296,11 @@ impl crate::Visitable for sqlparser::ast::ConnectBy {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ConnectBy {}
+impl crate::AsNodeKey for sqlparser::ast::ConnectBy {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ConstraintCharacteristics {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1170,7 +1321,11 @@ impl crate::Visitable for sqlparser::ast::ConstraintCharacteristics {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ConstraintCharacteristics {}
+impl crate::AsNodeKey for sqlparser::ast::ConstraintCharacteristics {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ContextModifier {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1193,7 +1348,11 @@ impl crate::Visitable for sqlparser::ast::ContextModifier {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ContextModifier {}
+impl crate::AsNodeKey for sqlparser::ast::ContextModifier {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CopyLegacyCsvOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1226,7 +1385,11 @@ impl crate::Visitable for sqlparser::ast::CopyLegacyCsvOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CopyLegacyCsvOption {}
+impl crate::AsNodeKey for sqlparser::ast::CopyLegacyCsvOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CopyLegacyOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1256,7 +1419,11 @@ impl crate::Visitable for sqlparser::ast::CopyLegacyOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CopyLegacyOption {}
+impl crate::AsNodeKey for sqlparser::ast::CopyLegacyOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CopyOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1309,7 +1476,11 @@ impl crate::Visitable for sqlparser::ast::CopyOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CopyOption {}
+impl crate::AsNodeKey for sqlparser::ast::CopyOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CopySource {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1322,10 +1493,7 @@ impl crate::Visitable for sqlparser::ast::CopySource {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqlparser::ast::CopySource::Table {
-                        table_name,
-                        columns,
-                    } => {
+                    sqlparser::ast::CopySource::Table { table_name, columns } => {
                         table_name.accept(visitor)?;
                         columns.accept(visitor)?;
                     }
@@ -1339,7 +1507,11 @@ impl crate::Visitable for sqlparser::ast::CopySource {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CopySource {}
+impl crate::AsNodeKey for sqlparser::ast::CopySource {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CopyTarget {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1367,7 +1539,11 @@ impl crate::Visitable for sqlparser::ast::CopyTarget {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CopyTarget {}
+impl crate::AsNodeKey for sqlparser::ast::CopyTarget {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CreateFunctionBody {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1396,7 +1572,11 @@ impl crate::Visitable for sqlparser::ast::CreateFunctionBody {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CreateFunctionBody {}
+impl crate::AsNodeKey for sqlparser::ast::CreateFunctionBody {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CreateFunctionUsing {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1425,7 +1605,11 @@ impl crate::Visitable for sqlparser::ast::CreateFunctionUsing {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CreateFunctionUsing {}
+impl crate::AsNodeKey for sqlparser::ast::CreateFunctionUsing {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CreateIndex {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1454,7 +1638,11 @@ impl crate::Visitable for sqlparser::ast::CreateIndex {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CreateIndex {}
+impl crate::AsNodeKey for sqlparser::ast::CreateIndex {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CreatePolicyCommand {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1479,7 +1667,11 @@ impl crate::Visitable for sqlparser::ast::CreatePolicyCommand {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CreatePolicyCommand {}
+impl crate::AsNodeKey for sqlparser::ast::CreatePolicyCommand {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CreatePolicyType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1501,7 +1693,11 @@ impl crate::Visitable for sqlparser::ast::CreatePolicyType {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CreatePolicyType {}
+impl crate::AsNodeKey for sqlparser::ast::CreatePolicyType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CreateTable {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1562,7 +1758,11 @@ impl crate::Visitable for sqlparser::ast::CreateTable {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CreateTable {}
+impl crate::AsNodeKey for sqlparser::ast::CreateTable {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CreateTableOptions {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1589,7 +1789,11 @@ impl crate::Visitable for sqlparser::ast::CreateTableOptions {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CreateTableOptions {}
+impl crate::AsNodeKey for sqlparser::ast::CreateTableOptions {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Cte {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1611,7 +1815,11 @@ impl crate::Visitable for sqlparser::ast::Cte {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Cte {}
+impl crate::AsNodeKey for sqlparser::ast::Cte {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::CteAsMaterialized {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1633,7 +1841,11 @@ impl crate::Visitable for sqlparser::ast::CteAsMaterialized {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::CteAsMaterialized {}
+impl crate::AsNodeKey for sqlparser::ast::CteAsMaterialized {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::DataType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1852,7 +2064,11 @@ impl crate::Visitable for sqlparser::ast::DataType {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::DataType {}
+impl crate::AsNodeKey for sqlparser::ast::DataType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::DateTimeField {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1913,7 +2129,11 @@ impl crate::Visitable for sqlparser::ast::DateTimeField {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::DateTimeField {}
+impl crate::AsNodeKey for sqlparser::ast::DateTimeField {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Declare {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1940,7 +2160,11 @@ impl crate::Visitable for sqlparser::ast::Declare {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Declare {}
+impl crate::AsNodeKey for sqlparser::ast::Declare {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::DeclareAssignment {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1975,7 +2199,11 @@ impl crate::Visitable for sqlparser::ast::DeclareAssignment {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::DeclareAssignment {}
+impl crate::AsNodeKey for sqlparser::ast::DeclareAssignment {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::DeclareType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -1998,7 +2226,11 @@ impl crate::Visitable for sqlparser::ast::DeclareType {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::DeclareType {}
+impl crate::AsNodeKey for sqlparser::ast::DeclareType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Deduplicate {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2022,7 +2254,11 @@ impl crate::Visitable for sqlparser::ast::Deduplicate {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Deduplicate {}
+impl crate::AsNodeKey for sqlparser::ast::Deduplicate {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::DeferrableInitial {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2044,7 +2280,11 @@ impl crate::Visitable for sqlparser::ast::DeferrableInitial {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::DeferrableInitial {}
+impl crate::AsNodeKey for sqlparser::ast::DeferrableInitial {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Delete {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2069,7 +2309,11 @@ impl crate::Visitable for sqlparser::ast::Delete {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Delete {}
+impl crate::AsNodeKey for sqlparser::ast::Delete {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::DescribeAlias {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2092,7 +2336,11 @@ impl crate::Visitable for sqlparser::ast::DescribeAlias {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::DescribeAlias {}
+impl crate::AsNodeKey for sqlparser::ast::DescribeAlias {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::DictionaryField {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2112,7 +2360,11 @@ impl crate::Visitable for sqlparser::ast::DictionaryField {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::DictionaryField {}
+impl crate::AsNodeKey for sqlparser::ast::DictionaryField {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::DiscardObject {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2136,7 +2388,11 @@ impl crate::Visitable for sqlparser::ast::DiscardObject {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::DiscardObject {}
+impl crate::AsNodeKey for sqlparser::ast::DiscardObject {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Distinct {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2160,7 +2416,11 @@ impl crate::Visitable for sqlparser::ast::Distinct {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Distinct {}
+impl crate::AsNodeKey for sqlparser::ast::Distinct {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::DoUpdate {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2180,7 +2440,11 @@ impl crate::Visitable for sqlparser::ast::DoUpdate {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::DoUpdate {}
+impl crate::AsNodeKey for sqlparser::ast::DoUpdate {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::DollarQuotedString {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2200,7 +2464,11 @@ impl crate::Visitable for sqlparser::ast::DollarQuotedString {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::DollarQuotedString {}
+impl crate::AsNodeKey for sqlparser::ast::DollarQuotedString {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::DuplicateTreatment {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2222,7 +2490,11 @@ impl crate::Visitable for sqlparser::ast::DuplicateTreatment {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::DuplicateTreatment {}
+impl crate::AsNodeKey for sqlparser::ast::DuplicateTreatment {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::EmptyMatchesMode {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2245,7 +2517,11 @@ impl crate::Visitable for sqlparser::ast::EmptyMatchesMode {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::EmptyMatchesMode {}
+impl crate::AsNodeKey for sqlparser::ast::EmptyMatchesMode {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ExactNumberInfo {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2262,7 +2538,10 @@ impl crate::Visitable for sqlparser::ast::ExactNumberInfo {
                     sqlparser::ast::ExactNumberInfo::Precision(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::ExactNumberInfo::PrecisionAndScale(field0, field1) => {
+                    sqlparser::ast::ExactNumberInfo::PrecisionAndScale(
+                        field0,
+                        field1,
+                    ) => {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
                     }
@@ -2273,7 +2552,11 @@ impl crate::Visitable for sqlparser::ast::ExactNumberInfo {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ExactNumberInfo {}
+impl crate::AsNodeKey for sqlparser::ast::ExactNumberInfo {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ExceptSelectItem {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2293,7 +2576,11 @@ impl crate::Visitable for sqlparser::ast::ExceptSelectItem {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ExceptSelectItem {}
+impl crate::AsNodeKey for sqlparser::ast::ExceptSelectItem {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ExcludeSelectItem {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2319,7 +2606,11 @@ impl crate::Visitable for sqlparser::ast::ExcludeSelectItem {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ExcludeSelectItem {}
+impl crate::AsNodeKey for sqlparser::ast::ExcludeSelectItem {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Expr {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2378,39 +2669,22 @@ impl crate::Visitable for sqlparser::ast::Expr {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::InList {
-                        expr,
-                        list,
-                        negated,
-                    } => {
+                    sqlparser::ast::Expr::InList { expr, list, negated } => {
                         expr.accept(visitor)?;
                         list.accept(visitor)?;
                         negated.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::InSubquery {
-                        expr,
-                        subquery,
-                        negated,
-                    } => {
+                    sqlparser::ast::Expr::InSubquery { expr, subquery, negated } => {
                         expr.accept(visitor)?;
                         subquery.accept(visitor)?;
                         negated.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::InUnnest {
-                        expr,
-                        array_expr,
-                        negated,
-                    } => {
+                    sqlparser::ast::Expr::InUnnest { expr, array_expr, negated } => {
                         expr.accept(visitor)?;
                         array_expr.accept(visitor)?;
                         negated.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::Between {
-                        expr,
-                        negated,
-                        low,
-                        high,
-                    } => {
+                    sqlparser::ast::Expr::Between { expr, negated, low, high } => {
                         expr.accept(visitor)?;
                         negated.accept(visitor)?;
                         low.accept(visitor)?;
@@ -2458,33 +2732,19 @@ impl crate::Visitable for sqlparser::ast::Expr {
                         pattern.accept(visitor)?;
                         escape_char.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::RLike {
-                        negated,
-                        expr,
-                        pattern,
-                        regexp,
-                    } => {
+                    sqlparser::ast::Expr::RLike { negated, expr, pattern, regexp } => {
                         negated.accept(visitor)?;
                         expr.accept(visitor)?;
                         pattern.accept(visitor)?;
                         regexp.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::AnyOp {
-                        left,
-                        compare_op,
-                        right,
-                        is_some,
-                    } => {
+                    sqlparser::ast::Expr::AnyOp { left, compare_op, right, is_some } => {
                         left.accept(visitor)?;
                         compare_op.accept(visitor)?;
                         right.accept(visitor)?;
                         is_some.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::AllOp {
-                        left,
-                        compare_op,
-                        right,
-                    } => {
+                    sqlparser::ast::Expr::AllOp { left, compare_op, right } => {
                         left.accept(visitor)?;
                         compare_op.accept(visitor)?;
                         right.accept(visitor)?;
@@ -2508,29 +2768,17 @@ impl crate::Visitable for sqlparser::ast::Expr {
                         target_before_value.accept(visitor)?;
                         styles.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::Cast {
-                        kind,
-                        expr,
-                        data_type,
-                        format,
-                    } => {
+                    sqlparser::ast::Expr::Cast { kind, expr, data_type, format } => {
                         kind.accept(visitor)?;
                         expr.accept(visitor)?;
                         data_type.accept(visitor)?;
                         format.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::AtTimeZone {
-                        timestamp,
-                        time_zone,
-                    } => {
+                    sqlparser::ast::Expr::AtTimeZone { timestamp, time_zone } => {
                         timestamp.accept(visitor)?;
                         time_zone.accept(visitor)?;
                     }
-                    sqlparser::ast::Expr::Extract {
-                        field,
-                        syntax,
-                        expr,
-                    } => {
+                    sqlparser::ast::Expr::Extract { field, syntax, expr } => {
                         field.accept(visitor)?;
                         syntax.accept(visitor)?;
                         expr.accept(visitor)?;
@@ -2688,7 +2936,11 @@ impl crate::Visitable for sqlparser::ast::Expr {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Expr {}
+impl crate::AsNodeKey for sqlparser::ast::Expr {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ExprWithAlias {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2708,7 +2960,11 @@ impl crate::Visitable for sqlparser::ast::ExprWithAlias {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ExprWithAlias {}
+impl crate::AsNodeKey for sqlparser::ast::ExprWithAlias {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ExtractSyntax {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2730,7 +2986,11 @@ impl crate::Visitable for sqlparser::ast::ExtractSyntax {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ExtractSyntax {}
+impl crate::AsNodeKey for sqlparser::ast::ExtractSyntax {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Fetch {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2751,7 +3011,11 @@ impl crate::Visitable for sqlparser::ast::Fetch {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Fetch {}
+impl crate::AsNodeKey for sqlparser::ast::Fetch {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FetchDirection {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2793,7 +3057,11 @@ impl crate::Visitable for sqlparser::ast::FetchDirection {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FetchDirection {}
+impl crate::AsNodeKey for sqlparser::ast::FetchDirection {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FileFormat {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2820,7 +3088,11 @@ impl crate::Visitable for sqlparser::ast::FileFormat {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FileFormat {}
+impl crate::AsNodeKey for sqlparser::ast::FileFormat {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FlushLocation {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2842,7 +3114,11 @@ impl crate::Visitable for sqlparser::ast::FlushLocation {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FlushLocation {}
+impl crate::AsNodeKey for sqlparser::ast::FlushLocation {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FlushType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2875,7 +3151,11 @@ impl crate::Visitable for sqlparser::ast::FlushType {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FlushType {}
+impl crate::AsNodeKey for sqlparser::ast::FlushType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ForClause {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2920,7 +3200,11 @@ impl crate::Visitable for sqlparser::ast::ForClause {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ForClause {}
+impl crate::AsNodeKey for sqlparser::ast::ForClause {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ForJson {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2942,7 +3226,11 @@ impl crate::Visitable for sqlparser::ast::ForJson {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ForJson {}
+impl crate::AsNodeKey for sqlparser::ast::ForJson {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ForXml {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2970,7 +3258,11 @@ impl crate::Visitable for sqlparser::ast::ForXml {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ForXml {}
+impl crate::AsNodeKey for sqlparser::ast::ForXml {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FormatClause {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -2994,7 +3286,11 @@ impl crate::Visitable for sqlparser::ast::FormatClause {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FormatClause {}
+impl crate::AsNodeKey for sqlparser::ast::FormatClause {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FromTable {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3020,7 +3316,11 @@ impl crate::Visitable for sqlparser::ast::FromTable {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FromTable {}
+impl crate::AsNodeKey for sqlparser::ast::FromTable {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Function {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3045,7 +3345,11 @@ impl crate::Visitable for sqlparser::ast::Function {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Function {}
+impl crate::AsNodeKey for sqlparser::ast::Function {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FunctionArg {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3058,11 +3362,7 @@ impl crate::Visitable for sqlparser::ast::FunctionArg {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqlparser::ast::FunctionArg::Named {
-                        name,
-                        arg,
-                        operator,
-                    } => {
+                    sqlparser::ast::FunctionArg::Named { name, arg, operator } => {
                         name.accept(visitor)?;
                         arg.accept(visitor)?;
                         operator.accept(visitor)?;
@@ -3077,7 +3377,11 @@ impl crate::Visitable for sqlparser::ast::FunctionArg {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FunctionArg {}
+impl crate::AsNodeKey for sqlparser::ast::FunctionArg {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FunctionArgExpr {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3104,7 +3408,11 @@ impl crate::Visitable for sqlparser::ast::FunctionArgExpr {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FunctionArgExpr {}
+impl crate::AsNodeKey for sqlparser::ast::FunctionArgExpr {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FunctionArgOperator {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3127,7 +3435,11 @@ impl crate::Visitable for sqlparser::ast::FunctionArgOperator {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FunctionArgOperator {}
+impl crate::AsNodeKey for sqlparser::ast::FunctionArgOperator {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FunctionArgumentClause {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3140,7 +3452,9 @@ impl crate::Visitable for sqlparser::ast::FunctionArgumentClause {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqlparser::ast::FunctionArgumentClause::IgnoreOrRespectNulls(field0) => {
+                    sqlparser::ast::FunctionArgumentClause::IgnoreOrRespectNulls(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::FunctionArgumentClause::OrderBy(field0) => {
@@ -3165,7 +3479,11 @@ impl crate::Visitable for sqlparser::ast::FunctionArgumentClause {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FunctionArgumentClause {}
+impl crate::AsNodeKey for sqlparser::ast::FunctionArgumentClause {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FunctionArgumentList {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3186,7 +3504,11 @@ impl crate::Visitable for sqlparser::ast::FunctionArgumentList {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FunctionArgumentList {}
+impl crate::AsNodeKey for sqlparser::ast::FunctionArgumentList {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FunctionArguments {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3213,7 +3535,11 @@ impl crate::Visitable for sqlparser::ast::FunctionArguments {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FunctionArguments {}
+impl crate::AsNodeKey for sqlparser::ast::FunctionArguments {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FunctionBehavior {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3236,7 +3562,11 @@ impl crate::Visitable for sqlparser::ast::FunctionBehavior {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FunctionBehavior {}
+impl crate::AsNodeKey for sqlparser::ast::FunctionBehavior {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FunctionCalledOnNull {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3259,7 +3589,11 @@ impl crate::Visitable for sqlparser::ast::FunctionCalledOnNull {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FunctionCalledOnNull {}
+impl crate::AsNodeKey for sqlparser::ast::FunctionCalledOnNull {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FunctionDesc {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3279,7 +3613,11 @@ impl crate::Visitable for sqlparser::ast::FunctionDesc {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FunctionDesc {}
+impl crate::AsNodeKey for sqlparser::ast::FunctionDesc {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FunctionDeterminismSpecifier {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3301,7 +3639,11 @@ impl crate::Visitable for sqlparser::ast::FunctionDeterminismSpecifier {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FunctionDeterminismSpecifier {}
+impl crate::AsNodeKey for sqlparser::ast::FunctionDeterminismSpecifier {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::FunctionParallel {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3324,7 +3666,11 @@ impl crate::Visitable for sqlparser::ast::FunctionParallel {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::FunctionParallel {}
+impl crate::AsNodeKey for sqlparser::ast::FunctionParallel {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::GeneratedAs {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3347,7 +3693,11 @@ impl crate::Visitable for sqlparser::ast::GeneratedAs {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::GeneratedAs {}
+impl crate::AsNodeKey for sqlparser::ast::GeneratedAs {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::GeneratedExpressionMode {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3369,7 +3719,11 @@ impl crate::Visitable for sqlparser::ast::GeneratedExpressionMode {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::GeneratedExpressionMode {}
+impl crate::AsNodeKey for sqlparser::ast::GeneratedExpressionMode {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::GrantObjects {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3404,7 +3758,11 @@ impl crate::Visitable for sqlparser::ast::GrantObjects {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::GrantObjects {}
+impl crate::AsNodeKey for sqlparser::ast::GrantObjects {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::GroupByExpr {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3431,7 +3789,11 @@ impl crate::Visitable for sqlparser::ast::GroupByExpr {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::GroupByExpr {}
+impl crate::AsNodeKey for sqlparser::ast::GroupByExpr {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::GroupByWithModifier {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3454,7 +3816,11 @@ impl crate::Visitable for sqlparser::ast::GroupByWithModifier {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::GroupByWithModifier {}
+impl crate::AsNodeKey for sqlparser::ast::GroupByWithModifier {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::HavingBound {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3474,7 +3840,11 @@ impl crate::Visitable for sqlparser::ast::HavingBound {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::HavingBound {}
+impl crate::AsNodeKey for sqlparser::ast::HavingBound {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::HavingBoundKind {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3496,7 +3866,11 @@ impl crate::Visitable for sqlparser::ast::HavingBoundKind {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::HavingBoundKind {}
+impl crate::AsNodeKey for sqlparser::ast::HavingBoundKind {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::HiveDelimiter {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3522,7 +3896,11 @@ impl crate::Visitable for sqlparser::ast::HiveDelimiter {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::HiveDelimiter {}
+impl crate::AsNodeKey for sqlparser::ast::HiveDelimiter {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::HiveDescribeFormat {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3544,7 +3922,11 @@ impl crate::Visitable for sqlparser::ast::HiveDescribeFormat {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::HiveDescribeFormat {}
+impl crate::AsNodeKey for sqlparser::ast::HiveDescribeFormat {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::HiveDistributionStyle {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3577,7 +3959,11 @@ impl crate::Visitable for sqlparser::ast::HiveDistributionStyle {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::HiveDistributionStyle {}
+impl crate::AsNodeKey for sqlparser::ast::HiveDistributionStyle {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::HiveFormat {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3599,7 +3985,11 @@ impl crate::Visitable for sqlparser::ast::HiveFormat {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::HiveFormat {}
+impl crate::AsNodeKey for sqlparser::ast::HiveFormat {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::HiveIOFormat {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3629,7 +4019,11 @@ impl crate::Visitable for sqlparser::ast::HiveIOFormat {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::HiveIOFormat {}
+impl crate::AsNodeKey for sqlparser::ast::HiveIOFormat {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::HiveRowDelimiter {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3649,7 +4043,11 @@ impl crate::Visitable for sqlparser::ast::HiveRowDelimiter {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::HiveRowDelimiter {}
+impl crate::AsNodeKey for sqlparser::ast::HiveRowDelimiter {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::HiveRowFormat {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3675,7 +4073,11 @@ impl crate::Visitable for sqlparser::ast::HiveRowFormat {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::HiveRowFormat {}
+impl crate::AsNodeKey for sqlparser::ast::HiveRowFormat {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::HiveSetLocation {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3695,7 +4097,11 @@ impl crate::Visitable for sqlparser::ast::HiveSetLocation {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::HiveSetLocation {}
+impl crate::AsNodeKey for sqlparser::ast::HiveSetLocation {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Ident {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3715,7 +4121,11 @@ impl crate::Visitable for sqlparser::ast::Ident {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Ident {}
+impl crate::AsNodeKey for sqlparser::ast::Ident {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::IdentWithAlias {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3735,7 +4145,11 @@ impl crate::Visitable for sqlparser::ast::IdentWithAlias {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::IdentWithAlias {}
+impl crate::AsNodeKey for sqlparser::ast::IdentWithAlias {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::IdentityParameters {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3755,7 +4169,11 @@ impl crate::Visitable for sqlparser::ast::IdentityParameters {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::IdentityParameters {}
+impl crate::AsNodeKey for sqlparser::ast::IdentityParameters {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::IdentityProperty {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3775,7 +4193,11 @@ impl crate::Visitable for sqlparser::ast::IdentityProperty {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::IdentityProperty {}
+impl crate::AsNodeKey for sqlparser::ast::IdentityProperty {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::IdentityPropertyFormatKind {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3791,7 +4213,9 @@ impl crate::Visitable for sqlparser::ast::IdentityPropertyFormatKind {
                     sqlparser::ast::IdentityPropertyFormatKind::FunctionCall(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::IdentityPropertyFormatKind::StartAndIncrement(field0) => {
+                    sqlparser::ast::IdentityPropertyFormatKind::StartAndIncrement(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                 }
@@ -3801,7 +4225,11 @@ impl crate::Visitable for sqlparser::ast::IdentityPropertyFormatKind {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::IdentityPropertyFormatKind {}
+impl crate::AsNodeKey for sqlparser::ast::IdentityPropertyFormatKind {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::IdentityPropertyKind {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3827,7 +4255,11 @@ impl crate::Visitable for sqlparser::ast::IdentityPropertyKind {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::IdentityPropertyKind {}
+impl crate::AsNodeKey for sqlparser::ast::IdentityPropertyKind {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::IdentityPropertyOrder {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3849,7 +4281,11 @@ impl crate::Visitable for sqlparser::ast::IdentityPropertyOrder {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::IdentityPropertyOrder {}
+impl crate::AsNodeKey for sqlparser::ast::IdentityPropertyOrder {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::IlikeSelectItem {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3868,7 +4304,11 @@ impl crate::Visitable for sqlparser::ast::IlikeSelectItem {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::IlikeSelectItem {}
+impl crate::AsNodeKey for sqlparser::ast::IlikeSelectItem {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::IndexOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3894,7 +4334,11 @@ impl crate::Visitable for sqlparser::ast::IndexOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::IndexOption {}
+impl crate::AsNodeKey for sqlparser::ast::IndexOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::IndexType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3916,7 +4360,11 @@ impl crate::Visitable for sqlparser::ast::IndexType {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::IndexType {}
+impl crate::AsNodeKey for sqlparser::ast::IndexType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Insert {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3950,7 +4398,11 @@ impl crate::Visitable for sqlparser::ast::Insert {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Insert {}
+impl crate::AsNodeKey for sqlparser::ast::Insert {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::InsertAliases {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3970,7 +4422,11 @@ impl crate::Visitable for sqlparser::ast::InsertAliases {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::InsertAliases {}
+impl crate::AsNodeKey for sqlparser::ast::InsertAliases {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Interpolate {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -3989,7 +4445,11 @@ impl crate::Visitable for sqlparser::ast::Interpolate {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Interpolate {}
+impl crate::AsNodeKey for sqlparser::ast::Interpolate {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::InterpolateExpr {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4009,7 +4469,11 @@ impl crate::Visitable for sqlparser::ast::InterpolateExpr {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::InterpolateExpr {}
+impl crate::AsNodeKey for sqlparser::ast::InterpolateExpr {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Interval {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4032,7 +4496,11 @@ impl crate::Visitable for sqlparser::ast::Interval {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Interval {}
+impl crate::AsNodeKey for sqlparser::ast::Interval {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Join {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4053,7 +4521,11 @@ impl crate::Visitable for sqlparser::ast::Join {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Join {}
+impl crate::AsNodeKey for sqlparser::ast::Join {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::JoinConstraint {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4081,7 +4553,11 @@ impl crate::Visitable for sqlparser::ast::JoinConstraint {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::JoinConstraint {}
+impl crate::AsNodeKey for sqlparser::ast::JoinConstraint {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::JoinOperator {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4135,7 +4611,11 @@ impl crate::Visitable for sqlparser::ast::JoinOperator {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::JoinOperator {}
+impl crate::AsNodeKey for sqlparser::ast::JoinOperator {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::JsonPath {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4154,7 +4634,11 @@ impl crate::Visitable for sqlparser::ast::JsonPath {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::JsonPath {}
+impl crate::AsNodeKey for sqlparser::ast::JsonPath {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::JsonPathElem {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4181,7 +4665,11 @@ impl crate::Visitable for sqlparser::ast::JsonPathElem {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::JsonPathElem {}
+impl crate::AsNodeKey for sqlparser::ast::JsonPathElem {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::JsonTableColumn {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4210,7 +4698,11 @@ impl crate::Visitable for sqlparser::ast::JsonTableColumn {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::JsonTableColumn {}
+impl crate::AsNodeKey for sqlparser::ast::JsonTableColumn {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::JsonTableColumnErrorHandling {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4235,7 +4727,11 @@ impl crate::Visitable for sqlparser::ast::JsonTableColumnErrorHandling {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::JsonTableColumnErrorHandling {}
+impl crate::AsNodeKey for sqlparser::ast::JsonTableColumnErrorHandling {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::JsonTableNamedColumn {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4259,7 +4755,11 @@ impl crate::Visitable for sqlparser::ast::JsonTableNamedColumn {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::JsonTableNamedColumn {}
+impl crate::AsNodeKey for sqlparser::ast::JsonTableNamedColumn {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::JsonTableNestedColumn {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4279,7 +4779,11 @@ impl crate::Visitable for sqlparser::ast::JsonTableNestedColumn {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::JsonTableNestedColumn {}
+impl crate::AsNodeKey for sqlparser::ast::JsonTableNestedColumn {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::KeyOrIndexDisplay {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4302,7 +4806,11 @@ impl crate::Visitable for sqlparser::ast::KeyOrIndexDisplay {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::KeyOrIndexDisplay {}
+impl crate::AsNodeKey for sqlparser::ast::KeyOrIndexDisplay {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::KillType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4325,7 +4833,11 @@ impl crate::Visitable for sqlparser::ast::KillType {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::KillType {}
+impl crate::AsNodeKey for sqlparser::ast::KillType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::LambdaFunction {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4345,7 +4857,11 @@ impl crate::Visitable for sqlparser::ast::LambdaFunction {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::LambdaFunction {}
+impl crate::AsNodeKey for sqlparser::ast::LambdaFunction {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::LateralView {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4367,7 +4883,11 @@ impl crate::Visitable for sqlparser::ast::LateralView {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::LateralView {}
+impl crate::AsNodeKey for sqlparser::ast::LateralView {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ListAggOnOverflow {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4381,7 +4901,10 @@ impl crate::Visitable for sqlparser::ast::ListAggOnOverflow {
             |visitor| {
                 match self {
                     sqlparser::ast::ListAggOnOverflow::Error => {}
-                    sqlparser::ast::ListAggOnOverflow::Truncate { filler, with_count } => {
+                    sqlparser::ast::ListAggOnOverflow::Truncate {
+                        filler,
+                        with_count,
+                    } => {
                         filler.accept(visitor)?;
                         with_count.accept(visitor)?;
                     }
@@ -4392,7 +4915,11 @@ impl crate::Visitable for sqlparser::ast::ListAggOnOverflow {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ListAggOnOverflow {}
+impl crate::AsNodeKey for sqlparser::ast::ListAggOnOverflow {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::LockClause {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4413,7 +4940,11 @@ impl crate::Visitable for sqlparser::ast::LockClause {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::LockClause {}
+impl crate::AsNodeKey for sqlparser::ast::LockClause {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::LockTable {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4434,7 +4965,11 @@ impl crate::Visitable for sqlparser::ast::LockTable {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::LockTable {}
+impl crate::AsNodeKey for sqlparser::ast::LockTable {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::LockTableType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4460,7 +4995,11 @@ impl crate::Visitable for sqlparser::ast::LockTableType {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::LockTableType {}
+impl crate::AsNodeKey for sqlparser::ast::LockTableType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::LockType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4482,7 +5021,11 @@ impl crate::Visitable for sqlparser::ast::LockType {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::LockType {}
+impl crate::AsNodeKey for sqlparser::ast::LockType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MacroArg {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4502,7 +5045,11 @@ impl crate::Visitable for sqlparser::ast::MacroArg {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MacroArg {}
+impl crate::AsNodeKey for sqlparser::ast::MacroArg {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MacroDefinition {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4528,7 +5075,11 @@ impl crate::Visitable for sqlparser::ast::MacroDefinition {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MacroDefinition {}
+impl crate::AsNodeKey for sqlparser::ast::MacroDefinition {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Map {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4547,7 +5098,11 @@ impl crate::Visitable for sqlparser::ast::Map {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Map {}
+impl crate::AsNodeKey for sqlparser::ast::Map {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MapAccessKey {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4567,7 +5122,11 @@ impl crate::Visitable for sqlparser::ast::MapAccessKey {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MapAccessKey {}
+impl crate::AsNodeKey for sqlparser::ast::MapAccessKey {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MapAccessSyntax {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4589,7 +5148,11 @@ impl crate::Visitable for sqlparser::ast::MapAccessSyntax {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MapAccessSyntax {}
+impl crate::AsNodeKey for sqlparser::ast::MapAccessSyntax {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MapEntry {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4609,7 +5172,11 @@ impl crate::Visitable for sqlparser::ast::MapEntry {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MapEntry {}
+impl crate::AsNodeKey for sqlparser::ast::MapEntry {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MatchRecognizePattern {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4640,7 +5207,10 @@ impl crate::Visitable for sqlparser::ast::MatchRecognizePattern {
                     sqlparser::ast::MatchRecognizePattern::Alternation(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::MatchRecognizePattern::Repetition(field0, field1) => {
+                    sqlparser::ast::MatchRecognizePattern::Repetition(
+                        field0,
+                        field1,
+                    ) => {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
                     }
@@ -4651,7 +5221,11 @@ impl crate::Visitable for sqlparser::ast::MatchRecognizePattern {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MatchRecognizePattern {}
+impl crate::AsNodeKey for sqlparser::ast::MatchRecognizePattern {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MatchRecognizeSymbol {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4676,7 +5250,11 @@ impl crate::Visitable for sqlparser::ast::MatchRecognizeSymbol {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MatchRecognizeSymbol {}
+impl crate::AsNodeKey for sqlparser::ast::MatchRecognizeSymbol {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Measure {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4696,7 +5274,11 @@ impl crate::Visitable for sqlparser::ast::Measure {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Measure {}
+impl crate::AsNodeKey for sqlparser::ast::Measure {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MergeAction {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4723,7 +5305,11 @@ impl crate::Visitable for sqlparser::ast::MergeAction {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MergeAction {}
+impl crate::AsNodeKey for sqlparser::ast::MergeAction {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MergeClause {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4744,7 +5330,11 @@ impl crate::Visitable for sqlparser::ast::MergeClause {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MergeClause {}
+impl crate::AsNodeKey for sqlparser::ast::MergeClause {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MergeClauseKind {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4768,7 +5358,11 @@ impl crate::Visitable for sqlparser::ast::MergeClauseKind {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MergeClauseKind {}
+impl crate::AsNodeKey for sqlparser::ast::MergeClauseKind {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MergeInsertExpr {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4788,7 +5382,11 @@ impl crate::Visitable for sqlparser::ast::MergeInsertExpr {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MergeInsertExpr {}
+impl crate::AsNodeKey for sqlparser::ast::MergeInsertExpr {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MergeInsertKind {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4812,7 +5410,11 @@ impl crate::Visitable for sqlparser::ast::MergeInsertKind {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MergeInsertKind {}
+impl crate::AsNodeKey for sqlparser::ast::MergeInsertKind {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MinMaxValue {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4837,7 +5439,11 @@ impl crate::Visitable for sqlparser::ast::MinMaxValue {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MinMaxValue {}
+impl crate::AsNodeKey for sqlparser::ast::MinMaxValue {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MySQLColumnPosition {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4861,7 +5467,11 @@ impl crate::Visitable for sqlparser::ast::MySQLColumnPosition {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MySQLColumnPosition {}
+impl crate::AsNodeKey for sqlparser::ast::MySQLColumnPosition {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::MysqlInsertPriority {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4884,7 +5494,11 @@ impl crate::Visitable for sqlparser::ast::MysqlInsertPriority {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::MysqlInsertPriority {}
+impl crate::AsNodeKey for sqlparser::ast::MysqlInsertPriority {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::NamedWindowDefinition {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4904,7 +5518,11 @@ impl crate::Visitable for sqlparser::ast::NamedWindowDefinition {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::NamedWindowDefinition {}
+impl crate::AsNodeKey for sqlparser::ast::NamedWindowDefinition {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::NamedWindowExpr {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4930,7 +5548,11 @@ impl crate::Visitable for sqlparser::ast::NamedWindowExpr {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::NamedWindowExpr {}
+impl crate::AsNodeKey for sqlparser::ast::NamedWindowExpr {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::NonBlock {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4952,7 +5574,11 @@ impl crate::Visitable for sqlparser::ast::NonBlock {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::NonBlock {}
+impl crate::AsNodeKey for sqlparser::ast::NonBlock {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::NullTreatment {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4974,7 +5600,11 @@ impl crate::Visitable for sqlparser::ast::NullTreatment {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::NullTreatment {}
+impl crate::AsNodeKey for sqlparser::ast::NullTreatment {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ObjectName {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -4993,7 +5623,11 @@ impl crate::Visitable for sqlparser::ast::ObjectName {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ObjectName {}
+impl crate::AsNodeKey for sqlparser::ast::ObjectName {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ObjectType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5022,7 +5656,11 @@ impl crate::Visitable for sqlparser::ast::ObjectType {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ObjectType {}
+impl crate::AsNodeKey for sqlparser::ast::ObjectType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Offset {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5042,7 +5680,11 @@ impl crate::Visitable for sqlparser::ast::Offset {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Offset {}
+impl crate::AsNodeKey for sqlparser::ast::Offset {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::OffsetRows {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5065,7 +5707,11 @@ impl crate::Visitable for sqlparser::ast::OffsetRows {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::OffsetRows {}
+impl crate::AsNodeKey for sqlparser::ast::OffsetRows {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::OnCommit {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5088,7 +5734,11 @@ impl crate::Visitable for sqlparser::ast::OnCommit {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::OnCommit {}
+impl crate::AsNodeKey for sqlparser::ast::OnCommit {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::OnConflict {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5108,7 +5758,11 @@ impl crate::Visitable for sqlparser::ast::OnConflict {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::OnConflict {}
+impl crate::AsNodeKey for sqlparser::ast::OnConflict {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::OnConflictAction {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5132,7 +5786,11 @@ impl crate::Visitable for sqlparser::ast::OnConflictAction {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::OnConflictAction {}
+impl crate::AsNodeKey for sqlparser::ast::OnConflictAction {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::OnInsert {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5159,7 +5817,11 @@ impl crate::Visitable for sqlparser::ast::OnInsert {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::OnInsert {}
+impl crate::AsNodeKey for sqlparser::ast::OnInsert {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::OperateFunctionArg {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5181,7 +5843,11 @@ impl crate::Visitable for sqlparser::ast::OperateFunctionArg {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::OperateFunctionArg {}
+impl crate::AsNodeKey for sqlparser::ast::OperateFunctionArg {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::OrderBy {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5201,7 +5867,11 @@ impl crate::Visitable for sqlparser::ast::OrderBy {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::OrderBy {}
+impl crate::AsNodeKey for sqlparser::ast::OrderBy {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::OrderByExpr {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5223,7 +5893,11 @@ impl crate::Visitable for sqlparser::ast::OrderByExpr {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::OrderByExpr {}
+impl crate::AsNodeKey for sqlparser::ast::OrderByExpr {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Owner {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5249,7 +5923,11 @@ impl crate::Visitable for sqlparser::ast::Owner {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Owner {}
+impl crate::AsNodeKey for sqlparser::ast::Owner {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Partition {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5281,7 +5959,11 @@ impl crate::Visitable for sqlparser::ast::Partition {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Partition {}
+impl crate::AsNodeKey for sqlparser::ast::Partition {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::PartitionRangeDirection {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5303,7 +5985,11 @@ impl crate::Visitable for sqlparser::ast::PartitionRangeDirection {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::PartitionRangeDirection {}
+impl crate::AsNodeKey for sqlparser::ast::PartitionRangeDirection {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Password {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5327,7 +6013,11 @@ impl crate::Visitable for sqlparser::ast::Password {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Password {}
+impl crate::AsNodeKey for sqlparser::ast::Password {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::PivotValueSource {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5356,7 +6046,11 @@ impl crate::Visitable for sqlparser::ast::PivotValueSource {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::PivotValueSource {}
+impl crate::AsNodeKey for sqlparser::ast::PivotValueSource {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Privileges {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5369,9 +6063,7 @@ impl crate::Visitable for sqlparser::ast::Privileges {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqlparser::ast::Privileges::All {
-                        with_privileges_keyword,
-                    } => {
+                    sqlparser::ast::Privileges::All { with_privileges_keyword } => {
                         with_privileges_keyword.accept(visitor)?;
                     }
                     sqlparser::ast::Privileges::Actions(field0) => {
@@ -5384,7 +6076,11 @@ impl crate::Visitable for sqlparser::ast::Privileges {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Privileges {}
+impl crate::AsNodeKey for sqlparser::ast::Privileges {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ProcedureParam {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5404,7 +6100,11 @@ impl crate::Visitable for sqlparser::ast::ProcedureParam {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ProcedureParam {}
+impl crate::AsNodeKey for sqlparser::ast::ProcedureParam {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ProjectionSelect {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5425,7 +6125,11 @@ impl crate::Visitable for sqlparser::ast::ProjectionSelect {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ProjectionSelect {}
+impl crate::AsNodeKey for sqlparser::ast::ProjectionSelect {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Query {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5454,7 +6158,11 @@ impl crate::Visitable for sqlparser::ast::Query {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Query {}
+impl crate::AsNodeKey for sqlparser::ast::Query {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ReferentialAction {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5479,7 +6187,11 @@ impl crate::Visitable for sqlparser::ast::ReferentialAction {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ReferentialAction {}
+impl crate::AsNodeKey for sqlparser::ast::ReferentialAction {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::RenameSelectItem {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5505,7 +6217,11 @@ impl crate::Visitable for sqlparser::ast::RenameSelectItem {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::RenameSelectItem {}
+impl crate::AsNodeKey for sqlparser::ast::RenameSelectItem {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::RepetitionQuantifier {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5541,7 +6257,11 @@ impl crate::Visitable for sqlparser::ast::RepetitionQuantifier {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::RepetitionQuantifier {}
+impl crate::AsNodeKey for sqlparser::ast::RepetitionQuantifier {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ReplaceSelectElement {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5562,7 +6282,11 @@ impl crate::Visitable for sqlparser::ast::ReplaceSelectElement {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ReplaceSelectElement {}
+impl crate::AsNodeKey for sqlparser::ast::ReplaceSelectElement {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ReplaceSelectItem {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5581,7 +6305,11 @@ impl crate::Visitable for sqlparser::ast::ReplaceSelectItem {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ReplaceSelectItem {}
+impl crate::AsNodeKey for sqlparser::ast::ReplaceSelectItem {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ResetConfig {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5605,7 +6333,11 @@ impl crate::Visitable for sqlparser::ast::ResetConfig {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ResetConfig {}
+impl crate::AsNodeKey for sqlparser::ast::ResetConfig {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::RoleOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5655,7 +6387,11 @@ impl crate::Visitable for sqlparser::ast::RoleOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::RoleOption {}
+impl crate::AsNodeKey for sqlparser::ast::RoleOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::RowAccessPolicy {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5675,7 +6411,11 @@ impl crate::Visitable for sqlparser::ast::RowAccessPolicy {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::RowAccessPolicy {}
+impl crate::AsNodeKey for sqlparser::ast::RowAccessPolicy {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::RowsPerMatch {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5699,7 +6439,11 @@ impl crate::Visitable for sqlparser::ast::RowsPerMatch {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::RowsPerMatch {}
+impl crate::AsNodeKey for sqlparser::ast::RowsPerMatch {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SchemaName {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5729,7 +6473,11 @@ impl crate::Visitable for sqlparser::ast::SchemaName {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SchemaName {}
+impl crate::AsNodeKey for sqlparser::ast::SchemaName {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SearchModifier {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5753,7 +6501,11 @@ impl crate::Visitable for sqlparser::ast::SearchModifier {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SearchModifier {}
+impl crate::AsNodeKey for sqlparser::ast::SearchModifier {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SecretOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5773,7 +6525,11 @@ impl crate::Visitable for sqlparser::ast::SecretOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SecretOption {}
+impl crate::AsNodeKey for sqlparser::ast::SecretOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Select {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5810,7 +6566,11 @@ impl crate::Visitable for sqlparser::ast::Select {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Select {}
+impl crate::AsNodeKey for sqlparser::ast::Select {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SelectInto {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5832,7 +6592,11 @@ impl crate::Visitable for sqlparser::ast::SelectInto {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SelectInto {}
+impl crate::AsNodeKey for sqlparser::ast::SelectInto {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SelectItem {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5866,7 +6630,11 @@ impl crate::Visitable for sqlparser::ast::SelectItem {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SelectItem {}
+impl crate::AsNodeKey for sqlparser::ast::SelectItem {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SequenceOptions {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5906,7 +6674,11 @@ impl crate::Visitable for sqlparser::ast::SequenceOptions {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SequenceOptions {}
+impl crate::AsNodeKey for sqlparser::ast::SequenceOptions {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SetConfigValue {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5931,7 +6703,11 @@ impl crate::Visitable for sqlparser::ast::SetConfigValue {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SetConfigValue {}
+impl crate::AsNodeKey for sqlparser::ast::SetConfigValue {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SetExpr {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -5980,7 +6756,11 @@ impl crate::Visitable for sqlparser::ast::SetExpr {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SetExpr {}
+impl crate::AsNodeKey for sqlparser::ast::SetExpr {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SetOperator {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -6003,7 +6783,11 @@ impl crate::Visitable for sqlparser::ast::SetOperator {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SetOperator {}
+impl crate::AsNodeKey for sqlparser::ast::SetOperator {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SetQuantifier {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -6029,7 +6813,11 @@ impl crate::Visitable for sqlparser::ast::SetQuantifier {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SetQuantifier {}
+impl crate::AsNodeKey for sqlparser::ast::SetQuantifier {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Setting {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -6049,7 +6837,11 @@ impl crate::Visitable for sqlparser::ast::Setting {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Setting {}
+impl crate::AsNodeKey for sqlparser::ast::Setting {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ShowClause {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -6071,7 +6863,11 @@ impl crate::Visitable for sqlparser::ast::ShowClause {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ShowClause {}
+impl crate::AsNodeKey for sqlparser::ast::ShowClause {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ShowCreateObject {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -6097,7 +6893,11 @@ impl crate::Visitable for sqlparser::ast::ShowCreateObject {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ShowCreateObject {}
+impl crate::AsNodeKey for sqlparser::ast::ShowCreateObject {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ShowStatementFilter {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -6129,7 +6929,11 @@ impl crate::Visitable for sqlparser::ast::ShowStatementFilter {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ShowStatementFilter {}
+impl crate::AsNodeKey for sqlparser::ast::ShowStatementFilter {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SqlOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -6168,7 +6972,11 @@ impl crate::Visitable for sqlparser::ast::SqlOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SqlOption {}
+impl crate::AsNodeKey for sqlparser::ast::SqlOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SqliteOnConflict {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -6193,7 +7001,11 @@ impl crate::Visitable for sqlparser::ast::SqliteOnConflict {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SqliteOnConflict {}
+impl crate::AsNodeKey for sqlparser::ast::SqliteOnConflict {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Statement {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -6598,11 +7410,7 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         schema.accept(visitor)?;
                         version.accept(visitor)?;
                     }
-                    sqlparser::ast::Statement::Fetch {
-                        name,
-                        direction,
-                        into,
-                    } => {
+                    sqlparser::ast::Statement::Fetch { name, direction, into } => {
                         name.accept(visitor)?;
                         direction.accept(visitor)?;
                         into.accept(visitor)?;
@@ -7020,10 +7828,7 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         options.accept(visitor)?;
                         query.accept(visitor)?;
                     }
-                    sqlparser::ast::Statement::UNCache {
-                        table_name,
-                        if_exists,
-                    } => {
+                    sqlparser::ast::Statement::UNCache { table_name, if_exists } => {
                         table_name.accept(visitor)?;
                         if_exists.accept(visitor)?;
                     }
@@ -7042,10 +7847,7 @@ impl crate::Visitable for sqlparser::ast::Statement {
                         sequence_options.accept(visitor)?;
                         owned_by.accept(visitor)?;
                     }
-                    sqlparser::ast::Statement::CreateType {
-                        name,
-                        representation,
-                    } => {
+                    sqlparser::ast::Statement::CreateType { name, representation } => {
                         name.accept(visitor)?;
                         representation.accept(visitor)?;
                     }
@@ -7090,7 +7892,11 @@ impl crate::Visitable for sqlparser::ast::Statement {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Statement {}
+impl crate::AsNodeKey for sqlparser::ast::Statement {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::StructBracketKind {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7112,7 +7918,11 @@ impl crate::Visitable for sqlparser::ast::StructBracketKind {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::StructBracketKind {}
+impl crate::AsNodeKey for sqlparser::ast::StructBracketKind {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::StructField {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7132,7 +7942,11 @@ impl crate::Visitable for sqlparser::ast::StructField {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::StructField {}
+impl crate::AsNodeKey for sqlparser::ast::StructField {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Subscript {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7164,7 +7978,11 @@ impl crate::Visitable for sqlparser::ast::Subscript {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Subscript {}
+impl crate::AsNodeKey for sqlparser::ast::Subscript {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::SymbolDefinition {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7184,7 +8002,11 @@ impl crate::Visitable for sqlparser::ast::SymbolDefinition {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::SymbolDefinition {}
+impl crate::AsNodeKey for sqlparser::ast::SymbolDefinition {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Table {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7204,7 +8026,11 @@ impl crate::Visitable for sqlparser::ast::Table {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Table {}
+impl crate::AsNodeKey for sqlparser::ast::Table {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TableAlias {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7224,7 +8050,11 @@ impl crate::Visitable for sqlparser::ast::TableAlias {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TableAlias {}
+impl crate::AsNodeKey for sqlparser::ast::TableAlias {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TableConstraint {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7319,7 +8149,11 @@ impl crate::Visitable for sqlparser::ast::TableConstraint {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TableConstraint {}
+impl crate::AsNodeKey for sqlparser::ast::TableConstraint {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TableEngine {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7339,7 +8173,11 @@ impl crate::Visitable for sqlparser::ast::TableEngine {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TableEngine {}
+impl crate::AsNodeKey for sqlparser::ast::TableEngine {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TableFactor {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7480,7 +8318,11 @@ impl crate::Visitable for sqlparser::ast::TableFactor {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TableFactor {}
+impl crate::AsNodeKey for sqlparser::ast::TableFactor {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TableFunctionArgs {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7500,7 +8342,11 @@ impl crate::Visitable for sqlparser::ast::TableFunctionArgs {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TableFunctionArgs {}
+impl crate::AsNodeKey for sqlparser::ast::TableFunctionArgs {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TableOptionsClustered {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7514,7 +8360,9 @@ impl crate::Visitable for sqlparser::ast::TableOptionsClustered {
             |visitor| {
                 match self {
                     sqlparser::ast::TableOptionsClustered::ColumnstoreIndex => {}
-                    sqlparser::ast::TableOptionsClustered::ColumnstoreIndexOrder(field0) => {
+                    sqlparser::ast::TableOptionsClustered::ColumnstoreIndexOrder(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::TableOptionsClustered::Index(field0) => {
@@ -7527,7 +8375,11 @@ impl crate::Visitable for sqlparser::ast::TableOptionsClustered {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TableOptionsClustered {}
+impl crate::AsNodeKey for sqlparser::ast::TableOptionsClustered {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TableVersion {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7550,7 +8402,11 @@ impl crate::Visitable for sqlparser::ast::TableVersion {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TableVersion {}
+impl crate::AsNodeKey for sqlparser::ast::TableVersion {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TableWithJoins {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7570,7 +8426,11 @@ impl crate::Visitable for sqlparser::ast::TableWithJoins {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TableWithJoins {}
+impl crate::AsNodeKey for sqlparser::ast::TableWithJoins {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Tag {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7590,7 +8450,11 @@ impl crate::Visitable for sqlparser::ast::Tag {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Tag {}
+impl crate::AsNodeKey for sqlparser::ast::Tag {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TagsColumnOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7610,7 +8474,11 @@ impl crate::Visitable for sqlparser::ast::TagsColumnOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TagsColumnOption {}
+impl crate::AsNodeKey for sqlparser::ast::TagsColumnOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TimezoneInfo {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7634,7 +8502,11 @@ impl crate::Visitable for sqlparser::ast::TimezoneInfo {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TimezoneInfo {}
+impl crate::AsNodeKey for sqlparser::ast::TimezoneInfo {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Top {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7655,7 +8527,11 @@ impl crate::Visitable for sqlparser::ast::Top {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Top {}
+impl crate::AsNodeKey for sqlparser::ast::Top {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TopQuantity {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7681,7 +8557,11 @@ impl crate::Visitable for sqlparser::ast::TopQuantity {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TopQuantity {}
+impl crate::AsNodeKey for sqlparser::ast::TopQuantity {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TransactionAccessMode {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7703,7 +8583,11 @@ impl crate::Visitable for sqlparser::ast::TransactionAccessMode {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TransactionAccessMode {}
+impl crate::AsNodeKey for sqlparser::ast::TransactionAccessMode {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TransactionIsolationLevel {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7727,7 +8611,11 @@ impl crate::Visitable for sqlparser::ast::TransactionIsolationLevel {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TransactionIsolationLevel {}
+impl crate::AsNodeKey for sqlparser::ast::TransactionIsolationLevel {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TransactionMode {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7753,7 +8641,11 @@ impl crate::Visitable for sqlparser::ast::TransactionMode {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TransactionMode {}
+impl crate::AsNodeKey for sqlparser::ast::TransactionMode {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TransactionModifier {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7776,7 +8668,11 @@ impl crate::Visitable for sqlparser::ast::TransactionModifier {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TransactionModifier {}
+impl crate::AsNodeKey for sqlparser::ast::TransactionModifier {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TriggerEvent {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7802,7 +8698,11 @@ impl crate::Visitable for sqlparser::ast::TriggerEvent {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TriggerEvent {}
+impl crate::AsNodeKey for sqlparser::ast::TriggerEvent {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TriggerExecBody {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7822,7 +8722,11 @@ impl crate::Visitable for sqlparser::ast::TriggerExecBody {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TriggerExecBody {}
+impl crate::AsNodeKey for sqlparser::ast::TriggerExecBody {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TriggerExecBodyType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7844,7 +8748,11 @@ impl crate::Visitable for sqlparser::ast::TriggerExecBodyType {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TriggerExecBodyType {}
+impl crate::AsNodeKey for sqlparser::ast::TriggerExecBodyType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TriggerObject {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7866,7 +8774,11 @@ impl crate::Visitable for sqlparser::ast::TriggerObject {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TriggerObject {}
+impl crate::AsNodeKey for sqlparser::ast::TriggerObject {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TriggerPeriod {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7889,7 +8801,11 @@ impl crate::Visitable for sqlparser::ast::TriggerPeriod {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TriggerPeriod {}
+impl crate::AsNodeKey for sqlparser::ast::TriggerPeriod {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TriggerReferencing {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7910,7 +8826,11 @@ impl crate::Visitable for sqlparser::ast::TriggerReferencing {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TriggerReferencing {}
+impl crate::AsNodeKey for sqlparser::ast::TriggerReferencing {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TriggerReferencingType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7932,7 +8852,11 @@ impl crate::Visitable for sqlparser::ast::TriggerReferencingType {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TriggerReferencingType {}
+impl crate::AsNodeKey for sqlparser::ast::TriggerReferencingType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TrimWhereField {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7955,7 +8879,11 @@ impl crate::Visitable for sqlparser::ast::TrimWhereField {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TrimWhereField {}
+impl crate::AsNodeKey for sqlparser::ast::TrimWhereField {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TruncateCascadeOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7977,7 +8905,11 @@ impl crate::Visitable for sqlparser::ast::TruncateCascadeOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TruncateCascadeOption {}
+impl crate::AsNodeKey for sqlparser::ast::TruncateCascadeOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TruncateIdentityOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -7999,7 +8931,11 @@ impl crate::Visitable for sqlparser::ast::TruncateIdentityOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TruncateIdentityOption {}
+impl crate::AsNodeKey for sqlparser::ast::TruncateIdentityOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::TruncateTableTarget {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8018,7 +8954,11 @@ impl crate::Visitable for sqlparser::ast::TruncateTableTarget {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::TruncateTableTarget {}
+impl crate::AsNodeKey for sqlparser::ast::TruncateTableTarget {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::UnaryOperator {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8047,7 +8987,11 @@ impl crate::Visitable for sqlparser::ast::UnaryOperator {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::UnaryOperator {}
+impl crate::AsNodeKey for sqlparser::ast::UnaryOperator {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::UnionField {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8067,7 +9011,11 @@ impl crate::Visitable for sqlparser::ast::UnionField {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::UnionField {}
+impl crate::AsNodeKey for sqlparser::ast::UnionField {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Use {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8103,7 +9051,11 @@ impl crate::Visitable for sqlparser::ast::Use {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Use {}
+impl crate::AsNodeKey for sqlparser::ast::Use {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::UserDefinedTypeCompositeAttributeDef {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8124,7 +9076,11 @@ impl crate::Visitable for sqlparser::ast::UserDefinedTypeCompositeAttributeDef {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::UserDefinedTypeCompositeAttributeDef {}
+impl crate::AsNodeKey for sqlparser::ast::UserDefinedTypeCompositeAttributeDef {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::UserDefinedTypeRepresentation {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8137,7 +9093,9 @@ impl crate::Visitable for sqlparser::ast::UserDefinedTypeRepresentation {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqlparser::ast::UserDefinedTypeRepresentation::Composite { attributes } => {
+                    sqlparser::ast::UserDefinedTypeRepresentation::Composite {
+                        attributes,
+                    } => {
                         attributes.accept(visitor)?;
                     }
                     sqlparser::ast::UserDefinedTypeRepresentation::Enum { labels } => {
@@ -8150,7 +9108,11 @@ impl crate::Visitable for sqlparser::ast::UserDefinedTypeRepresentation {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::UserDefinedTypeRepresentation {}
+impl crate::AsNodeKey for sqlparser::ast::UserDefinedTypeRepresentation {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::UtilityOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8170,7 +9132,11 @@ impl crate::Visitable for sqlparser::ast::UtilityOption {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::UtilityOption {}
+impl crate::AsNodeKey for sqlparser::ast::UtilityOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Value {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8211,10 +9177,14 @@ impl crate::Visitable for sqlparser::ast::Value {
                     sqlparser::ast::Value::DoubleQuotedByteStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::Value::TripleSingleQuotedByteStringLiteral(field0) => {
+                    sqlparser::ast::Value::TripleSingleQuotedByteStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::Value::TripleDoubleQuotedByteStringLiteral(field0) => {
+                    sqlparser::ast::Value::TripleDoubleQuotedByteStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::Value::SingleQuotedRawStringLiteral(field0) => {
@@ -8223,10 +9193,14 @@ impl crate::Visitable for sqlparser::ast::Value {
                     sqlparser::ast::Value::DoubleQuotedRawStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::Value::TripleSingleQuotedRawStringLiteral(field0) => {
+                    sqlparser::ast::Value::TripleSingleQuotedRawStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::ast::Value::TripleDoubleQuotedRawStringLiteral(field0) => {
+                    sqlparser::ast::Value::TripleDoubleQuotedRawStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                     sqlparser::ast::Value::NationalStringLiteral(field0) => {
@@ -8252,7 +9226,11 @@ impl crate::Visitable for sqlparser::ast::Value {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Value {}
+impl crate::AsNodeKey for sqlparser::ast::Value {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ValueTableMode {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8274,7 +9252,11 @@ impl crate::Visitable for sqlparser::ast::ValueTableMode {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ValueTableMode {}
+impl crate::AsNodeKey for sqlparser::ast::ValueTableMode {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::Values {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8294,7 +9276,11 @@ impl crate::Visitable for sqlparser::ast::Values {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::Values {}
+impl crate::AsNodeKey for sqlparser::ast::Values {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::ViewColumnDef {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8315,7 +9301,11 @@ impl crate::Visitable for sqlparser::ast::ViewColumnDef {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::ViewColumnDef {}
+impl crate::AsNodeKey for sqlparser::ast::ViewColumnDef {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::WildcardAdditionalOptions {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8338,7 +9328,11 @@ impl crate::Visitable for sqlparser::ast::WildcardAdditionalOptions {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::WildcardAdditionalOptions {}
+impl crate::AsNodeKey for sqlparser::ast::WildcardAdditionalOptions {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::WindowFrame {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8359,7 +9353,11 @@ impl crate::Visitable for sqlparser::ast::WindowFrame {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::WindowFrame {}
+impl crate::AsNodeKey for sqlparser::ast::WindowFrame {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::WindowFrameBound {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8386,7 +9384,11 @@ impl crate::Visitable for sqlparser::ast::WindowFrameBound {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::WindowFrameBound {}
+impl crate::AsNodeKey for sqlparser::ast::WindowFrameBound {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::WindowFrameUnits {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8409,7 +9411,11 @@ impl crate::Visitable for sqlparser::ast::WindowFrameUnits {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::WindowFrameUnits {}
+impl crate::AsNodeKey for sqlparser::ast::WindowFrameUnits {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::WindowSpec {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8431,7 +9437,11 @@ impl crate::Visitable for sqlparser::ast::WindowSpec {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::WindowSpec {}
+impl crate::AsNodeKey for sqlparser::ast::WindowSpec {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::WindowType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8457,7 +9467,11 @@ impl crate::Visitable for sqlparser::ast::WindowType {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::WindowType {}
+impl crate::AsNodeKey for sqlparser::ast::WindowType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::With {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8477,7 +9491,11 @@ impl crate::Visitable for sqlparser::ast::With {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::With {}
+impl crate::AsNodeKey for sqlparser::ast::With {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::WithFill {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8498,7 +9516,11 @@ impl crate::Visitable for sqlparser::ast::WithFill {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::WithFill {}
+impl crate::AsNodeKey for sqlparser::ast::WithFill {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8519,9 +9541,14 @@ impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::DataLoadin
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOption {}
+impl crate::AsNodeKey for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
-impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptionType {
+impl crate::Visitable
+for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptionType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
         visitor: &mut V,
@@ -8542,9 +9569,15 @@ impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::DataLoadin
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptionType {}
+impl crate::AsNodeKey
+for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptionType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
-impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptions {
+impl crate::Visitable
+for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptions {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
         visitor: &mut V,
@@ -8561,9 +9594,15 @@ impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::DataLoadin
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptions {}
+impl crate::AsNodeKey
+for sqlparser::ast::helpers::stmt_data_loading::DataLoadingOptions {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
-impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::StageLoadSelectItem {
+impl crate::Visitable
+for sqlparser::ast::helpers::stmt_data_loading::StageLoadSelectItem {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
         visitor: &mut V,
@@ -8583,7 +9622,12 @@ impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::StageLoadS
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::helpers::stmt_data_loading::StageLoadSelectItem {}
+impl crate::AsNodeKey
+for sqlparser::ast::helpers::stmt_data_loading::StageLoadSelectItem {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::StageParamsObject {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -8606,7 +9650,11 @@ impl crate::Visitable for sqlparser::ast::helpers::stmt_data_loading::StageParam
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::ast::helpers::stmt_data_loading::StageParamsObject {}
+impl crate::AsNodeKey for sqlparser::ast::helpers::stmt_data_loading::StageParamsObject {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::keywords::Keyword {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9402,7 +10450,11 @@ impl crate::Visitable for sqlparser::keywords::Keyword {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::keywords::Keyword {}
+impl crate::AsNodeKey for sqlparser::keywords::Keyword {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::tokenizer::Token {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9441,28 +10493,44 @@ impl crate::Visitable for sqlparser::tokenizer::Token {
                     sqlparser::tokenizer::Token::DollarQuotedString(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::SingleQuotedByteStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::SingleQuotedByteStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::DoubleQuotedByteStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::DoubleQuotedByteStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::TripleSingleQuotedByteStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::TripleSingleQuotedByteStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::TripleDoubleQuotedByteStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::TripleDoubleQuotedByteStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::SingleQuotedRawStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::SingleQuotedRawStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::DoubleQuotedRawStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::DoubleQuotedRawStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::TripleSingleQuotedRawStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::TripleSingleQuotedRawStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
-                    sqlparser::tokenizer::Token::TripleDoubleQuotedRawStringLiteral(field0) => {
+                    sqlparser::tokenizer::Token::TripleDoubleQuotedRawStringLiteral(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                     sqlparser::tokenizer::Token::NationalStringLiteral(field0) => {
@@ -9555,7 +10623,11 @@ impl crate::Visitable for sqlparser::tokenizer::Token {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::tokenizer::Token {}
+impl crate::AsNodeKey for sqlparser::tokenizer::Token {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::tokenizer::Whitespace {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9571,7 +10643,10 @@ impl crate::Visitable for sqlparser::tokenizer::Whitespace {
                     sqlparser::tokenizer::Whitespace::Space => {}
                     sqlparser::tokenizer::Whitespace::Newline => {}
                     sqlparser::tokenizer::Whitespace::Tab => {}
-                    sqlparser::tokenizer::Whitespace::SingleLineComment { comment, prefix } => {
+                    sqlparser::tokenizer::Whitespace::SingleLineComment {
+                        comment,
+                        prefix,
+                    } => {
                         comment.accept(visitor)?;
                         prefix.accept(visitor)?;
                     }
@@ -9585,7 +10660,11 @@ impl crate::Visitable for sqlparser::tokenizer::Whitespace {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::tokenizer::Whitespace {}
+impl crate::AsNodeKey for sqlparser::tokenizer::Whitespace {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for sqlparser::tokenizer::Word {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9606,7 +10685,11 @@ impl crate::Visitable for sqlparser::tokenizer::Word {
     }
 }
 #[automatically_derived]
-impl crate::Semantic for sqlparser::tokenizer::Word {}
+impl crate::AsNodeKey for sqlparser::tokenizer::Word {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for bigdecimal::BigDecimal {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9617,12 +10700,16 @@ impl crate::Visitable for bigdecimal::BigDecimal {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
 #[automatically_derived]
-impl crate::Semantic for bigdecimal::BigDecimal {}
+impl crate::AsNodeKey for bigdecimal::BigDecimal {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for bool {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9633,12 +10720,16 @@ impl crate::Visitable for bool {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
 #[automatically_derived]
-impl crate::Semantic for bool {}
+impl crate::AsNodeKey for bool {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for char {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9649,12 +10740,16 @@ impl crate::Visitable for char {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
 #[automatically_derived]
-impl crate::Semantic for char {}
+impl crate::AsNodeKey for char {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for i16 {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9665,12 +10760,16 @@ impl crate::Visitable for i16 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
 #[automatically_derived]
-impl crate::Semantic for i16 {}
+impl crate::AsNodeKey for i16 {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for i32 {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9681,12 +10780,16 @@ impl crate::Visitable for i32 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
 #[automatically_derived]
-impl crate::Semantic for i32 {}
+impl crate::AsNodeKey for i32 {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for i64 {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9697,12 +10800,16 @@ impl crate::Visitable for i64 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
 #[automatically_derived]
-impl crate::Semantic for i64 {}
+impl crate::AsNodeKey for i64 {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for i8 {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9713,12 +10820,16 @@ impl crate::Visitable for i8 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
 #[automatically_derived]
-impl crate::Semantic for i8 {}
+impl crate::AsNodeKey for i8 {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for String {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9729,12 +10840,16 @@ impl crate::Visitable for String {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
 #[automatically_derived]
-impl crate::Semantic for String {}
+impl crate::AsNodeKey for String {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for u16 {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9745,12 +10860,16 @@ impl crate::Visitable for u16 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
 #[automatically_derived]
-impl crate::Semantic for u16 {}
+impl crate::AsNodeKey for u16 {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for u32 {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9761,12 +10880,16 @@ impl crate::Visitable for u32 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
 #[automatically_derived]
-impl crate::Semantic for u32 {}
+impl crate::AsNodeKey for u32 {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for u64 {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9777,12 +10900,16 @@ impl crate::Visitable for u64 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
 #[automatically_derived]
-impl crate::Semantic for u64 {}
+impl crate::AsNodeKey for u64 {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
 #[automatically_derived]
 impl crate::Visitable for u8 {
     fn accept<'ast, V: crate::Visitor<'ast>>(
@@ -9793,9 +10920,13 @@ impl crate::Visitable for u8 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| std::ops::ControlFlow::Continue(()),
+            |visitor| { std::ops::ControlFlow::Continue(()) },
         )
     }
 }
 #[automatically_derived]
-impl crate::Semantic for u8 {}
+impl crate::AsNodeKey for u8 {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}

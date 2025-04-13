@@ -73,6 +73,7 @@ mod transform;
 mod transformable_impls;
 mod visitable_impls;
 
+pub use node_key::*;
 use sqlparser::ast::{Expr, ObjectName, Statement};
 pub use transform::*;
 
@@ -183,6 +184,16 @@ pub enum Break<E> {
 
     /// An error occurred. Traversal will be aborted.
     Err(E),
+}
+
+impl<E1> Break<E1>  {
+    pub fn convert<E2>(self) -> Break<E2> where E2: From<E1> {
+        match self {
+            Break::SkipChildren => Break::SkipChildren,
+            Break::Finished => Break::Finished,
+            Break::Err(e1) => Break::Err(E2::from(e1)),
+        }
+    }
 }
 
 /// Converts a `Result<(), E>` into a `ControlFlow<Break<E>, ()>`.

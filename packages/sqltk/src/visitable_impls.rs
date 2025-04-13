@@ -50,6 +50,12 @@ where
     }
 }
 
+impl<N: 'static> AsNodeKey for OneOrManyWithParens<N> {
+    fn as_node_key(&self) -> NodeKey<'_> {
+        NodeKey::new(self)
+    }
+}
+
 /// Manual implementaton because sqltk-codegen cannot handle generics.
 /// Does not implement `Semantic`.
 impl<N> Visitable for OneOrManyWithParens<N>
@@ -61,6 +67,12 @@ where
             OneOrManyWithParens::One(node) => node.accept(visitor),
             OneOrManyWithParens::Many(nodes) => nodes.accept(visitor),
         }
+    }
+}
+
+impl<N: 'static> AsNodeKey for WrappedCollection<N> {
+    fn as_node_key(&self) -> NodeKey<'_> {
+        NodeKey::new(self)
     }
 }
 

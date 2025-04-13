@@ -11,10 +11,10 @@
 //! 2. An arbitrary node type is SOURCE NODE REACHABLE if and only if:
 //!    a. is a SOURCE NODE TYPE, or
 //!    b. it directly contains a SOURCE NODE field type of or a variant contains
-//!       a SOURCE NODE TYPE field type, or
+//!    a SOURCE NODE TYPE field type, or
 //!    c. it transitively contains a field or variant of a field of node
-//!       type that matches condition a or b _and_ the SOURCE NODE TYPE is not
-//!       solely reachable via an `Expr` node.
+//!    type that matches condition a or b _and_ the SOURCE NODE TYPE is not
+//!    solely reachable via an `Expr` node.
 //!
 //! ## Explanation
 //!

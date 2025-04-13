@@ -32,7 +32,7 @@ impl ToTokens for TransformableImpl {
 
                 (
                     &self.path,
-                    quote!(transformer.transform(#copy_or_clone, self, context)?),
+                    quote!(transformer.transform(node_path, #copy_or_clone)?),
                 )
             }
         };
@@ -43,15 +43,16 @@ impl ToTokens for TransformableImpl {
                 fn apply_transform_with_path<T>(
                     &'ast self,
                     transformer: &mut T,
-                    context: &mut crate::Context<'ast>,
+                    node_path: &mut crate::NodePath<'ast>,
                 ) -> Result<Self, T::Error>
                 where
                     T: crate::Transform<'ast>
                 {
-                    context.push(self as &'ast dyn std::any::Any);
+                    node_path.push(self);
                     let transformed = { #body };
-                    context.pop();
-                    transformer.transform(transformed, self, context)
+                    let transformed = transformer.transform(node_path, transformed)?;
+                    node_path.pop();
+                    Ok(transformed)
                 }
             }
         })
@@ -73,7 +74,7 @@ impl TransformableImpl {
 
                 let transformed_fields = field_names.clone().map(|field_name| {
                     quote! {
-                        #field_name: #field_name.apply_transform_with_path(transformer, context)?
+                        #field_name: #field_name.apply_transform_with_path(transformer, node_path)?
                     }
                 });
 
@@ -91,7 +92,7 @@ impl TransformableImpl {
 
                 let transformed_field_params = field_params.clone().map(|field_param| {
                     quote! {
-                        #field_param.apply_transform_with_path(transformer, context)?
+                        #field_param.apply_transform_with_path(transformer, node_path)?
                     }
                 });
 
@@ -119,7 +120,7 @@ impl TransformableImpl {
 
                     let transformed_fields = field_names.clone().map(|field_name| {
                         quote! {
-                            #field_name: #field_name.apply_transform_with_path(transformer, context)?
+                            #field_name: #field_name.apply_transform_with_path(transformer, node_path)?
                         }
                     });
 
@@ -138,7 +139,7 @@ impl TransformableImpl {
 
                     let transformed_field_params = field_params.clone().map(|field_param| {
                         quote! {
-                            #field_param.apply_transform_with_path(transformer, context)?
+                            #field_param.apply_transform_with_path(transformer, node_path)?
                         }
                     });
 
@@ -151,9 +152,8 @@ impl TransformableImpl {
                 Fields::Unit => tokens.append_all(quote! {
                     #path::#ident => {
                         transformer.transform(
-                            #path::#ident,
-                            self,
-                            context
+                            node_path,
+                            #path::#ident
                         )?
                     }
                 }),
