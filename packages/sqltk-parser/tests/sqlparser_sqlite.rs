@@ -22,15 +22,15 @@
 #[macro_use]
 mod test_utils;
 
-use sqlparser::keywords::Keyword;
+use sqltk_parser::keywords::Keyword;
 use test_utils::*;
 
-use sqlparser::ast::SelectItem::UnnamedExpr;
-use sqlparser::ast::Value::Placeholder;
-use sqlparser::ast::*;
-use sqlparser::dialect::{GenericDialect, SQLiteDialect};
-use sqlparser::parser::{ParserError, ParserOptions};
-use sqlparser::tokenizer::Token;
+use sqltk_parser::ast::SelectItem::UnnamedExpr;
+use sqltk_parser::ast::Value::Placeholder;
+use sqltk_parser::ast::*;
+use sqltk_parser::dialect::{GenericDialect, SQLiteDialect};
+use sqltk_parser::parser::{ParserError, ParserOptions};
+use sqltk_parser::tokenizer::Token;
 
 #[test]
 fn pragma_no_value() {

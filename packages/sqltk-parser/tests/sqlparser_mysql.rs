@@ -21,11 +21,11 @@
 
 use matches::assert_matches;
 
-use sqlparser::ast::MysqlInsertPriority::{Delayed, HighPriority, LowPriority};
-use sqlparser::ast::*;
-use sqlparser::dialect::{GenericDialect, MySqlDialect};
-use sqlparser::parser::{ParserError, ParserOptions};
-use sqlparser::tokenizer::Token;
+use sqltk_parser::ast::MysqlInsertPriority::{Delayed, HighPriority, LowPriority};
+use sqltk_parser::ast::*;
+use sqltk_parser::dialect::{GenericDialect, MySqlDialect};
+use sqltk_parser::parser::{ParserError, ParserOptions};
+use sqltk_parser::tokenizer::Token;
 use test_utils::*;
 
 #[macro_use]

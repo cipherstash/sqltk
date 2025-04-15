@@ -22,7 +22,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "visitor")]
-use sqlparser_derive::{Visit, VisitMut};
+use sqltk_parser_derive::{Visit, VisitMut};
 
 use super::super::dml::CreateTable;
 use crate::ast::{
@@ -40,8 +40,8 @@ use crate::parser::ParserError;
 ///
 /// # Example
 /// ```rust
-/// use sqlparser::ast::helpers::stmt_create_table::CreateTableBuilder;
-/// use sqlparser::ast::{ColumnDef, DataType, Ident, ObjectName};
+/// use sqltk_parser::ast::helpers::stmt_create_table::CreateTableBuilder;
+/// use sqltk_parser::ast::{ColumnDef, DataType, Ident, ObjectName};
 /// let builder = CreateTableBuilder::new(ObjectName(vec![Ident::new("table_name")]))
 ///    .if_not_exists(true)
 ///    .columns(vec![ColumnDef {

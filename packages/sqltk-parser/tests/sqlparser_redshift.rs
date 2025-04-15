@@ -20,9 +20,9 @@ mod test_utils;
 
 use test_utils::*;
 
-use sqlparser::ast::*;
-use sqlparser::dialect::GenericDialect;
-use sqlparser::dialect::RedshiftSqlDialect;
+use sqltk_parser::ast::*;
+use sqltk_parser::dialect::GenericDialect;
+use sqltk_parser::dialect::RedshiftSqlDialect;
 
 #[test]
 fn test_square_brackets_over_db_schema_table_name() {

@@ -16,7 +16,7 @@
 # under the License.
 
 [package]
-name = "sqlparser_derive"
+name = "sqltk-parser-derive"
 description = "proc macro for sqlparser"
 version = "0.2.2"
 authors = ["sqlparser-rs authors"]

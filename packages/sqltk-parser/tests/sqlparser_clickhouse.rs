@@ -23,14 +23,14 @@ mod test_utils;
 
 use test_utils::*;
 
-use sqlparser::ast::Expr::{BinaryOp, Identifier, MapAccess};
-use sqlparser::ast::SelectItem::UnnamedExpr;
-use sqlparser::ast::TableFactor::Table;
-use sqlparser::ast::Value::Number;
-use sqlparser::ast::*;
-use sqlparser::dialect::ClickHouseDialect;
-use sqlparser::dialect::GenericDialect;
-use sqlparser::parser::ParserError::ParserError;
+use sqltk_parser::ast::Expr::{BinaryOp, Identifier, MapAccess};
+use sqltk_parser::ast::SelectItem::UnnamedExpr;
+use sqltk_parser::ast::TableFactor::Table;
+use sqltk_parser::ast::Value::Number;
+use sqltk_parser::ast::*;
+use sqltk_parser::dialect::ClickHouseDialect;
+use sqltk_parser::dialect::GenericDialect;
+use sqltk_parser::parser::ParserError::ParserError;
 
 #[test]
 fn parse_map_access_expr() {

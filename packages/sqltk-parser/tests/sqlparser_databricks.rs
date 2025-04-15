@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use sqlparser::ast::*;
-use sqlparser::dialect::{DatabricksDialect, GenericDialect};
-use sqlparser::parser::ParserError;
+use sqltk_parser::ast::*;
+use sqltk_parser::dialect::{DatabricksDialect, GenericDialect};
+use sqltk_parser::parser::ParserError;
 use test_utils::*;
 
 #[macro_use]

@@ -31,7 +31,7 @@ use core::ops::Deref;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "visitor")]
-use sqlparser_derive::{Visit, VisitMut};
+use sqltk_parser_derive::{Visit, VisitMut};
 
 pub use self::data_type::{
     ArrayElemTypeDef, CharLengthUnits, CharacterLength, DataType, ExactNumberInfo,
@@ -1021,7 +1021,7 @@ impl fmt::Display for LambdaFunction {
 /// # Examples
 /// Acessing as a slice:
 /// ```
-/// # use sqlparser::ast::OneOrManyWithParens;
+/// # use sqltk_parser::ast::OneOrManyWithParens;
 /// let one = OneOrManyWithParens::One("a");
 ///
 /// assert_eq!(one[0], "a");
@@ -1029,7 +1029,7 @@ impl fmt::Display for LambdaFunction {
 /// ```
 /// Iterating:
 /// ```
-/// # use sqlparser::ast::OneOrManyWithParens;
+/// # use sqltk_parser::ast::OneOrManyWithParens;
 /// let one = OneOrManyWithParens::One("a");
 /// let many = OneOrManyWithParens::Many(vec!["a", "b"]);
 ///
@@ -7283,7 +7283,7 @@ impl Display for CommentDef {
 ///
 /// # Examples
 /// ```
-/// # use sqlparser::ast::WrappedCollection;
+/// # use sqltk_parser::ast::WrappedCollection;
 /// let items = WrappedCollection::Parentheses(vec!["one", "two", "three"]);
 /// assert_eq!("(one, two, three)", items.to_string());
 ///

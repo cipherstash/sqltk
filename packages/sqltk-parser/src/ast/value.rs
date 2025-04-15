@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::ast::Ident;
 #[cfg(feature = "visitor")]
-use sqlparser_derive::{Visit, VisitMut};
+use sqltk_parser_derive::{Visit, VisitMut};
 
 /// Primitive SQL values such as number and string
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]

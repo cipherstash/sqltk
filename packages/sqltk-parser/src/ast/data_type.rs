@@ -23,7 +23,7 @@ use core::fmt;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "visitor")]
-use sqlparser_derive::{Visit, VisitMut};
+use sqltk_parser_derive::{Visit, VisitMut};
 
 use crate::ast::{display_comma_separated, ObjectName, StructField, UnionField};
 

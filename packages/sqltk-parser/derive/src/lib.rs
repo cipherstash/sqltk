@@ -77,8 +77,8 @@ fn derive_visit(input: proc_macro::TokenStream, visit_type: &VisitType) -> proc_
 
     let expanded = quote! {
         // The generated impl.
-        impl #impl_generics sqlparser::ast::#visit_trait for #name #ty_generics #where_clause {
-            fn visit<V: sqlparser::ast::#visitor_trait>(
+        impl #impl_generics sqltk_parser::ast::#visit_trait for #name #ty_generics #where_clause {
+            fn visit<V: sqltk_parser::ast::#visitor_trait>(
                 &#modifier self,
                 visitor: &mut V
             ) -> ::std::ops::ControlFlow<V::Break> {
@@ -162,7 +162,7 @@ fn add_trait_bounds(mut generics: Generics, VisitType { visit_trait, .. }: &Visi
         if let GenericParam::Type(ref mut type_param) = *param {
             type_param
                 .bounds
-                .push(parse_quote!(sqlparser::ast::#visit_trait));
+                .push(parse_quote!(sqltk_parser::ast::#visit_trait));
         }
     }
     generics
@@ -184,7 +184,7 @@ fn visit_children(
                     let name = &f.ident;
                     let attributes = Attributes::parse(&f.attrs);
                     let (pre_visit, post_visit) = attributes.visit(quote!(&#modifier self.#name));
-                    quote_spanned!(f.span() => #pre_visit sqlparser::ast::#visit_trait::visit(&#modifier self.#name, visitor)?; #post_visit)
+                    quote_spanned!(f.span() => #pre_visit sqltk_parser::ast::#visit_trait::visit(&#modifier self.#name, visitor)?; #post_visit)
                 });
                 quote! {
                     #(#recurse)*
@@ -195,7 +195,7 @@ fn visit_children(
                     let index = Index::from(i);
                     let attributes = Attributes::parse(&f.attrs);
                     let (pre_visit, post_visit) = attributes.visit(quote!(&self.#index));
-                    quote_spanned!(f.span() => #pre_visit sqlparser::ast::#visit_trait::visit(&#modifier self.#index, visitor)?; #post_visit)
+                    quote_spanned!(f.span() => #pre_visit sqltk_parser::ast::#visit_trait::visit(&#modifier self.#index, visitor)?; #post_visit)
                 });
                 quote! {
                     #(#recurse)*
@@ -215,7 +215,7 @@ fn visit_children(
                             let name = &f.ident;
                             let attributes = Attributes::parse(&f.attrs);
                             let (pre_visit, post_visit) = attributes.visit(name.to_token_stream());
-                            quote_spanned!(f.span() => #pre_visit sqlparser::ast::#visit_trait::visit(#name, visitor)?; #post_visit)
+                            quote_spanned!(f.span() => #pre_visit sqltk_parser::ast::#visit_trait::visit(#name, visitor)?; #post_visit)
                         });
 
                         quote!(
@@ -230,7 +230,7 @@ fn visit_children(
                             let name = format_ident!("_{}", i);
                             let attributes = Attributes::parse(&f.attrs);
                             let (pre_visit, post_visit) = attributes.visit(name.to_token_stream());
-                            quote_spanned!(f.span() => #pre_visit sqlparser::ast::#visit_trait::visit(#name, visitor)?; #post_visit)
+                            quote_spanned!(f.span() => #pre_visit sqltk_parser::ast::#visit_trait::visit(#name, visitor)?; #post_visit)
                         });
 
                         quote! {

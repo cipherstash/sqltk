@@ -20,8 +20,8 @@ mod test_utils;
 
 use test_utils::*;
 
-use sqlparser::ast::*;
-use sqlparser::dialect::{DuckDbDialect, GenericDialect};
+use sqltk_parser::ast::*;
+use sqltk_parser::dialect::{DuckDbDialect, GenericDialect};
 
 fn duckdb() -> TestedDialects {
     TestedDialects::new(vec![Box::new(DuckDbDialect {})])

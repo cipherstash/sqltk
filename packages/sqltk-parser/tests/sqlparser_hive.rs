@@ -20,14 +20,14 @@
 //! Test SQL syntax specific to Hive. The parser based on the generic dialect
 //! is also tested (on the inputs it can handle).
 
-use sqlparser::ast::{
+use sqltk_parser::ast::{
     ClusteredBy, CommentDef, CreateFunctionBody, CreateFunctionUsing, CreateTable, Expr, Function,
     FunctionArgumentList, FunctionArguments, Ident, ObjectName, OneOrManyWithParens, OrderByExpr,
     SelectItem, Statement, TableFactor, UnaryOperator, Use, Value,
 };
-use sqlparser::dialect::{GenericDialect, HiveDialect, MsSqlDialect};
-use sqlparser::parser::ParserError;
-use sqlparser::test_utils::*;
+use sqltk_parser::dialect::{GenericDialect, HiveDialect, MsSqlDialect};
+use sqltk_parser::parser::ParserError;
+use sqltk_parser::test_utils::*;
 
 #[test]
 fn parse_table_create() {

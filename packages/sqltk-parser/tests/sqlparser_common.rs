@@ -16,27 +16,27 @@
 // under the License.
 
 #![warn(clippy::all)]
-//! Test SQL syntax, which all sqlparser dialects must parse in the same way.
+//! Test SQL syntax, which all sqltk_parser dialects must parse in the same way.
 //!
 //! Note that it does not mean all SQL here is valid in all the dialects, only
 //! that 1) it's either standard or widely supported and 2) it can be parsed by
-//! sqlparser regardless of the chosen dialect (i.e. it doesn't conflict with
+//! sqltk_parser regardless of the chosen dialect (i.e. it doesn't conflict with
 //! dialect-specific parsing rules).
 
 extern crate core;
 
 use matches::assert_matches;
-use sqlparser::ast::SelectItem::UnnamedExpr;
-use sqlparser::ast::TableFactor::{Pivot, Unpivot};
-use sqlparser::ast::*;
-use sqlparser::dialect::{
+use sqltk_parser::ast::SelectItem::UnnamedExpr;
+use sqltk_parser::ast::TableFactor::{Pivot, Unpivot};
+use sqltk_parser::ast::*;
+use sqltk_parser::dialect::{
     AnsiDialect, BigQueryDialect, ClickHouseDialect, DatabricksDialect, Dialect, DuckDbDialect,
     GenericDialect, HiveDialect, MsSqlDialect, MySqlDialect, PostgreSqlDialect, RedshiftSqlDialect,
     SQLiteDialect, SnowflakeDialect,
 };
-use sqlparser::keywords::ALL_KEYWORDS;
-use sqlparser::parser::{Parser, ParserError, ParserOptions};
-use sqlparser::tokenizer::Tokenizer;
+use sqltk_parser::keywords::ALL_KEYWORDS;
+use sqltk_parser::parser::{Parser, ParserError, ParserOptions};
+use sqltk_parser::tokenizer::Tokenizer;
 use test_utils::{
     all_dialects, all_dialects_where, alter_table_op, assert_eq_vec, call, expr_from_projection,
     join, number, only, table, table_alias, TestedDialects,
@@ -47,9 +47,9 @@ mod test_utils;
 
 #[cfg(test)]
 use pretty_assertions::assert_eq;
-use sqlparser::ast::ColumnOption::Comment;
-use sqlparser::ast::Expr::{Identifier, UnaryOp};
-use sqlparser::test_utils::all_dialects_except;
+use sqltk_parser::ast::ColumnOption::Comment;
+use sqltk_parser::ast::Expr::{Identifier, UnaryOp};
+use sqltk_parser::test_utils::all_dialects_except;
 
 #[test]
 fn parse_insert_values() {
@@ -8553,7 +8553,7 @@ fn test_placeholder() {
         Box::new(BigQueryDialect {}),
         Box::new(SnowflakeDialect {}),
         // Note: `$` is the starting word for the HiveDialect identifier
-        // Box::new(sqlparser::dialect::HiveDialect {}),
+        // Box::new(sqltk_parser::dialect::HiveDialect {}),
     ]);
     let sql = "SELECT * FROM student WHERE id = $Id1";
     let ast = dialects.verified_only_select(sql);
@@ -8590,7 +8590,7 @@ fn test_placeholder() {
         Box::new(BigQueryDialect {}),
         Box::new(SnowflakeDialect {}),
         // Note: `$` is the starting word for the HiveDialect identifier
-        // Box::new(sqlparser::dialect::HiveDialect {}),
+        // Box::new(sqltk_parser::dialect::HiveDialect {}),
     ]);
     let sql = "SELECT * FROM student WHERE id = ?";
     let ast = dialects.verified_only_select(sql);

@@ -17,7 +17,7 @@
 
 //! Test the ability for dialects to override parsing
 
-use sqlparser::{
+use sqltk_parser::{
     ast::{BinaryOperator, Expr, Statement, Value},
     dialect::Dialect,
     keywords::Keyword,

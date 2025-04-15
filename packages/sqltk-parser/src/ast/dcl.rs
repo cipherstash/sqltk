@@ -26,7 +26,7 @@ use core::fmt;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "visitor")]
-use sqlparser_derive::{Visit, VisitMut};
+use sqltk_parser_derive::{Visit, VisitMut};
 
 use super::{Expr, Ident, Password};
 use crate::ast::{display_separated, ObjectName};

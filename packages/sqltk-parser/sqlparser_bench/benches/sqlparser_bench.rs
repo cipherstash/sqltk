@@ -16,15 +16,15 @@
 // under the License.
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use sqlparser::dialect::GenericDialect;
-use sqlparser::parser::Parser;
+use sqltk_parser::dialect::GenericDialect;
+use sqltk_parser::parser::Parser;
 
 fn basic_queries(c: &mut Criterion) {
-    let mut group = c.benchmark_group("sqlparser-rs parsing benchmark");
+    let mut group = c.benchmark_group("sqltk_parser-rs parsing benchmark");
     let dialect = GenericDialect {};
 
     let string = "SELECT * FROM table WHERE 1 = 1";
-    group.bench_function("sqlparser::select", |b| {
+    group.bench_function("sqltk_parser::select", |b| {
         b.iter(|| Parser::parse_sql(&dialect, string));
     });
 
@@ -39,7 +39,7 @@ fn basic_queries(c: &mut Criterion) {
         SELECT * FROM table
         LEFT JOIN derived USING (user_id)
     ";
-    group.bench_function("sqlparser::with_select", |b| {
+    group.bench_function("sqltk_parser::with_select", |b| {
         b.iter(|| Parser::parse_sql(&dialect, with_query));
     });
 }

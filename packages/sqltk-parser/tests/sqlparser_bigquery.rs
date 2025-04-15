@@ -20,9 +20,9 @@ mod test_utils;
 
 use std::ops::Deref;
 
-use sqlparser::ast::*;
-use sqlparser::dialect::{BigQueryDialect, GenericDialect};
-use sqlparser::parser::{ParserError, ParserOptions};
+use sqltk_parser::ast::*;
+use sqltk_parser::dialect::{BigQueryDialect, GenericDialect};
+use sqltk_parser::parser::{ParserError, ParserOptions};
 use test_utils::*;
 
 #[test]

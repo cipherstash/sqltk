@@ -38,7 +38,7 @@ use core::str::Chars;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "visitor")]
-use sqlparser_derive::{Visit, VisitMut};
+use sqltk_parser_derive::{Visit, VisitMut};
 
 use crate::ast::DollarQuotedString;
 use crate::dialect::Dialect;
@@ -573,8 +573,8 @@ impl<'a> Tokenizer<'a> {
     /// Create a new SQL tokenizer for the specified SQL statement
     ///
     /// ```
-    /// # use sqlparser::tokenizer::{Token, Whitespace, Tokenizer};
-    /// # use sqlparser::dialect::GenericDialect;
+    /// # use sqltk_parser::tokenizer::{Token, Whitespace, Tokenizer};
+    /// # use sqltk_parser::dialect::GenericDialect;
     /// # let dialect = GenericDialect{};
     /// let query = r#"SELECT 'foo'"#;
     ///
@@ -607,8 +607,8 @@ impl<'a> Tokenizer<'a> {
     /// # Example
     ///
     /// ```
-    /// # use sqlparser::tokenizer::{Token, Tokenizer};
-    /// # use sqlparser::dialect::GenericDialect;
+    /// # use sqltk_parser::tokenizer::{Token, Tokenizer};
+    /// # use sqltk_parser::dialect::GenericDialect;
     /// # let dialect = GenericDialect{};
     /// let query = r#""Foo "" Bar""#;
     /// let unescaped = Token::make_word(r#"Foo " Bar"#, Some('"'));

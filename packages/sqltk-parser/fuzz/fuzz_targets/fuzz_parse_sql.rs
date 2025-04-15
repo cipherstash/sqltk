@@ -16,8 +16,8 @@
 // under the License.
 
 use honggfuzz::fuzz;
-use sqlparser::dialect::GenericDialect;
-use sqlparser::parser::Parser;
+use sqltk_parser::dialect::GenericDialect;
+use sqltk_parser::parser::Parser;
 
 fn main() {
     loop {

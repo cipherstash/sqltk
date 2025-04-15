@@ -24,12 +24,12 @@ mod test_utils;
 
 use test_utils::*;
 
-use sqlparser::ast::DataType::{Int, Text};
-use sqlparser::ast::DeclareAssignment::MsSqlAssignment;
-use sqlparser::ast::Value::SingleQuotedString;
-use sqlparser::ast::*;
-use sqlparser::dialect::{GenericDialect, MsSqlDialect};
-use sqlparser::parser::{Parser, ParserError};
+use sqltk_parser::ast::DataType::{Int, Text};
+use sqltk_parser::ast::DeclareAssignment::MsSqlAssignment;
+use sqltk_parser::ast::Value::SingleQuotedString;
+use sqltk_parser::ast::*;
+use sqltk_parser::dialect::{GenericDialect, MsSqlDialect};
+use sqltk_parser::parser::{Parser, ParserError};
 
 #[test]
 fn parse_mssql_identifiers() {

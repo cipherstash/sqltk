@@ -22,8 +22,8 @@
 use std::fs;
 
 use simple_logger::SimpleLogger;
-use sqlparser::dialect::*;
-use sqlparser::parser::Parser;
+use sqltk_parser::dialect::*;
+use sqltk_parser::parser::Parser;
 
 fn main() {
     SimpleLogger::new().init().unwrap();

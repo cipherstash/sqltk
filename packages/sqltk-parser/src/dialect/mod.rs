@@ -93,7 +93,7 @@ macro_rules! dialect_of {
 /// level documentation]:
 ///
 /// ```
-/// # use sqlparser::dialect::AnsiDialect;
+/// # use sqltk_parser::dialect::AnsiDialect;
 /// let dialect = AnsiDialect {};
 /// ```
 ///
@@ -101,7 +101,7 @@ macro_rules! dialect_of {
 /// name. For example:
 ///
 /// ```
-/// # use sqlparser::dialect::{AnsiDialect, dialect_from_str};
+/// # use sqltk_parser::dialect::{AnsiDialect, dialect_from_str};
 /// let dialect = dialect_from_str("ansi").unwrap();
 ///
 /// // Parsed dialect is an instance of `AnsiDialect`:
@@ -794,31 +794,31 @@ mod tests {
 
             fn parse_prefix(
                 &self,
-                parser: &mut sqlparser::parser::Parser,
-            ) -> Option<Result<Expr, sqlparser::parser::ParserError>> {
+                parser: &mut sqltk_parser::parser::Parser,
+            ) -> Option<Result<Expr, sqltk_parser::parser::ParserError>> {
                 self.0.parse_prefix(parser)
             }
 
             fn parse_infix(
                 &self,
-                parser: &mut sqlparser::parser::Parser,
+                parser: &mut sqltk_parser::parser::Parser,
                 expr: &Expr,
                 precedence: u8,
-            ) -> Option<Result<Expr, sqlparser::parser::ParserError>> {
+            ) -> Option<Result<Expr, sqltk_parser::parser::ParserError>> {
                 self.0.parse_infix(parser, expr, precedence)
             }
 
             fn get_next_precedence(
                 &self,
-                parser: &sqlparser::parser::Parser,
-            ) -> Option<Result<u8, sqlparser::parser::ParserError>> {
+                parser: &sqltk_parser::parser::Parser,
+            ) -> Option<Result<u8, sqltk_parser::parser::ParserError>> {
                 self.0.get_next_precedence(parser)
             }
 
             fn parse_statement(
                 &self,
-                parser: &mut sqlparser::parser::Parser,
-            ) -> Option<Result<Statement, sqlparser::parser::ParserError>> {
+                parser: &mut sqltk_parser::parser::Parser,
+            ) -> Option<Result<Statement, sqltk_parser::parser::ParserError>> {
                 self.0.parse_statement(parser)
             }
 

@@ -23,9 +23,9 @@
 mod test_utils;
 use test_utils::*;
 
-use sqlparser::ast::*;
-use sqlparser::dialect::{GenericDialect, PostgreSqlDialect};
-use sqlparser::parser::ParserError;
+use sqltk_parser::ast::*;
+use sqltk_parser::dialect::{GenericDialect, PostgreSqlDialect};
+use sqltk_parser::parser::ParserError;
 
 #[test]
 fn parse_create_table_generated_always_as_identity() {
@@ -1876,7 +1876,7 @@ fn parse_pg_returning() {
 
 fn test_operator(operator: &str, dialect: &TestedDialects, expected: BinaryOperator) {
     let operator_tokens =
-        sqlparser::tokenizer::Tokenizer::new(&PostgreSqlDialect {}, &format!("a{operator}b"))
+        sqltk_parser::tokenizer::Tokenizer::new(&PostgreSqlDialect {}, &format!("a{operator}b"))
             .tokenize()
             .unwrap();
     assert_eq!(
@@ -2159,7 +2159,7 @@ fn parse_array_index_expr() {
     let sql = "SELECT ARRAY[]";
     let select = pg_and_generic().verified_only_select(sql);
     assert_eq!(
-        &Expr::Array(sqlparser::ast::Array {
+        &Expr::Array(sqltk_parser::ast::Array {
             elem: vec![],
             named: true
         }),
