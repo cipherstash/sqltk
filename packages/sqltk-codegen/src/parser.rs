@@ -17,12 +17,12 @@ use syn::{
 
 use quote::quote;
 
-/// The fully qualified path of a sqlparser type.  In some cases this will be
+/// The fully qualified path of a sqltk_parser type.  In some cases this will be
 /// different to the fully-qualified public export of the type.
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 struct InternalTypePath(TypePath);
 
-/// The fully-qualified public path of a sqlparser type.
+/// The fully-qualified public path of a sqltk_parser type.
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 struct PubTypePath(TypePath);
 
@@ -36,7 +36,7 @@ pub struct SqlParserAstAnalyser {
 impl SqlParserAstAnalyser {
     pub fn parse_mod(items: &Vec<syn::Item>) -> SqlParserMeta {
         let mut parser = Self::new();
-        let mut path: Vec<Ident> = vec![Ident::new("sqlparser", Span::call_site())];
+        let mut path: Vec<Ident> = vec![Ident::new("sqltk_parser", Span::call_site())];
         parser.parse_mod_recursively(true, items, &mut path);
         parser.finish()
     }
@@ -186,9 +186,9 @@ impl SqlParserAstAnalyser {
         }
     }
 
-    // Converts a type like `Expr` to `sqlparser::ast::Expr`.  Note that this
+    // Converts a type like `Expr` to `sqltk_parser::ast::Expr`.  Note that this
     // only works because the last path segment happens to be unique in
-    // `sqlparser`.
+    // `sqltk-parser`.
     fn resolve_fully_qualified_type(&self, type_path: &TypePath) -> Option<TypePath> {
         // 1. check if it's in public types and return it
         // 2. check if it's in the internal types and return it
@@ -219,12 +219,12 @@ impl SqlParserAstAnalyser {
         self.internal_types.retain(|_, ty| ty.has_visit_impl);
 
         self.internal_types.remove(&InternalTypePath(parse_quote!(
-            sqlparser::ast::helpers::stmt_create_table::CreateTableBuilder
+            sqltk_parser::ast::helpers::stmt_create_table::CreateTableBuilder
         )));
 
         // 2. For every type, go through fields and variants expanding generic
-        // types so that they refer to the fully qualified public sqlparser type.
-        // e.g. Vec<Expr> should be rewritten as Vec<sqlparser::ast::Expr>
+        // types so that they refer to the fully qualified public sqltk_parser type.
+        // e.g. Vec<Expr> should be rewritten as Vec<sqltk_parser::ast::Expr>
 
         let mut internal_types = self.internal_types.clone();
 
@@ -318,10 +318,10 @@ impl SqlParserAstAnalyser {
         assert!(!main_nodes.is_empty());
         assert!(!container_nodes.is_empty());
 
-        // This is the return type of sqlparser's parser. It's not discoverable
+        // This is the return type of sqltk_parser's parser. It's not discoverable
         // by examining the AST so we need to add it manually.
         container_nodes.insert(ContainerNode::Vec(Syn(syn::parse2(quote!(
-            Vec<sqlparser::ast::Statement>
+            Vec<sqltk_parser::ast::Statement>
         ))
         .unwrap())));
 

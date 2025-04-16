@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use sqlparser::ast::{OneOrManyWithParens, WrappedCollection};
+use sqltk_parser::ast::{OneOrManyWithParens, WrappedCollection};
 
 use crate::{Transform, Transformable, Visitable};
 
@@ -82,7 +82,7 @@ where
     }
 }
 
-// The following impls are special cases of sqlparser AST nodes (sqltk-codegen cannot handle generics).
+// The following impls are special cases of sqltk-parser AST nodes (sqltk-codegen cannot handle generics).
 
 impl<'ast, N> Transformable<'ast> for OneOrManyWithParens<N>
 where

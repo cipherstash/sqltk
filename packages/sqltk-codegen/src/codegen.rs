@@ -21,7 +21,7 @@ impl Default for Codegen {
 impl Codegen {
     pub fn new() -> Self {
         Self {
-            meta: SqlParserMetaQuery::from(sqlparser_node_extractor::extract(vec![])),
+            meta: SqlParserMetaQuery::from(sqlparser_node_extractor::extract()),
         }
     }
 

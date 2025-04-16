@@ -18,7 +18,7 @@
 //!
 //! ## Explanation
 //!
-//! In the `sqlparser` AST all data identifiers are ultimately introduced by the
+//! In the `sqltk-parser` AST all data identifiers are ultimately introduced by the
 //! `TableFactor` and `Table` types.
 //!
 //! ## The `Expr` type
@@ -48,7 +48,7 @@ pub struct Reachability {
 
 impl Reachability {
     /// Derive source node reachability metrics from our knowledge of
-    /// `sqlparser` AST types.
+    /// `sqltk-parser` AST types.
     pub fn derive(query: &SqlParserMetaQuery) -> HashMap<Ident, bool> {
         Self::new(query).execute()
     }
@@ -70,7 +70,7 @@ impl Reachability {
         }
     }
 
-    /// Computes source node reachability for every `sqlparser` node type.
+    /// Computes source node reachability for every `sqltk-parser` node type.
     ///
     /// bool(255) as a value in the map indicates that the corresponding
     /// node does not have a reachability relationship with a source node.
