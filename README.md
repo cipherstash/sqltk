@@ -66,9 +66,11 @@ git commit -m 'Re-generated trait implementations with `cargo run -p sqltk-codeg
 
 You will need to do this whenever:
 
-- You are updating sqlparser, and
-- Any AST handling in sqlparser has changed
+- You are updating sqltk-parser from [upstream](https://github.com/apache/datafusion-sqlparser-rs), and
+- Any AST handling in sqltk-parser has changed
 
 ## About
 
 `sqltk` is maintained by CipherStash and is a core component of [Proxy](https://cipherstash.com/products/cipherstash-proxy), our encryption-in-use database proxy.
+
+`packages/sqltk-parser` is a soft fork of [datafusion-sqlparser-rs](https://github.com/apache/datafusion-sqlparser-rs), and its use is governed by the [Apache Software License 2.0](https://github.com/apache/datafusion-sqlparser-rs/blob/main/LICENSE.txt).

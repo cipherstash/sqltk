@@ -1,4 +1,4 @@
-//! This module implements a persistable storage of `sqlparser` AST nodes.
+//! This module implements a persistable storage of `sqltk-parser` AST nodes.
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -12,7 +12,7 @@ use syn::{parse::Parse, ItemEnum, ItemStruct};
 
 #[derive(Clone)]
 pub struct SqlParserMeta {
-    /// Types for which `sqlparser` derives `Visit`, which are the main structs
+    /// Types for which `sqltk-parser` derives `Visit`, which are the main structs
     /// and enums plus terminal node types.  The [`TypePath`] is the
     /// *public* fully-qualified type name.
     main_nodes: HashMap<Syn<TypePath>, SqlParserTypeDef>,
@@ -83,7 +83,7 @@ impl SqlParserMeta {
     }
 }
 
-/// A type definition from `sqlparser`.
+/// A type definition from `sqltk-parser`.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct SqlParserTypeDef {
     /// `true` if this type as a Visit impl. After parsing, we'll discard any
@@ -251,7 +251,7 @@ impl<T: ToTokens + Parse + Eq + Hash + Clone> PartialOrd for Syn<T> {
 
 // NOTE: this is not a very efficient Ord implementation, but it is only used at
 // build time and only when the `SqlParserMeta` requires regenerating (which
-// only happens when bumping a version of the `sqlparser` crate, or when
+// only happens when bumping a version of the `sqltk-parser` crate, or when
 // building for the first time).
 impl<T: ToTokens + Parse + Eq + Hash + Clone> Ord for Syn<T> {
     fn cmp(&self, other: &Self) -> Ordering {

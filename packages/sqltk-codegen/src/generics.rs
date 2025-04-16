@@ -2,7 +2,7 @@
 use quote::quote;
 use syn::{PathArguments, Type, TypePath};
 
-/// An enum of container types used by the `sqlparser` AST.
+/// An enum of container types used by the `sqltk-parser` AST.
 pub enum ContainerType {
     Box,
     Vec,
@@ -141,7 +141,7 @@ pub fn compose_generic_type(parts: &[TypePath]) -> TypePath {
 /// Extracts the generic argument from a `TypePath`.
 ///
 /// Assumes there is exactly one generic argument - which is the case for all
-/// `sqlparser` AST generic types.
+/// `sqltk-parser` AST generic types.
 ///
 /// Panics if there are no generic arguments.
 pub fn extract_generic_argument(path: &TypePath) -> TypePath {

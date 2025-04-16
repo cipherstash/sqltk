@@ -1,36 +1,19 @@
-use cargo_metadata::{CargoOpt, MetadataCommand};
 use parser::SqlParserAstAnalyser;
-use std::path::PathBuf;
+use std::path::Path;
 use std::process::Command;
 
 use super::meta::SqlParserMeta;
 
 use super::*;
 
-pub fn extract(sqlparser_features: Vec<String>) -> SqlParserMeta {
-    let sqlparser_features = {
-        let mut tmp = sqlparser_features.clone();
-        tmp.push("visitor".into());
-        tmp.push("bigdecimal".into());
-        tmp
-    };
+pub fn extract() -> SqlParserMeta {
+    let sqlparser_features = vec!["visitor", "bigdecimal"];
 
-    let metadata = MetadataCommand::new()
-        .manifest_path("./Cargo.toml")
-        .features(CargoOpt::AllFeatures)
-        .exec()
-        .unwrap();
-
-    let sql_parser_dir = PathBuf::from(
-        &metadata
-            .packages
-            .iter()
-            .find(|p| p.name.starts_with("sqlparser"))
-            .expect("Could not find sqlparser crate")
-            .manifest_path
-            .parent()
-            .unwrap(),
-    );
+    let sql_parser_dir = Path::new(
+        std::env::var("CARGO_MANIFEST_DIR").unwrap().as_str()
+    )
+        .join("..")
+        .join("sqltk-parser");
 
     // TODO: instead of depending on cargo-expand, just invoke rustc the same
     // way that cargo-expand does and remove a dependency.

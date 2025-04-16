@@ -2,11 +2,11 @@
 //! This crate implements an enhanced Visitor implementation suitable for
 //! semantic analysis of SQL.
 //!
-//! The AST is provided by the `sqlparser` crate - which this crate re-exports.
+//! The AST is provided by the `sqltk-parser` crate - which this crate re-exports.
 //!
 //! ## Key features
 //!
-//! 1. Full coverage of all AST node types from `sqlparser` (including all field types and container types (`Vec` `Option` & `Box`)) and terminal nodes.
+//! 1. Full coverage of all AST node types from `sqltk-parser` (including all field types and container types (`Vec`, `Option` & `Box`)) and terminal nodes.
 //!
 //! 2. [`Transform`] trait methods do not receive a mutable node argument which means that non-mutable references AST nodes can be retained in your own data structures from previous analysis passes.
 //!
@@ -24,7 +24,7 @@
 //! use std::convert::Infallible;
 //! use std::ops::ControlFlow;
 //! use sqltk::{Visitor, Visitable, into_result, Break};
-//! use sqlparser::{ast::Expr, dialect::GenericDialect, parser::Parser};
+//! use sqltk_parser::{ast::Expr, dialect::GenericDialect, parser::Parser};
 //!
 //! let dialect = GenericDialect {};
 //!
@@ -74,13 +74,13 @@ mod transformable_impls;
 mod visitable_impls;
 
 pub use node_key::*;
-use sqlparser::ast::{Expr, ObjectName, Statement};
+use sqltk_parser::ast::{Expr, ObjectName, Statement};
 pub use transform::*;
 
 use core::fmt::Debug;
 use std::{any::Any, ops::ControlFlow};
 
-/// Trait for types that can visit any `sqlparser` AST node.
+/// Trait for types that can visit any `sqltk-parser` AST node.
 ///
 /// The reason for this is to support implementations that can store a reference to an AST node: `&'ast N` and also
 /// support recursive AST traversal. With a `&mut self` the former can be supported but the latter cannot because the
@@ -115,7 +115,7 @@ where
 
 /// Trait for types that can be traversed by a [`Visitor`].
 ///
-/// All required implementations of this trait (every `sqlparser` AST node type) are provided.
+/// All required implementations of this trait (every `sqltk-parser` AST node type) are provided.
 pub trait Visitable
 where
     Self: 'static + Sized + AsNodeKey,
@@ -317,7 +317,7 @@ mod test {
     use std::{cell::RefCell, convert::Infallible, fmt::Debug, ops::ControlFlow, rc::Rc};
 
     use super::{into_result, Break, Visitable, Visitor};
-    use sqlparser::{
+    use sqltk_parser::{
         ast::{Expr, SelectItem, TableWithJoins, With},
         dialect, parser,
     };
@@ -437,15 +437,15 @@ mod test {
             Ok(()) => assert_eq!(
                 visitor.0[0..9],
                 [
-                    "alloc::vec::Vec<sqlparser::ast::Statement>",
-                    "sqlparser::ast::Statement",
-                    "sqlparser::ast::query::Query",
-                    "sqlparser::ast::query::SetExpr",
-                    "sqlparser::ast::query::Select",
-                    "alloc::vec::Vec<sqlparser::ast::query::TableWithJoins>",
-                    "sqlparser::ast::query::TableWithJoins",
-                    "sqlparser::ast::query::TableFactor",
-                    "sqlparser::ast::ObjectName"
+                    "alloc::vec::Vec<sqltk_parser::ast::Statement>",
+                    "sqltk_parser::ast::Statement",
+                    "sqltk_parser::ast::query::Query",
+                    "sqltk_parser::ast::query::SetExpr",
+                    "sqltk_parser::ast::query::Select",
+                    "alloc::vec::Vec<sqltk_parser::ast::query::TableWithJoins>",
+                    "sqltk_parser::ast::query::TableWithJoins",
+                    "sqltk_parser::ast::query::TableFactor",
+                    "sqltk_parser::ast::ObjectName"
                 ]
             ),
             Err(err) => panic!("Err: {:?}", err),

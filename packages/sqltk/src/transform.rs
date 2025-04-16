@@ -131,7 +131,7 @@ impl<'ast> NodePath<'ast> {
 
 /// Trait for applying a [`Transform`] to an AST to produce an edited version.
 ///
-/// Implementations are provided for all AST node types in `sqlparser`.
+/// Implementations are provided for all AST node types in `sqltk-parser`.
 pub trait Transformable<'ast>
 where
     Self: Sized,
@@ -164,7 +164,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sqlparser::{
+    use sqltk_parser::{
         ast::{Assignment, Expr, Ident, SelectItem},
         dialect::PostgreSqlDialect,
         parser::{Parser, ParserError},

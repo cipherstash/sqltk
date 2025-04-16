@@ -1,4 +1,4 @@
-use sqlparser::ast::{OneOrManyWithParens, WrappedCollection};
+use sqltk_parser::ast::{OneOrManyWithParens, WrappedCollection};
 
 use crate::*;
 
