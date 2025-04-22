@@ -1,4 +1,7 @@
-use std::{any::TypeId, marker::PhantomData};
+use std::{
+    any::{type_name, TypeId},
+    marker::PhantomData,
+};
 
 /// Acts as a type-erased proxy for any type bound by `'static`.
 ///
@@ -23,6 +26,10 @@ pub trait AsNodeKey
 where
     Self: 'static,
 {
+    fn type_name(&self) -> &'static str {
+        type_name::<Self>()
+    }
+
     fn as_node_key(&self) -> NodeKey<'_>;
 }
 
@@ -32,7 +39,7 @@ impl<N: AsNodeKey> AsNodeKey for Box<N> {
     }
 }
 
-impl<N: 'static> AsNodeKey for Option<N> {
+impl<N: AsNodeKey> AsNodeKey for Option<N> {
     fn as_node_key(&self) -> NodeKey<'_> {
         NodeKey::new(self)
     }

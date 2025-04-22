@@ -118,7 +118,7 @@ where
 /// All required implementations of this trait (every `sqltk-parser` AST node type) are provided.
 pub trait Visitable
 where
-    Self: 'static + Sized + AsNodeKey,
+    Self: 'static + Debug + Sized + AsNodeKey,
 {
     /// Accepts a borrowed [`Visitor`] and traverses the AST starting at `self` invoking [`Visitor::enter`] and
     /// [`Visitor::exit`] as nodes are entered and exiting respectively.
