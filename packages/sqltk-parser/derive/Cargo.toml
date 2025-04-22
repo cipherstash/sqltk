@@ -17,7 +17,7 @@
 
 [package]
 name = "sqltk-parser-derive"
-description = "proc macro for sqlparser"
+description = "proc macro for sqltk"
 version = "0.2.2"
 authors = ["sqlparser-rs authors"]
 homepage = "https://github.com/sqlparser-rs/sqlparser-rs"
