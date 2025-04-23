@@ -419,6 +419,7 @@ fn parse_window_function_with_filter() {
             select.projection,
             vec![SelectItem::UnnamedExpr(Expr::Function(Function {
                 name: ObjectName(vec![Ident::new(func_name)]),
+                uses_odbc_syntax: false,
                 parameters: FunctionArguments::None,
                 args: FunctionArguments::List(FunctionArgumentList {
                     duplicate_treatment: None,
@@ -465,6 +466,7 @@ fn parse_update_tuple_row_values() {
     assert_eq!(
         sqlite().verified_stmt("UPDATE x SET (a, b) = (1, 2)"),
         Statement::Update {
+            or: None,
             assignments: vec![Assignment {
                 target: AssignmentTarget::Tuple(vec![
                     ObjectName(vec![Ident::new("a"),]),
@@ -485,6 +487,7 @@ fn parse_update_tuple_row_values() {
                     version: None,
                     partitions: vec![],
                     with_ordinality: false,
+                    json_path: None,
                 },
                 joins: vec![],
             },
@@ -525,9 +528,9 @@ fn parse_start_transaction_with_modifier() {
     sqlite_and_generic().verified_stmt("BEGIN DEFERRED TRANSACTION");
     sqlite_and_generic().verified_stmt("BEGIN IMMEDIATE TRANSACTION");
     sqlite_and_generic().verified_stmt("BEGIN EXCLUSIVE TRANSACTION");
-    sqlite_and_generic().one_statement_parses_to("BEGIN DEFERRED", "BEGIN DEFERRED TRANSACTION");
-    sqlite_and_generic().one_statement_parses_to("BEGIN IMMEDIATE", "BEGIN IMMEDIATE TRANSACTION");
-    sqlite_and_generic().one_statement_parses_to("BEGIN EXCLUSIVE", "BEGIN EXCLUSIVE TRANSACTION");
+    sqlite_and_generic().verified_stmt("BEGIN DEFERRED");
+    sqlite_and_generic().verified_stmt("BEGIN IMMEDIATE");
+    sqlite_and_generic().verified_stmt("BEGIN EXCLUSIVE");
 
     let unsupported_dialects = TestedDialects::new(
         all_dialects()

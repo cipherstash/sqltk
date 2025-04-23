@@ -1190,6 +1190,7 @@ fn parse_delimited_identifiers() {
             version,
             with_ordinality: _,
             partitions: _,
+            json_path: _,
         } => {
             assert_eq!(vec![Ident::with_quote('"', "a table")], name.0);
             assert_eq!(Ident::with_quote('"', "alias"), alias.unwrap().name);
@@ -1211,6 +1212,7 @@ fn parse_delimited_identifiers() {
     assert_eq!(
         &Expr::Function(Function {
             name: ObjectName(vec![Ident::with_quote('"', "myfun")]),
+            uses_odbc_syntax: false,
             parameters: FunctionArguments::None,
             args: FunctionArguments::List(FunctionArgumentList {
                 duplicate_treatment: None,
@@ -1408,6 +1410,43 @@ fn test_alter_table_swap_with() {
         }
         _ => unreachable!(),
     };
+}
+
+#[test]
+fn test_alter_table_clustering() {
+    let sql = r#"ALTER TABLE tab CLUSTER BY (c1, "c2", TO_DATE(c3))"#;
+    match alter_table_op(snowflake_and_generic().verified_stmt(sql)) {
+        AlterTableOperation::ClusterBy { exprs } => {
+            assert_eq!(
+                exprs,
+                [
+                    Expr::Identifier(Ident::new("c1")),
+                    Expr::Identifier(Ident::with_quote('"', "c2")),
+                    Expr::Function(Function {
+                        name: ObjectName(vec![Ident::new("TO_DATE")]),
+                        uses_odbc_syntax: false,
+                        parameters: FunctionArguments::None,
+                        args: FunctionArguments::List(FunctionArgumentList {
+                            args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+                                Expr::Identifier(Ident::new("c3"))
+                            ))],
+                            duplicate_treatment: None,
+                            clauses: vec![],
+                        }),
+                        filter: None,
+                        null_treatment: None,
+                        over: None,
+                        within_group: vec![]
+                    })
+                ],
+            );
+        }
+        _ => unreachable!(),
+    }
+
+    snowflake_and_generic().verified_stmt("ALTER TABLE tbl DROP CLUSTERING KEY");
+    snowflake_and_generic().verified_stmt("ALTER TABLE tbl SUSPEND RECLUSTER");
+    snowflake_and_generic().verified_stmt("ALTER TABLE tbl RESUME RECLUSTER");
 }
 
 #[test]
@@ -2648,7 +2687,7 @@ fn parse_use() {
     let quote_styles = ['\'', '"', '`'];
     for object_name in &valid_object_names {
         // Test single identifier without quotes
-        std::assert_eq!(
+        assert_eq!(
             snowflake().verified_stmt(&format!("USE {}", object_name)),
             Statement::Use(Use::Object(ObjectName(vec![Ident::new(
                 object_name.to_string()
@@ -2656,7 +2695,7 @@ fn parse_use() {
         );
         for &quote in &quote_styles {
             // Test single identifier with different type of quotes
-            std::assert_eq!(
+            assert_eq!(
                 snowflake().verified_stmt(&format!("USE {}{}{}", quote, object_name, quote)),
                 Statement::Use(Use::Object(ObjectName(vec![Ident::with_quote(
                     quote,
@@ -2668,7 +2707,7 @@ fn parse_use() {
 
     for &quote in &quote_styles {
         // Test double identifier with different type of quotes
-        std::assert_eq!(
+        assert_eq!(
             snowflake().verified_stmt(&format!("USE {0}CATALOG{0}.{0}my_schema{0}", quote)),
             Statement::Use(Use::Object(ObjectName(vec![
                 Ident::with_quote(quote, "CATALOG"),
@@ -2677,7 +2716,7 @@ fn parse_use() {
         );
     }
     // Test double identifier without quotes
-    std::assert_eq!(
+    assert_eq!(
         snowflake().verified_stmt("USE mydb.my_schema"),
         Statement::Use(Use::Object(ObjectName(vec![
             Ident::new("mydb"),
@@ -2687,37 +2726,55 @@ fn parse_use() {
 
     for &quote in &quote_styles {
         // Test single and double identifier with keyword and different type of quotes
-        std::assert_eq!(
+        assert_eq!(
             snowflake().verified_stmt(&format!("USE DATABASE {0}my_database{0}", quote)),
             Statement::Use(Use::Database(ObjectName(vec![Ident::with_quote(
                 quote,
                 "my_database".to_string(),
             )])))
         );
-        std::assert_eq!(
+        assert_eq!(
             snowflake().verified_stmt(&format!("USE SCHEMA {0}my_schema{0}", quote)),
             Statement::Use(Use::Schema(ObjectName(vec![Ident::with_quote(
                 quote,
                 "my_schema".to_string(),
             )])))
         );
-        std::assert_eq!(
+        assert_eq!(
             snowflake().verified_stmt(&format!("USE SCHEMA {0}CATALOG{0}.{0}my_schema{0}", quote)),
             Statement::Use(Use::Schema(ObjectName(vec![
                 Ident::with_quote(quote, "CATALOG"),
                 Ident::with_quote(quote, "my_schema")
             ])))
         );
+        assert_eq!(
+            snowflake().verified_stmt(&format!("USE ROLE {0}my_role{0}", quote)),
+            Statement::Use(Use::Role(ObjectName(vec![Ident::with_quote(
+                quote,
+                "my_role".to_string(),
+            )])))
+        );
+        assert_eq!(
+            snowflake().verified_stmt(&format!("USE WAREHOUSE {0}my_wh{0}", quote)),
+            Statement::Use(Use::Warehouse(ObjectName(vec![Ident::with_quote(
+                quote,
+                "my_wh".to_string(),
+            )])))
+        );
     }
 
     // Test invalid syntax - missing identifier
     let invalid_cases = ["USE SCHEMA", "USE DATABASE", "USE WAREHOUSE"];
     for sql in &invalid_cases {
-        std::assert_eq!(
+        assert_eq!(
             snowflake().parse_sql_statements(sql).unwrap_err(),
             ParserError::ParserError("Expected: identifier, found: EOF".to_string()),
         );
     }
+
+    snowflake().verified_stmt("USE SECONDARY ROLES ALL");
+    snowflake().verified_stmt("USE SECONDARY ROLES NONE");
+    snowflake().verified_stmt("USE SECONDARY ROLES r1, r2, r3");
 }
 
 #[test]
@@ -2761,7 +2818,9 @@ fn parse_view_column_descriptions() {
 
 #[test]
 fn test_parentheses_overflow() {
-    let max_nesting_level: usize = 30;
+    // TODO: increase / improve after we fix the recursion limit
+    // for real (see https://github.com/apache/datafusion-sqlparser-rs/issues/984)
+    let max_nesting_level: usize = 25;
 
     // Verify the recursion check is not too wasteful... (num of parentheses - 2 is acceptable)
     let slack = 2;
@@ -2780,4 +2839,124 @@ fn test_parentheses_overflow() {
     let parsed =
         snowflake_with_recursion_limit(max_nesting_level).parse_sql_statements(sql.as_str());
     assert_eq!(parsed.err(), Some(ParserError::RecursionLimitExceeded));
+}
+
+#[test]
+fn test_show_databases() {
+    snowflake().verified_stmt("SHOW DATABASES");
+    snowflake().verified_stmt("SHOW DATABASES HISTORY");
+    snowflake().verified_stmt("SHOW DATABASES LIKE '%abc%'");
+    snowflake().verified_stmt("SHOW DATABASES STARTS WITH 'demo_db'");
+    snowflake().verified_stmt("SHOW DATABASES LIMIT 12");
+    snowflake()
+        .verified_stmt("SHOW DATABASES HISTORY LIKE '%aa' STARTS WITH 'demo' LIMIT 20 FROM 'abc'");
+    snowflake().verified_stmt("SHOW DATABASES IN ACCOUNT abc");
+}
+
+#[test]
+fn test_parse_show_schemas() {
+    snowflake().verified_stmt("SHOW SCHEMAS");
+    snowflake().verified_stmt("SHOW SCHEMAS IN ACCOUNT");
+    snowflake().verified_stmt("SHOW SCHEMAS IN ACCOUNT abc");
+    snowflake().verified_stmt("SHOW SCHEMAS IN DATABASE");
+    snowflake().verified_stmt("SHOW SCHEMAS IN DATABASE xyz");
+    snowflake().verified_stmt("SHOW SCHEMAS HISTORY LIKE '%xa%'");
+    snowflake().verified_stmt("SHOW SCHEMAS STARTS WITH 'abc' LIMIT 20");
+    snowflake().verified_stmt("SHOW SCHEMAS IN DATABASE STARTS WITH 'abc' LIMIT 20 FROM 'xyz'");
+}
+
+#[test]
+fn test_parse_show_tables() {
+    snowflake().verified_stmt("SHOW TABLES");
+    snowflake().verified_stmt("SHOW TABLES IN ACCOUNT");
+    snowflake().verified_stmt("SHOW TABLES IN DATABASE");
+    snowflake().verified_stmt("SHOW TABLES IN DATABASE xyz");
+    snowflake().verified_stmt("SHOW TABLES IN SCHEMA");
+    snowflake().verified_stmt("SHOW TABLES IN SCHEMA xyz");
+    snowflake().verified_stmt("SHOW TABLES HISTORY LIKE '%xa%'");
+    snowflake().verified_stmt("SHOW TABLES STARTS WITH 'abc' LIMIT 20");
+    snowflake().verified_stmt("SHOW TABLES IN SCHEMA STARTS WITH 'abc' LIMIT 20 FROM 'xyz'");
+    snowflake().verified_stmt("SHOW EXTERNAL TABLES");
+    snowflake().verified_stmt("SHOW EXTERNAL TABLES IN ACCOUNT");
+    snowflake().verified_stmt("SHOW EXTERNAL TABLES IN DATABASE");
+    snowflake().verified_stmt("SHOW EXTERNAL TABLES IN DATABASE xyz");
+    snowflake().verified_stmt("SHOW EXTERNAL TABLES IN SCHEMA");
+    snowflake().verified_stmt("SHOW EXTERNAL TABLES IN SCHEMA xyz");
+    snowflake().verified_stmt("SHOW EXTERNAL TABLES STARTS WITH 'abc' LIMIT 20");
+    snowflake()
+        .verified_stmt("SHOW EXTERNAL TABLES IN SCHEMA STARTS WITH 'abc' LIMIT 20 FROM 'xyz'");
+}
+
+#[test]
+fn test_show_views() {
+    snowflake().verified_stmt("SHOW VIEWS");
+    snowflake().verified_stmt("SHOW VIEWS IN ACCOUNT");
+    snowflake().verified_stmt("SHOW VIEWS IN DATABASE");
+    snowflake().verified_stmt("SHOW VIEWS IN DATABASE xyz");
+    snowflake().verified_stmt("SHOW VIEWS IN SCHEMA");
+    snowflake().verified_stmt("SHOW VIEWS IN SCHEMA xyz");
+    snowflake().verified_stmt("SHOW VIEWS STARTS WITH 'abc' LIMIT 20");
+    snowflake().verified_stmt("SHOW VIEWS IN SCHEMA STARTS WITH 'abc' LIMIT 20 FROM 'xyz'");
+}
+
+#[test]
+fn test_parse_show_columns_sql() {
+    snowflake().verified_stmt("SHOW COLUMNS IN TABLE");
+    snowflake().verified_stmt("SHOW COLUMNS IN TABLE abc");
+    snowflake().verified_stmt("SHOW COLUMNS LIKE '%xyz%' IN TABLE abc");
+}
+
+#[test]
+fn test_projection_with_nested_trailing_commas() {
+    let sql = "SELECT a, FROM b, LATERAL FLATTEN(input => events)";
+    let _ = snowflake().parse_sql_statements(sql).unwrap();
+
+    //Single nesting
+    let sql = "SELECT (SELECT a, FROM b, LATERAL FLATTEN(input => events))";
+    let _ = snowflake().parse_sql_statements(sql).unwrap();
+
+    //Double nesting
+    let sql = "SELECT (SELECT (SELECT a, FROM b, LATERAL FLATTEN(input => events)))";
+    let _ = snowflake().parse_sql_statements(sql).unwrap();
+
+    let sql = "SELECT a, b, FROM c, (SELECT d, e, FROM f, LATERAL FLATTEN(input => events))";
+    let _ = snowflake().parse_sql_statements(sql).unwrap();
+}
+
+#[test]
+fn test_sf_double_dot_notation() {
+    snowflake().verified_stmt("SELECT * FROM db_name..table_name");
+    snowflake().verified_stmt("SELECT * FROM x, y..z JOIN a..b AS b ON x.id = b.id");
+
+    assert_eq!(
+        snowflake()
+            .parse_sql_statements("SELECT * FROM X.Y..")
+            .unwrap_err()
+            .to_string(),
+        "sql parser error: Expected: identifier, found: ."
+    );
+    assert_eq!(
+        snowflake()
+            .parse_sql_statements("SELECT * FROM X..Y..Z")
+            .unwrap_err()
+            .to_string(),
+        "sql parser error: Expected: identifier, found: ."
+    );
+    assert_eq!(
+        // Ensure we don't parse leading token
+        snowflake()
+            .parse_sql_statements("SELECT * FROM .X.Y")
+            .unwrap_err()
+            .to_string(),
+        "sql parser error: Expected: identifier, found: ."
+    );
+}
+
+#[test]
+fn test_parse_double_dot_notation_wrong_position() {}
+
+#[test]
+fn parse_insert_overwrite() {
+    let insert_overwrite_into = r#"INSERT OVERWRITE INTO schema.table SELECT a FROM b"#;
+    snowflake().verified_stmt(insert_overwrite_into);
 }
