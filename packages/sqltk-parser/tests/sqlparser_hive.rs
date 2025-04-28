@@ -21,9 +21,10 @@
 //! is also tested (on the inputs it can handle).
 
 use sqltk_parser::ast::{
-    ClusteredBy, CommentDef, CreateFunctionBody, CreateFunctionUsing, CreateTable, Expr, Function,
-    FunctionArgumentList, FunctionArguments, Ident, ObjectName, OneOrManyWithParens, OrderByExpr,
-    SelectItem, Statement, TableFactor, UnaryOperator, Use, Value,
+    ClusteredBy, CommentDef, CreateFunction, CreateFunctionBody, CreateFunctionUsing, CreateTable,
+    Expr, Function, FunctionArgumentList, FunctionArguments, Ident, ObjectName,
+    OneOrManyWithParens, OrderByExpr, SelectItem, Statement, TableFactor, UnaryOperator, Use,
+    Value,
 };
 use sqltk_parser::dialect::{GenericDialect, HiveDialect, MsSqlDialect};
 use sqltk_parser::parser::ParserError;
@@ -392,13 +393,13 @@ fn set_statement_with_minus() {
 fn parse_create_function() {
     let sql = "CREATE TEMPORARY FUNCTION mydb.myfunc AS 'org.random.class.Name' USING JAR 'hdfs://somewhere.com:8020/very/far'";
     match hive().verified_stmt(sql) {
-        Statement::CreateFunction {
+        Statement::CreateFunction(CreateFunction {
             temporary,
             name,
             function_body,
             using,
             ..
-        } => {
+        }) => {
             assert!(temporary);
             assert_eq!(name.to_string(), "mydb.myfunc");
             assert_eq!(
@@ -457,6 +458,7 @@ fn parse_delimited_identifiers() {
             version,
             with_ordinality: _,
             partitions: _,
+            json_path: _,
         } => {
             assert_eq!(vec![Ident::with_quote('"', "a table")], name.0);
             assert_eq!(Ident::with_quote('"', "alias"), alias.unwrap().name);
@@ -478,6 +480,7 @@ fn parse_delimited_identifiers() {
     assert_eq!(
         &Expr::Function(Function {
             name: ObjectName(vec![Ident::with_quote('"', "myfun")]),
+            uses_odbc_syntax: false,
             parameters: FunctionArguments::None,
             args: FunctionArguments::List(FunctionArgumentList {
                 duplicate_treatment: None,

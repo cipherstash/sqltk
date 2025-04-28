@@ -20,12 +20,12 @@ use sqltk_parser::dialect::GenericDialect;
 use sqltk_parser::parser::Parser;
 
 fn basic_queries(c: &mut Criterion) {
-    let mut group = c.benchmark_group("sqltk_parser-rs parsing benchmark");
+    let mut group = c.benchmark_group("sqlparser-rs parsing benchmark");
     let dialect = GenericDialect {};
 
-    let string = "SELECT * FROM table WHERE 1 = 1";
+    let string = "SELECT * FROM my_table WHERE 1 = 1";
     group.bench_function("sqltk_parser::select", |b| {
-        b.iter(|| Parser::parse_sql(&dialect, string));
+        b.iter(|| Parser::parse_sql(&dialect, string).unwrap());
     });
 
     let with_query = "
@@ -33,14 +33,14 @@ fn basic_queries(c: &mut Criterion) {
             SELECT MAX(a) AS max_a,
                    COUNT(b) AS b_num,
                    user_id
-            FROM TABLE
+            FROM MY_TABLE
             GROUP BY user_id
         )
-        SELECT * FROM table
+        SELECT * FROM my_table
         LEFT JOIN derived USING (user_id)
     ";
     group.bench_function("sqltk_parser::with_select", |b| {
-        b.iter(|| Parser::parse_sql(&dialect, with_query));
+        b.iter(|| Parser::parse_sql(&dialect, with_query).unwrap());
     });
 }
 

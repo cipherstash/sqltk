@@ -21,8 +21,9 @@ use syn::spanned::Spanned;
 use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input, parse_quote, Attribute, Data, DeriveInput, Fields, GenericParam, Generics,
-    Ident, Index, LitStr, Meta, Token,
+    Ident, Index, LitStr, Meta, Token, Type, TypePath,
 };
+use syn::{Path, PathArguments};
 
 /// Implementation of `[#derive(Visit)]`
 #[proc_macro_derive(VisitMut, attributes(visit))]
@@ -182,9 +183,21 @@ fn visit_children(
             Fields::Named(fields) => {
                 let recurse = fields.named.iter().map(|f| {
                     let name = &f.ident;
+                    let is_option = is_option(&f.ty);
                     let attributes = Attributes::parse(&f.attrs);
-                    let (pre_visit, post_visit) = attributes.visit(quote!(&#modifier self.#name));
-                    quote_spanned!(f.span() => #pre_visit sqltk_parser::ast::#visit_trait::visit(&#modifier self.#name, visitor)?; #post_visit)
+                    if is_option && attributes.with.is_some() {
+                        let (pre_visit, post_visit) = attributes.visit(quote!(value));
+                        quote_spanned!(f.span() =>
+                            if let Some(value) = &#modifier self.#name {
+                                #pre_visit sqltk_parser::ast::#visit_trait::visit(value, visitor)?; #post_visit
+                            }
+                        )
+                    } else {
+                        let (pre_visit, post_visit) = attributes.visit(quote!(&#modifier self.#name));
+                        quote_spanned!(f.span() =>
+                            #pre_visit sqltk_parser::ast::#visit_trait::visit(&#modifier self.#name, visitor)?; #post_visit
+                        )
+                    }
                 });
                 quote! {
                     #(#recurse)*
@@ -255,4 +268,21 @@ fn visit_children(
         }
         Data::Union(_) => unimplemented!(),
     }
+}
+
+fn is_option(ty: &Type) -> bool {
+    if let Type::Path(TypePath {
+        path: Path { segments, .. },
+        ..
+    }) = ty
+    {
+        if let Some(segment) = segments.last() {
+            if segment.ident == "Option" {
+                if let PathArguments::AngleBracketed(args) = &segment.arguments {
+                    return args.args.len() == 1;
+                }
+            }
+        }
+    }
+    false
 }

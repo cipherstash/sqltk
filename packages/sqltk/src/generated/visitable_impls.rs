@@ -484,6 +484,12 @@ impl crate::Visitable for sqltk_parser::ast::AlterTableOperation {
                     sqltk_parser::ast::AlterTableOperation::OwnerTo { new_owner } => {
                         new_owner.accept(visitor)?;
                     }
+                    sqltk_parser::ast::AlterTableOperation::ClusterBy { exprs } => {
+                        exprs.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::AlterTableOperation::DropClusteringKey => {}
+                    sqltk_parser::ast::AlterTableOperation::SuspendRecluster => {}
+                    sqltk_parser::ast::AlterTableOperation::ResumeRecluster => {}
                 }
                 std::ops::ControlFlow::Continue(())
             },
@@ -692,6 +698,32 @@ impl crate::Visitable for sqltk_parser::ast::AttachDuckDBDatabaseOption {
 }
 #[automatically_derived]
 impl crate::AsNodeKey for sqltk_parser::ast::AttachDuckDBDatabaseOption {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::BeginTransactionKind {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqltk_parser::ast::BeginTransactionKind::Transaction => {}
+                    sqltk_parser::ast::BeginTransactionKind::Work => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::BeginTransactionKind {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
@@ -1253,6 +1285,10 @@ impl crate::Visitable for sqltk_parser::ast::CommentObject {
                     sqltk_parser::ast::CommentObject::Column => {}
                     sqltk_parser::ast::CommentObject::Table => {}
                     sqltk_parser::ast::CommentObject::Extension => {}
+                    sqltk_parser::ast::CommentObject::Schema => {}
+                    sqltk_parser::ast::CommentObject::Database => {}
+                    sqltk_parser::ast::CommentObject::User => {}
+                    sqltk_parser::ast::CommentObject::Role => {}
                 }
                 std::ops::ControlFlow::Continue(())
             },
@@ -1563,6 +1599,43 @@ impl crate::AsNodeKey for sqltk_parser::ast::CopyTarget {
     }
 }
 #[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::CreateFunction {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.or_replace.accept(visitor)?;
+                self.temporary.accept(visitor)?;
+                self.if_not_exists.accept(visitor)?;
+                self.name.accept(visitor)?;
+                self.args.accept(visitor)?;
+                self.return_type.accept(visitor)?;
+                self.function_body.accept(visitor)?;
+                self.behavior.accept(visitor)?;
+                self.called_on_null.accept(visitor)?;
+                self.parallel.accept(visitor)?;
+                self.using.accept(visitor)?;
+                self.language.accept(visitor)?;
+                self.determinism_specifier.accept(visitor)?;
+                self.options.accept(visitor)?;
+                self.remote_connection.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::CreateFunction {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
 impl crate::Visitable for sqltk_parser::ast::CreateFunctionBody {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -1827,6 +1900,7 @@ impl crate::Visitable for sqltk_parser::ast::Cte {
                 self.query.accept(visitor)?;
                 self.from.accept(visitor)?;
                 self.materialized.accept(visitor)?;
+                self.closing_paren_token.accept(visitor)?;
                 std::ops::ControlFlow::Continue(())
             },
         )
@@ -1913,6 +1987,9 @@ impl crate::Visitable for sqltk_parser::ast::DataType {
                     sqltk_parser::ast::DataType::Blob(field0) => {
                         field0.accept(visitor)?;
                     }
+                    sqltk_parser::ast::DataType::TinyBlob => {}
+                    sqltk_parser::ast::DataType::MediumBlob => {}
+                    sqltk_parser::ast::DataType::LongBlob => {}
                     sqltk_parser::ast::DataType::Bytes(field0) => {
                         field0.accept(visitor)?;
                     }
@@ -2030,6 +2107,9 @@ impl crate::Visitable for sqltk_parser::ast::DataType {
                     sqltk_parser::ast::DataType::JSONB => {}
                     sqltk_parser::ast::DataType::Regclass => {}
                     sqltk_parser::ast::DataType::Text => {}
+                    sqltk_parser::ast::DataType::TinyText => {}
+                    sqltk_parser::ast::DataType::MediumText => {}
+                    sqltk_parser::ast::DataType::LongText => {}
                     sqltk_parser::ast::DataType::String(field0) => {
                         field0.accept(visitor)?;
                     }
@@ -2037,6 +2117,12 @@ impl crate::Visitable for sqltk_parser::ast::DataType {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::DataType::Bytea => {}
+                    sqltk_parser::ast::DataType::Bit(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::DataType::BitVarying(field0) => {
+                        field0.accept(visitor)?;
+                    }
                     sqltk_parser::ast::DataType::Custom(field0, field1) => {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
@@ -2054,8 +2140,9 @@ impl crate::Visitable for sqltk_parser::ast::DataType {
                     sqltk_parser::ast::DataType::Nested(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::DataType::Enum(field0) => {
+                    sqltk_parser::ast::DataType::Enum(field0, field1) => {
                         field0.accept(visitor)?;
+                        field1.accept(visitor)?;
                     }
                     sqltk_parser::ast::DataType::Set(field0) => {
                         field0.accept(visitor)?;
@@ -2541,6 +2628,37 @@ impl crate::AsNodeKey for sqltk_parser::ast::EmptyMatchesMode {
     }
 }
 #[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::EnumMember {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqltk_parser::ast::EnumMember::Name(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::EnumMember::NamedValue(field0, field1) => {
+                        field0.accept(visitor)?;
+                        field1.accept(visitor)?;
+                    }
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::EnumMember {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
 impl crate::Visitable for sqltk_parser::ast::ExactNumberInfo {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -2881,6 +2999,9 @@ impl crate::Visitable for sqltk_parser::ast::Expr {
                     sqltk_parser::ast::Expr::Function(field0) => {
                         field0.accept(visitor)?;
                     }
+                    sqltk_parser::ast::Expr::Method(field0) => {
+                        field0.accept(visitor)?;
+                    }
                     sqltk_parser::ast::Expr::Case {
                         operand,
                         conditions,
@@ -2944,9 +3065,12 @@ impl crate::Visitable for sqltk_parser::ast::Expr {
                         match_value.accept(visitor)?;
                         opt_search_modifier.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Expr::Wildcard => {}
-                    sqltk_parser::ast::Expr::QualifiedWildcard(field0) => {
+                    sqltk_parser::ast::Expr::Wildcard(field0) => {
                         field0.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::Expr::QualifiedWildcard(field0, field1) => {
+                        field0.accept(visitor)?;
+                        field1.accept(visitor)?;
                     }
                     sqltk_parser::ast::Expr::OuterJoin(field0) => {
                         field0.accept(visitor)?;
@@ -3361,6 +3485,7 @@ impl crate::Visitable for sqltk_parser::ast::Function {
             #[allow(unused_variables)]
             |visitor| {
                 self.name.accept(visitor)?;
+                self.uses_odbc_syntax.accept(visitor)?;
                 self.parameters.accept(visitor)?;
                 self.args.accept(visitor)?;
                 self.filter.accept(visitor)?;
@@ -3391,6 +3516,15 @@ impl crate::Visitable for sqltk_parser::ast::FunctionArg {
             |visitor| {
                 match self {
                     sqltk_parser::ast::FunctionArg::Named { name, arg, operator } => {
+                        name.accept(visitor)?;
+                        arg.accept(visitor)?;
+                        operator.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::FunctionArg::ExprNamed {
+                        name,
+                        arg,
+                        operator,
+                    } => {
                         name.accept(visitor)?;
                         arg.accept(visitor)?;
                         operator.accept(visitor)?;
@@ -3456,6 +3590,8 @@ impl crate::Visitable for sqltk_parser::ast::FunctionArgOperator {
                     sqltk_parser::ast::FunctionArgOperator::Equals => {}
                     sqltk_parser::ast::FunctionArgOperator::RightArrow => {}
                     sqltk_parser::ast::FunctionArgOperator::Assignment => {}
+                    sqltk_parser::ast::FunctionArgOperator::Colon => {}
+                    sqltk_parser::ast::FunctionArgOperator::Value => {}
                 }
                 std::ops::ControlFlow::Continue(())
             },
@@ -3498,6 +3634,11 @@ impl crate::Visitable for sqltk_parser::ast::FunctionArgumentClause {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::FunctionArgumentClause::Separator(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::FunctionArgumentClause::JsonNullClause(
+                        field0,
+                    ) => {
                         field0.accept(visitor)?;
                     }
                 }
@@ -4057,6 +4198,30 @@ impl crate::AsNodeKey for sqltk_parser::ast::HiveIOFormat {
     }
 }
 #[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::HiveLoadDataFormat {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.serde.accept(visitor)?;
+                self.input_format.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::HiveLoadDataFormat {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
 impl crate::Visitable for sqltk_parser::ast::HiveRowDelimiter {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -4147,6 +4312,7 @@ impl crate::Visitable for sqltk_parser::ast::Ident {
             |visitor| {
                 self.value.accept(visitor)?;
                 self.quote_style.accept(visitor)?;
+                self.span.accept(visitor)?;
                 std::ops::ControlFlow::Continue(())
             },
         )
@@ -4617,10 +4783,16 @@ impl crate::Visitable for sqltk_parser::ast::JoinOperator {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::JoinOperator::CrossJoin => {}
+                    sqltk_parser::ast::JoinOperator::Semi(field0) => {
+                        field0.accept(visitor)?;
+                    }
                     sqltk_parser::ast::JoinOperator::LeftSemi(field0) => {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::JoinOperator::RightSemi(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::JoinOperator::Anti(field0) => {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::JoinOperator::LeftAnti(field0) => {
@@ -4646,6 +4818,32 @@ impl crate::Visitable for sqltk_parser::ast::JoinOperator {
 }
 #[automatically_derived]
 impl crate::AsNodeKey for sqltk_parser::ast::JoinOperator {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::JsonNullClause {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqltk_parser::ast::JsonNullClause::NullOnNull => {}
+                    sqltk_parser::ast::JsonNullClause::AbsentOnNull => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::JsonNullClause {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
@@ -5450,6 +5648,30 @@ impl crate::AsNodeKey for sqltk_parser::ast::MergeInsertKind {
     }
 }
 #[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::Method {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.expr.accept(visitor)?;
+                self.method_chain.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::Method {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
 impl crate::Visitable for sqltk_parser::ast::MinMaxValue {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -5635,6 +5857,33 @@ impl crate::Visitable for sqltk_parser::ast::NullTreatment {
 }
 #[automatically_derived]
 impl crate::AsNodeKey for sqltk_parser::ast::NullTreatment {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::NullsDistinctOption {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqltk_parser::ast::NullsDistinctOption::None => {}
+                    sqltk_parser::ast::NullsDistinctOption::Distinct => {}
+                    sqltk_parser::ast::NullsDistinctOption::NotDistinct => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::NullsDistinctOption {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
@@ -5852,6 +6101,32 @@ impl crate::Visitable for sqltk_parser::ast::OnInsert {
 }
 #[automatically_derived]
 impl crate::AsNodeKey for sqltk_parser::ast::OnInsert {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::OpenJsonTableColumn {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.name.accept(visitor)?;
+                self.r#type.accept(visitor)?;
+                self.path.accept(visitor)?;
+                self.as_json.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::OpenJsonTableColumn {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
@@ -6544,6 +6819,35 @@ impl crate::AsNodeKey for sqltk_parser::ast::SearchModifier {
     }
 }
 #[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::SecondaryRoles {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqltk_parser::ast::SecondaryRoles::All => {}
+                    sqltk_parser::ast::SecondaryRoles::None => {}
+                    sqltk_parser::ast::SecondaryRoles::List(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::SecondaryRoles {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
 impl crate::Visitable for sqltk_parser::ast::SecretOption {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -6579,6 +6883,7 @@ impl crate::Visitable for sqltk_parser::ast::Select {
             #[allow(unused_variables)]
             |visitor| {
                 self.from.accept(visitor)?;
+                self.select_token.accept(visitor)?;
                 self.distinct.accept(visitor)?;
                 self.top.accept(visitor)?;
                 self.top_before_distinct.accept(visitor)?;
@@ -6880,32 +7185,6 @@ impl crate::AsNodeKey for sqltk_parser::ast::Setting {
     }
 }
 #[automatically_derived]
-impl crate::Visitable for sqltk_parser::ast::ShowClause {
-    fn accept<'ast, V: crate::Visitor<'ast>>(
-        &'ast self,
-        visitor: &mut V,
-    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
-        visit(
-            self,
-            visitor,
-            #[allow(unused_variables)]
-            |visitor| {
-                match self {
-                    sqltk_parser::ast::ShowClause::IN => {}
-                    sqltk_parser::ast::ShowClause::FROM => {}
-                }
-                std::ops::ControlFlow::Continue(())
-            },
-        )
-    }
-}
-#[automatically_derived]
-impl crate::AsNodeKey for sqltk_parser::ast::ShowClause {
-    fn as_node_key(&self) -> crate::NodeKey<'_> {
-        crate::NodeKey::new(self)
-    }
-}
-#[automatically_derived]
 impl crate::Visitable for sqltk_parser::ast::ShowCreateObject {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -6967,6 +7246,143 @@ impl crate::Visitable for sqltk_parser::ast::ShowStatementFilter {
 }
 #[automatically_derived]
 impl crate::AsNodeKey for sqltk_parser::ast::ShowStatementFilter {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::ShowStatementFilterPosition {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqltk_parser::ast::ShowStatementFilterPosition::Infix(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::ShowStatementFilterPosition::Suffix(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::ShowStatementFilterPosition {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::ShowStatementIn {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.clause.accept(visitor)?;
+                self.parent_type.accept(visitor)?;
+                self.parent_name.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::ShowStatementIn {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::ShowStatementInClause {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqltk_parser::ast::ShowStatementInClause::IN => {}
+                    sqltk_parser::ast::ShowStatementInClause::FROM => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::ShowStatementInClause {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::ShowStatementInParentType {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqltk_parser::ast::ShowStatementInParentType::Account => {}
+                    sqltk_parser::ast::ShowStatementInParentType::Database => {}
+                    sqltk_parser::ast::ShowStatementInParentType::Schema => {}
+                    sqltk_parser::ast::ShowStatementInParentType::Table => {}
+                    sqltk_parser::ast::ShowStatementInParentType::View => {}
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::ShowStatementInParentType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::ShowStatementOptions {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.show_in.accept(visitor)?;
+                self.starts_with.accept(visitor)?;
+                self.limit.accept(visitor)?;
+                self.limit_from.accept(visitor)?;
+                self.filter_position.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::ShowStatementOptions {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
@@ -7173,12 +7589,14 @@ impl crate::Visitable for sqltk_parser::ast::Statement {
                         from,
                         selection,
                         returning,
+                        or,
                     } => {
                         table.accept(visitor)?;
                         from.accept(visitor)?;
                         assignments.accept(visitor)?;
                         selection.accept(visitor)?;
                         returning.accept(visitor)?;
+                        or.accept(visitor)?;
                     }
                     sqltk_parser::ast::Statement::Delete(field0) => {
                         field0.accept(visitor)?;
@@ -7531,43 +7949,53 @@ impl crate::Visitable for sqltk_parser::ast::Statement {
                     sqltk_parser::ast::Statement::ShowColumns {
                         extended,
                         full,
-                        table_name,
-                        filter,
+                        show_options,
                     } => {
                         extended.accept(visitor)?;
                         full.accept(visitor)?;
-                        table_name.accept(visitor)?;
-                        filter.accept(visitor)?;
+                        show_options.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Statement::ShowDatabases { filter } => {
-                        filter.accept(visitor)?;
+                    sqltk_parser::ast::Statement::ShowDatabases {
+                        terse,
+                        history,
+                        show_options,
+                    } => {
+                        terse.accept(visitor)?;
+                        history.accept(visitor)?;
+                        show_options.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Statement::ShowSchemas { filter } => {
-                        filter.accept(visitor)?;
+                    sqltk_parser::ast::Statement::ShowSchemas {
+                        terse,
+                        history,
+                        show_options,
+                    } => {
+                        terse.accept(visitor)?;
+                        history.accept(visitor)?;
+                        show_options.accept(visitor)?;
                     }
                     sqltk_parser::ast::Statement::ShowTables {
+                        terse,
+                        history,
                         extended,
                         full,
-                        clause,
-                        db_name,
-                        filter,
+                        external,
+                        show_options,
                     } => {
+                        terse.accept(visitor)?;
+                        history.accept(visitor)?;
                         extended.accept(visitor)?;
                         full.accept(visitor)?;
-                        clause.accept(visitor)?;
-                        db_name.accept(visitor)?;
-                        filter.accept(visitor)?;
+                        external.accept(visitor)?;
+                        show_options.accept(visitor)?;
                     }
                     sqltk_parser::ast::Statement::ShowViews {
+                        terse,
                         materialized,
-                        clause,
-                        db_name,
-                        filter,
+                        show_options,
                     } => {
+                        terse.accept(visitor)?;
                         materialized.accept(visitor)?;
-                        clause.accept(visitor)?;
-                        db_name.accept(visitor)?;
-                        filter.accept(visitor)?;
+                        show_options.accept(visitor)?;
                     }
                     sqltk_parser::ast::Statement::ShowCollation { filter } => {
                         filter.accept(visitor)?;
@@ -7578,10 +8006,12 @@ impl crate::Visitable for sqltk_parser::ast::Statement {
                     sqltk_parser::ast::Statement::StartTransaction {
                         modes,
                         begin,
+                        transaction,
                         modifier,
                     } => {
                         modes.accept(visitor)?;
                         begin.accept(visitor)?;
+                        transaction.accept(visitor)?;
                         modifier.accept(visitor)?;
                     }
                     sqltk_parser::ast::Statement::SetTransaction {
@@ -7629,38 +8059,8 @@ impl crate::Visitable for sqltk_parser::ast::Statement {
                         location.accept(visitor)?;
                         managed_location.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Statement::CreateFunction {
-                        or_replace,
-                        temporary,
-                        if_not_exists,
-                        name,
-                        args,
-                        return_type,
-                        function_body,
-                        behavior,
-                        called_on_null,
-                        parallel,
-                        using,
-                        language,
-                        determinism_specifier,
-                        options,
-                        remote_connection,
-                    } => {
-                        or_replace.accept(visitor)?;
-                        temporary.accept(visitor)?;
-                        if_not_exists.accept(visitor)?;
-                        name.accept(visitor)?;
-                        args.accept(visitor)?;
-                        return_type.accept(visitor)?;
-                        function_body.accept(visitor)?;
-                        behavior.accept(visitor)?;
-                        called_on_null.accept(visitor)?;
-                        parallel.accept(visitor)?;
-                        using.accept(visitor)?;
-                        language.accept(visitor)?;
-                        determinism_specifier.accept(visitor)?;
-                        options.accept(visitor)?;
-                        remote_connection.accept(visitor)?;
+                    sqltk_parser::ast::Statement::CreateFunction(field0) => {
+                        field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::Statement::CreateTrigger {
                         or_replace,
@@ -7921,9 +8321,27 @@ impl crate::Visitable for sqltk_parser::ast::Statement {
                     sqltk_parser::ast::Statement::LISTEN { channel } => {
                         channel.accept(visitor)?;
                     }
+                    sqltk_parser::ast::Statement::UNLISTEN { channel } => {
+                        channel.accept(visitor)?;
+                    }
                     sqltk_parser::ast::Statement::NOTIFY { channel, payload } => {
                         channel.accept(visitor)?;
                         payload.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::Statement::LoadData {
+                        local,
+                        inpath,
+                        overwrite,
+                        table_name,
+                        partitioned,
+                        table_format,
+                    } => {
+                        local.accept(visitor)?;
+                        inpath.accept(visitor)?;
+                        overwrite.accept(visitor)?;
+                        table_name.accept(visitor)?;
+                        partitioned.accept(visitor)?;
+                        table_format.accept(visitor)?;
                     }
                 }
                 std::ops::ControlFlow::Continue(())
@@ -8096,6 +8514,30 @@ impl crate::AsNodeKey for sqltk_parser::ast::TableAlias {
     }
 }
 #[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::TableAliasColumnDef {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.name.accept(visitor)?;
+                self.data_type.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::TableAliasColumnDef {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
 impl crate::Visitable for sqltk_parser::ast::TableConstraint {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -8115,6 +8557,7 @@ impl crate::Visitable for sqltk_parser::ast::TableConstraint {
                         columns,
                         index_options,
                         characteristics,
+                        nulls_distinct,
                     } => {
                         name.accept(visitor)?;
                         index_name.accept(visitor)?;
@@ -8123,6 +8566,7 @@ impl crate::Visitable for sqltk_parser::ast::TableConstraint {
                         columns.accept(visitor)?;
                         index_options.accept(visitor)?;
                         characteristics.accept(visitor)?;
+                        nulls_distinct.accept(visitor)?;
                     }
                     sqltk_parser::ast::TableConstraint::PrimaryKey {
                         name,
@@ -8238,6 +8682,7 @@ impl crate::Visitable for sqltk_parser::ast::TableFactor {
                         version,
                         with_ordinality,
                         partitions,
+                        json_path,
                     } => {
                         name.accept(visitor)?;
                         alias.accept(visitor)?;
@@ -8246,6 +8691,7 @@ impl crate::Visitable for sqltk_parser::ast::TableFactor {
                         version.accept(visitor)?;
                         with_ordinality.accept(visitor)?;
                         partitions.accept(visitor)?;
+                        json_path.accept(visitor)?;
                     }
                     sqltk_parser::ast::TableFactor::Derived {
                         lateral,
@@ -8285,6 +8731,17 @@ impl crate::Visitable for sqltk_parser::ast::TableFactor {
                         with_ordinality.accept(visitor)?;
                     }
                     sqltk_parser::ast::TableFactor::JsonTable {
+                        json_expr,
+                        json_path,
+                        columns,
+                        alias,
+                    } => {
+                        json_expr.accept(visitor)?;
+                        json_path.accept(visitor)?;
+                        columns.accept(visitor)?;
+                        alias.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::TableFactor::OpenJsonTable {
                         json_expr,
                         json_path,
                         columns,
@@ -9020,6 +9477,7 @@ impl crate::Visitable for sqltk_parser::ast::UnaryOperator {
                     sqltk_parser::ast::UnaryOperator::PGPostfixFactorial => {}
                     sqltk_parser::ast::UnaryOperator::PGPrefixFactorial => {}
                     sqltk_parser::ast::UnaryOperator::PGAbs => {}
+                    sqltk_parser::ast::UnaryOperator::BangNot => {}
                 }
                 std::ops::ControlFlow::Continue(())
             },
@@ -9078,6 +9536,12 @@ impl crate::Visitable for sqltk_parser::ast::Use {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::Use::Warehouse(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::Use::Role(field0) => {
+                        field0.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::Use::SecondaryRoles(field0) => {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::Use::Object(field0) => {
@@ -9359,6 +9823,7 @@ impl crate::Visitable for sqltk_parser::ast::WildcardAdditionalOptions {
             visitor,
             #[allow(unused_variables)]
             |visitor| {
+                self.wildcard_token.accept(visitor)?;
                 self.opt_ilike.accept(visitor)?;
                 self.opt_exclude.accept(visitor)?;
                 self.opt_except.accept(visitor)?;
@@ -9525,6 +9990,7 @@ impl crate::Visitable for sqltk_parser::ast::With {
             visitor,
             #[allow(unused_variables)]
             |visitor| {
+                self.with_token.accept(visitor)?;
                 self.recursive.accept(visitor)?;
                 self.cte_tables.accept(visitor)?;
                 std::ops::ControlFlow::Continue(())
@@ -9559,6 +10025,29 @@ impl crate::Visitable for sqltk_parser::ast::WithFill {
 }
 #[automatically_derived]
 impl crate::AsNodeKey for sqltk_parser::ast::WithFill {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::helpers::attached_token::AttachedToken {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.0.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::helpers::attached_token::AttachedToken {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
@@ -9716,8 +10205,10 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::NoKeyword => {}
                     sqltk_parser::keywords::Keyword::ABORT => {}
                     sqltk_parser::keywords::Keyword::ABS => {}
+                    sqltk_parser::keywords::Keyword::ABSENT => {}
                     sqltk_parser::keywords::Keyword::ABSOLUTE => {}
                     sqltk_parser::keywords::Keyword::ACCESS => {}
+                    sqltk_parser::keywords::Keyword::ACCOUNT => {}
                     sqltk_parser::keywords::Keyword::ACTION => {}
                     sqltk_parser::keywords::Keyword::ADD => {}
                     sqltk_parser::keywords::Keyword::ADMIN => {}
@@ -9733,6 +10224,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::AND => {}
                     sqltk_parser::keywords::Keyword::ANTI => {}
                     sqltk_parser::keywords::Keyword::ANY => {}
+                    sqltk_parser::keywords::Keyword::APPLICATION => {}
                     sqltk_parser::keywords::Keyword::APPLY => {}
                     sqltk_parser::keywords::Keyword::ARCHIVE => {}
                     sqltk_parser::keywords::Keyword::ARE => {}
@@ -9765,6 +10257,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::BIGNUMERIC => {}
                     sqltk_parser::keywords::Keyword::BINARY => {}
                     sqltk_parser::keywords::Keyword::BINDING => {}
+                    sqltk_parser::keywords::Keyword::BIT => {}
                     sqltk_parser::keywords::Keyword::BLOB => {}
                     sqltk_parser::keywords::Keyword::BLOOMFILTER => {}
                     sqltk_parser::keywords::Keyword::BOOL => {}
@@ -9806,6 +10299,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::CLOSE => {}
                     sqltk_parser::keywords::Keyword::CLUSTER => {}
                     sqltk_parser::keywords::Keyword::CLUSTERED => {}
+                    sqltk_parser::keywords::Keyword::CLUSTERING => {}
                     sqltk_parser::keywords::Keyword::COALESCE => {}
                     sqltk_parser::keywords::Keyword::COLLATE => {}
                     sqltk_parser::keywords::Keyword::COLLATION => {}
@@ -9924,6 +10418,8 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::ENFORCED => {}
                     sqltk_parser::keywords::Keyword::ENGINE => {}
                     sqltk_parser::keywords::Keyword::ENUM => {}
+                    sqltk_parser::keywords::Keyword::ENUM16 => {}
+                    sqltk_parser::keywords::Keyword::ENUM8 => {}
                     sqltk_parser::keywords::Keyword::EPHEMERAL => {}
                     sqltk_parser::keywords::Keyword::EPOCH => {}
                     sqltk_parser::keywords::Keyword::EQUALS => {}
@@ -9968,6 +10464,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::FLOAT8 => {}
                     sqltk_parser::keywords::Keyword::FLOOR => {}
                     sqltk_parser::keywords::Keyword::FLUSH => {}
+                    sqltk_parser::keywords::Keyword::FN => {}
                     sqltk_parser::keywords::Keyword::FOLLOWING => {}
                     sqltk_parser::keywords::Keyword::FOR => {}
                     sqltk_parser::keywords::Keyword::FORCE => {}
@@ -10029,6 +10526,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::INITIALLY => {}
                     sqltk_parser::keywords::Keyword::INNER => {}
                     sqltk_parser::keywords::Keyword::INOUT => {}
+                    sqltk_parser::keywords::Keyword::INPATH => {}
                     sqltk_parser::keywords::Keyword::INPUT => {}
                     sqltk_parser::keywords::Keyword::INPUTFORMAT => {}
                     sqltk_parser::keywords::Keyword::INSENSITIVE => {}
@@ -10091,6 +10589,8 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::LOCKED => {}
                     sqltk_parser::keywords::Keyword::LOGIN => {}
                     sqltk_parser::keywords::Keyword::LOGS => {}
+                    sqltk_parser::keywords::Keyword::LONGBLOB => {}
+                    sqltk_parser::keywords::Keyword::LONGTEXT => {}
                     sqltk_parser::keywords::Keyword::LOWCARDINALITY => {}
                     sqltk_parser::keywords::Keyword::LOWER => {}
                     sqltk_parser::keywords::Keyword::LOW_PRIORITY => {}
@@ -10109,7 +10609,9 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::MAXVALUE => {}
                     sqltk_parser::keywords::Keyword::MAX_DATA_EXTENSION_TIME_IN_DAYS => {}
                     sqltk_parser::keywords::Keyword::MEASURES => {}
+                    sqltk_parser::keywords::Keyword::MEDIUMBLOB => {}
                     sqltk_parser::keywords::Keyword::MEDIUMINT => {}
+                    sqltk_parser::keywords::Keyword::MEDIUMTEXT => {}
                     sqltk_parser::keywords::Keyword::MEMBER => {}
                     sqltk_parser::keywords::Keyword::MERGE => {}
                     sqltk_parser::keywords::Keyword::METADATA => {}
@@ -10179,6 +10681,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::ONE => {}
                     sqltk_parser::keywords::Keyword::ONLY => {}
                     sqltk_parser::keywords::Keyword::OPEN => {}
+                    sqltk_parser::keywords::Keyword::OPENJSON => {}
                     sqltk_parser::keywords::Keyword::OPERATOR => {}
                     sqltk_parser::keywords::Keyword::OPTIMIZE => {}
                     sqltk_parser::keywords::Keyword::OPTIMIZER_COSTS => {}
@@ -10252,6 +10755,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::READS => {}
                     sqltk_parser::keywords::Keyword::READ_ONLY => {}
                     sqltk_parser::keywords::Keyword::REAL => {}
+                    sqltk_parser::keywords::Keyword::RECLUSTER => {}
                     sqltk_parser::keywords::Keyword::RECURSIVE => {}
                     sqltk_parser::keywords::Keyword::REF => {}
                     sqltk_parser::keywords::Keyword::REFERENCES => {}
@@ -10286,6 +10790,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::RESTRICTIVE => {}
                     sqltk_parser::keywords::Keyword::RESULT => {}
                     sqltk_parser::keywords::Keyword::RESULTSET => {}
+                    sqltk_parser::keywords::Keyword::RESUME => {}
                     sqltk_parser::keywords::Keyword::RETAIN => {}
                     sqltk_parser::keywords::Keyword::RETURN => {}
                     sqltk_parser::keywords::Keyword::RETURNING => {}
@@ -10294,6 +10799,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::RIGHT => {}
                     sqltk_parser::keywords::Keyword::RLIKE => {}
                     sqltk_parser::keywords::Keyword::ROLE => {}
+                    sqltk_parser::keywords::Keyword::ROLES => {}
                     sqltk_parser::keywords::Keyword::ROLLBACK => {}
                     sqltk_parser::keywords::Keyword::ROLLUP => {}
                     sqltk_parser::keywords::Keyword::ROOT => {}
@@ -10312,6 +10818,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::SCROLL => {}
                     sqltk_parser::keywords::Keyword::SEARCH => {}
                     sqltk_parser::keywords::Keyword::SECOND => {}
+                    sqltk_parser::keywords::Keyword::SECONDARY => {}
                     sqltk_parser::keywords::Keyword::SECRET => {}
                     sqltk_parser::keywords::Keyword::SECURITY => {}
                     sqltk_parser::keywords::Keyword::SELECT => {}
@@ -10351,6 +10858,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::STABLE => {}
                     sqltk_parser::keywords::Keyword::STAGE => {}
                     sqltk_parser::keywords::Keyword::START => {}
+                    sqltk_parser::keywords::Keyword::STARTS => {}
                     sqltk_parser::keywords::Keyword::STATEMENT => {}
                     sqltk_parser::keywords::Keyword::STATIC => {}
                     sqltk_parser::keywords::Keyword::STATISTICS => {}
@@ -10372,6 +10880,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::SUM => {}
                     sqltk_parser::keywords::Keyword::SUPER => {}
                     sqltk_parser::keywords::Keyword::SUPERUSER => {}
+                    sqltk_parser::keywords::Keyword::SUSPEND => {}
                     sqltk_parser::keywords::Keyword::SWAP => {}
                     sqltk_parser::keywords::Keyword::SYMMETRIC => {}
                     sqltk_parser::keywords::Keyword::SYNC => {}
@@ -10387,6 +10896,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::TEMP => {}
                     sqltk_parser::keywords::Keyword::TEMPORARY => {}
                     sqltk_parser::keywords::Keyword::TERMINATED => {}
+                    sqltk_parser::keywords::Keyword::TERSE => {}
                     sqltk_parser::keywords::Keyword::TEXT => {}
                     sqltk_parser::keywords::Keyword::TEXTFILE => {}
                     sqltk_parser::keywords::Keyword::THEN => {}
@@ -10400,7 +10910,9 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::TIMEZONE_HOUR => {}
                     sqltk_parser::keywords::Keyword::TIMEZONE_MINUTE => {}
                     sqltk_parser::keywords::Keyword::TIMEZONE_REGION => {}
+                    sqltk_parser::keywords::Keyword::TINYBLOB => {}
                     sqltk_parser::keywords::Keyword::TINYINT => {}
+                    sqltk_parser::keywords::Keyword::TINYTEXT => {}
                     sqltk_parser::keywords::Keyword::TO => {}
                     sqltk_parser::keywords::Keyword::TOP => {}
                     sqltk_parser::keywords::Keyword::TOTALS => {}
@@ -10434,6 +10946,7 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
                     sqltk_parser::keywords::Keyword::UNION => {}
                     sqltk_parser::keywords::Keyword::UNIQUE => {}
                     sqltk_parser::keywords::Keyword::UNKNOWN => {}
+                    sqltk_parser::keywords::Keyword::UNLISTEN => {}
                     sqltk_parser::keywords::Keyword::UNLOAD => {}
                     sqltk_parser::keywords::Keyword::UNLOCK => {}
                     sqltk_parser::keywords::Keyword::UNLOGGED => {}
@@ -10497,6 +11010,54 @@ impl crate::Visitable for sqltk_parser::keywords::Keyword {
 }
 #[automatically_derived]
 impl crate::AsNodeKey for sqltk_parser::keywords::Keyword {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::tokenizer::Location {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.line.accept(visitor)?;
+                self.column.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::tokenizer::Location {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::tokenizer::Span {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.start.accept(visitor)?;
+                self.end.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::tokenizer::Span {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
@@ -10670,6 +11231,30 @@ impl crate::Visitable for sqltk_parser::tokenizer::Token {
 }
 #[automatically_derived]
 impl crate::AsNodeKey for sqltk_parser::tokenizer::Token {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::tokenizer::TokenWithSpan {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.token.accept(visitor)?;
+                self.span.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::tokenizer::TokenWithSpan {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }

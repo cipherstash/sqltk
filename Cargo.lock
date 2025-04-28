@@ -339,7 +339,7 @@ dependencies = [
 
 [[package]]
 name = "sqltk-parser"
-version = "0.52.0"
+version = "0.53.0"
 dependencies = [
  "bigdecimal",
  "log",
@@ -353,7 +353,7 @@ dependencies = [
 
 [[package]]
 name = "sqltk-parser-derive"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "proc-macro2",
  "quote",
