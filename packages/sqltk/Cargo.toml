@@ -31,4 +31,4 @@ include = [
 
 [dependencies]
 bigdecimal = { version = "^0.4" }
-sqltk-parser = { path = "../sqltk-parser", features = ["bigdecimal"]}
+sqltk-parser = { path = "../sqltk-parser", version = "0.53.0", features = ["bigdecimal"]}
