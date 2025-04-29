@@ -5178,31 +5178,6 @@ impl crate::AsNodeKey for sqltk_parser::ast::LockClause {
     }
 }
 #[automatically_derived]
-impl crate::Visitable for sqltk_parser::ast::LockTable {
-    fn accept<'ast, V: crate::Visitor<'ast>>(
-        &'ast self,
-        visitor: &mut V,
-    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
-        visit(
-            self,
-            visitor,
-            #[allow(unused_variables)]
-            |visitor| {
-                self.table.accept(visitor)?;
-                self.alias.accept(visitor)?;
-                self.lock_type.accept(visitor)?;
-                std::ops::ControlFlow::Continue(())
-            },
-        )
-    }
-}
-#[automatically_derived]
-impl crate::AsNodeKey for sqltk_parser::ast::LockTable {
-    fn as_node_key(&self) -> crate::NodeKey<'_> {
-        crate::NodeKey::new(self)
-    }
-}
-#[automatically_derived]
 impl crate::Visitable for sqltk_parser::ast::LockTableType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
@@ -5220,6 +5195,15 @@ impl crate::Visitable for sqltk_parser::ast::LockTableType {
                     sqltk_parser::ast::LockTableType::Write { low_priority } => {
                         low_priority.accept(visitor)?;
                     }
+                    sqltk_parser::ast::LockTableType::AccessShare => {}
+                    sqltk_parser::ast::LockTableType::RowShare => {}
+                    sqltk_parser::ast::LockTableType::RowExclusive => {}
+                    sqltk_parser::ast::LockTableType::ShareUpdateExclusive => {}
+                    sqltk_parser::ast::LockTableType::Share => {}
+                    sqltk_parser::ast::LockTableType::ShareRowExclusive => {}
+                    sqltk_parser::ast::LockTableType::Exclusive => {}
+                    sqltk_parser::ast::LockTableType::AccessExclusive => {}
+                    _ => unreachable!(),
                 }
                 std::ops::ControlFlow::Continue(())
             },
@@ -5228,6 +5212,51 @@ impl crate::Visitable for sqltk_parser::ast::LockTableType {
 }
 #[automatically_derived]
 impl crate::AsNodeKey for sqltk_parser::ast::LockTableType {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::LockTables {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                match self {
+                    sqltk_parser::ast::LockTables::MySql {
+                        pluralized_table_keyword,
+                        tables,
+                    } => {
+                        pluralized_table_keyword.accept(visitor)?;
+                        tables.accept(visitor)?;
+                    }
+                    sqltk_parser::ast::LockTables::Postgres {
+                        tables,
+                        lock_mode,
+                        has_table_keyword,
+                        only,
+                        no_wait,
+                    } => {
+                        tables.accept(visitor)?;
+                        lock_mode.accept(visitor)?;
+                        has_table_keyword.accept(visitor)?;
+                        only.accept(visitor)?;
+                        no_wait.accept(visitor)?;
+                    }
+                    _ => unreachable!(),
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::LockTables {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
@@ -5724,6 +5753,31 @@ impl crate::Visitable for sqltk_parser::ast::MySQLColumnPosition {
 }
 #[automatically_derived]
 impl crate::AsNodeKey for sqltk_parser::ast::MySQLColumnPosition {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::MySqlTableLock {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.table.accept(visitor)?;
+                self.alias.accept(visitor)?;
+                self.lock_type.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::MySqlTableLock {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
@@ -6527,6 +6581,30 @@ impl crate::Visitable for sqltk_parser::ast::RenameSelectItem {
 }
 #[automatically_derived]
 impl crate::AsNodeKey for sqltk_parser::ast::RenameSelectItem {
+    fn as_node_key(&self) -> crate::NodeKey<'_> {
+        crate::NodeKey::new(self)
+    }
+}
+#[automatically_derived]
+impl crate::Visitable for sqltk_parser::ast::RenameTable {
+    fn accept<'ast, V: crate::Visitor<'ast>>(
+        &'ast self,
+        visitor: &mut V,
+    ) -> std::ops::ControlFlow<crate::Break<V::Error>> {
+        visit(
+            self,
+            visitor,
+            #[allow(unused_variables)]
+            |visitor| {
+                self.old_name.accept(visitor)?;
+                self.new_name.accept(visitor)?;
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+    }
+}
+#[automatically_derived]
+impl crate::AsNodeKey for sqltk_parser::ast::RenameTable {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
@@ -8296,10 +8374,12 @@ impl crate::Visitable for sqltk_parser::ast::Statement {
                         value.accept(visitor)?;
                         is_eq.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Statement::LockTables { tables } => {
-                        tables.accept(visitor)?;
+                    sqltk_parser::ast::Statement::LockTables(field0) => {
+                        field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Statement::UnlockTables => {}
+                    sqltk_parser::ast::Statement::UnlockTables(field0) => {
+                        field0.accept(visitor)?;
+                    }
                     sqltk_parser::ast::Statement::Unload { query, to, with } => {
                         query.accept(visitor)?;
                         to.accept(visitor)?;
