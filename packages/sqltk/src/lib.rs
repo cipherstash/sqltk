@@ -73,6 +73,13 @@ mod transform;
 mod transformable_impls;
 mod visitable_impls;
 
+// Re-export sqltk-parser under this lib as `sqltk::parser`, so we can avoid
+// needing to expose the machinations of the versioning of our
+// forked-but-with-upstream-updates sqlparser.
+pub mod parser {
+    pub use sqltk_parser::*;
+}
+
 pub use node_key::*;
 use sqltk_parser::ast::{Expr, ObjectName, Statement};
 pub use transform::*;
