@@ -317,7 +317,7 @@ dependencies = [
 
 [[package]]
 name = "sqltk"
-version = "0.6.0"
+version = "0.8.0"
 dependencies = [
  "bigdecimal",
  "sqltk-parser",
@@ -339,7 +339,7 @@ dependencies = [
 
 [[package]]
 name = "sqltk-parser"
-version = "0.53.0-cipherstash.1"
+version = "0.53.0-cipherstash.2"
 dependencies = [
  "bigdecimal",
  "log",
