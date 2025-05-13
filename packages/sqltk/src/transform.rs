@@ -117,6 +117,27 @@ impl<'ast> NodePath<'ast> {
         ))
     }
 
+    /// Returns the last 5 nodes in the path. The leftmost node in the tuple is the shallowest ancestor and the
+    /// rightmost node is the current node.
+    ///
+    /// Returns `Some(nodes)` on success, `None` if there are less than 4 nodes in the path.
+    pub fn last_5_as<E, D, C, B, A>(&self) -> Option<(&'ast E, &'ast D, &'ast C, &'ast B, &'ast A)>
+    where
+        E: Visitable,
+        D: Visitable,
+        C: Visitable,
+        B: Visitable,
+        A: Visitable,
+    {
+        Some((
+            self.nth_last_as(4)?,
+            self.nth_last_as(3)?,
+            self.nth_last_as(2)?,
+            self.nth_last_as(1)?,
+            self.nth_last_as(0)?,
+        ))
+    }
+
     pub fn nth_last_as<N: Visitable>(&self, nth: usize) -> Option<&'ast N> {
         let len = self.node_path.len();
         if len > nth {
