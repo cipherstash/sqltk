@@ -1,4 +1,34 @@
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AccessExpr {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::AccessExpr::Dot(field0) => {
+                    sqltk_parser::ast::AccessExpr::Dot(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::AccessExpr::Subscript(field0) => {
+                    sqltk_parser::ast::AccessExpr::Subscript(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Action {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -11,17 +41,82 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Action {
         node_path.push(self);
         let transformed = {
             match self {
+                sqltk_parser::ast::Action::AddSearchOptimization => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::Action::AddSearchOptimization,
+                        )?
+                }
+                sqltk_parser::ast::Action::Apply { apply_type } => {
+                    sqltk_parser::ast::Action::Apply {
+                        apply_type: apply_type
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::Action::ApplyBudget => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::Action::ApplyBudget)?
+                }
+                sqltk_parser::ast::Action::AttachListing => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::Action::AttachListing)?
+                }
+                sqltk_parser::ast::Action::AttachPolicy => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::Action::AttachPolicy)?
+                }
+                sqltk_parser::ast::Action::Audit => {
+                    transformer.transform(node_path, sqltk_parser::ast::Action::Audit)?
+                }
+                sqltk_parser::ast::Action::BindServiceEndpoint => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::Action::BindServiceEndpoint,
+                        )?
+                }
                 sqltk_parser::ast::Action::Connect => {
                     transformer.transform(node_path, sqltk_parser::ast::Action::Connect)?
                 }
-                sqltk_parser::ast::Action::Create => {
-                    transformer.transform(node_path, sqltk_parser::ast::Action::Create)?
+                sqltk_parser::ast::Action::Create { obj_type } => {
+                    sqltk_parser::ast::Action::Create {
+                        obj_type: obj_type
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::Action::DatabaseRole { role } => {
+                    sqltk_parser::ast::Action::DatabaseRole {
+                        role: role.apply_transform_with_path(transformer, node_path)?,
+                    }
                 }
                 sqltk_parser::ast::Action::Delete => {
                     transformer.transform(node_path, sqltk_parser::ast::Action::Delete)?
                 }
-                sqltk_parser::ast::Action::Execute => {
-                    transformer.transform(node_path, sqltk_parser::ast::Action::Execute)?
+                sqltk_parser::ast::Action::EvolveSchema => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::Action::EvolveSchema)?
+                }
+                sqltk_parser::ast::Action::Execute { obj_type } => {
+                    sqltk_parser::ast::Action::Execute {
+                        obj_type: obj_type
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::Action::Failover => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::Action::Failover)?
+                }
+                sqltk_parser::ast::Action::ImportedPrivileges => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::Action::ImportedPrivileges,
+                        )?
+                }
+                sqltk_parser::ast::Action::ImportShare => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::Action::ImportShare)?
                 }
                 sqltk_parser::ast::Action::Insert { columns } => {
                     sqltk_parser::ast::Action::Insert {
@@ -29,10 +124,77 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Action {
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
+                sqltk_parser::ast::Action::Manage { manage_type } => {
+                    sqltk_parser::ast::Action::Manage {
+                        manage_type: manage_type
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::Action::ManageReleases => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::Action::ManageReleases)?
+                }
+                sqltk_parser::ast::Action::ManageVersions => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::Action::ManageVersions)?
+                }
+                sqltk_parser::ast::Action::Modify { modify_type } => {
+                    sqltk_parser::ast::Action::Modify {
+                        modify_type: modify_type
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::Action::Monitor { monitor_type } => {
+                    sqltk_parser::ast::Action::Monitor {
+                        monitor_type: monitor_type
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::Action::Operate => {
+                    transformer.transform(node_path, sqltk_parser::ast::Action::Operate)?
+                }
+                sqltk_parser::ast::Action::OverrideShareRestrictions => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::Action::OverrideShareRestrictions,
+                        )?
+                }
+                sqltk_parser::ast::Action::Ownership => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::Action::Ownership)?
+                }
+                sqltk_parser::ast::Action::PurchaseDataExchangeListing => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::Action::PurchaseDataExchangeListing,
+                        )?
+                }
+                sqltk_parser::ast::Action::Read => {
+                    transformer.transform(node_path, sqltk_parser::ast::Action::Read)?
+                }
+                sqltk_parser::ast::Action::ReadSession => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::Action::ReadSession)?
+                }
                 sqltk_parser::ast::Action::References { columns } => {
                     sqltk_parser::ast::Action::References {
                         columns: columns
                             .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::Action::Replicate => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::Action::Replicate)?
+                }
+                sqltk_parser::ast::Action::ResolveAll => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::Action::ResolveAll)?
+                }
+                sqltk_parser::ast::Action::Role { role } => {
+                    sqltk_parser::ast::Action::Role {
+                        role: role.apply_transform_with_path(transformer, node_path)?,
                     }
                 }
                 sqltk_parser::ast::Action::Select { columns } => {
@@ -60,6 +222,438 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Action {
                 }
                 sqltk_parser::ast::Action::Usage => {
                     transformer.transform(node_path, sqltk_parser::ast::Action::Usage)?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ActionApplyType {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::ActionApplyType::AggregationPolicy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionApplyType::AggregationPolicy,
+                        )?
+                }
+                sqltk_parser::ast::ActionApplyType::AuthenticationPolicy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionApplyType::AuthenticationPolicy,
+                        )?
+                }
+                sqltk_parser::ast::ActionApplyType::JoinPolicy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionApplyType::JoinPolicy,
+                        )?
+                }
+                sqltk_parser::ast::ActionApplyType::MaskingPolicy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionApplyType::MaskingPolicy,
+                        )?
+                }
+                sqltk_parser::ast::ActionApplyType::PackagesPolicy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionApplyType::PackagesPolicy,
+                        )?
+                }
+                sqltk_parser::ast::ActionApplyType::PasswordPolicy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionApplyType::PasswordPolicy,
+                        )?
+                }
+                sqltk_parser::ast::ActionApplyType::ProjectionPolicy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionApplyType::ProjectionPolicy,
+                        )?
+                }
+                sqltk_parser::ast::ActionApplyType::RowAccessPolicy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionApplyType::RowAccessPolicy,
+                        )?
+                }
+                sqltk_parser::ast::ActionApplyType::SessionPolicy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionApplyType::SessionPolicy,
+                        )?
+                }
+                sqltk_parser::ast::ActionApplyType::Tag => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::ActionApplyType::Tag)?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ActionCreateObjectType {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::ActionCreateObjectType::Account => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::Account,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::Application => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::Application,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::ApplicationPackage => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::ApplicationPackage,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::ComputePool => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::ComputePool,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::DataExchangeListing => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::DataExchangeListing,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::Database => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::Database,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::ExternalVolume => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::ExternalVolume,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::FailoverGroup => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::FailoverGroup,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::Integration => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::Integration,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::NetworkPolicy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::NetworkPolicy,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::OrganiationListing => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::OrganiationListing,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::ReplicationGroup => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::ReplicationGroup,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::Role => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::Role,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::Share => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::Share,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::User => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::User,
+                        )?
+                }
+                sqltk_parser::ast::ActionCreateObjectType::Warehouse => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionCreateObjectType::Warehouse,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ActionExecuteObjectType {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::ActionExecuteObjectType::Alert => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionExecuteObjectType::Alert,
+                        )?
+                }
+                sqltk_parser::ast::ActionExecuteObjectType::DataMetricFunction => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionExecuteObjectType::DataMetricFunction,
+                        )?
+                }
+                sqltk_parser::ast::ActionExecuteObjectType::ManagedAlert => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionExecuteObjectType::ManagedAlert,
+                        )?
+                }
+                sqltk_parser::ast::ActionExecuteObjectType::ManagedTask => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionExecuteObjectType::ManagedTask,
+                        )?
+                }
+                sqltk_parser::ast::ActionExecuteObjectType::Task => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionExecuteObjectType::Task,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ActionManageType {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::ActionManageType::AccountSupportCases => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionManageType::AccountSupportCases,
+                        )?
+                }
+                sqltk_parser::ast::ActionManageType::EventSharing => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionManageType::EventSharing,
+                        )?
+                }
+                sqltk_parser::ast::ActionManageType::Grants => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionManageType::Grants,
+                        )?
+                }
+                sqltk_parser::ast::ActionManageType::ListingAutoFulfillment => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionManageType::ListingAutoFulfillment,
+                        )?
+                }
+                sqltk_parser::ast::ActionManageType::OrganizationSupportCases => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionManageType::OrganizationSupportCases,
+                        )?
+                }
+                sqltk_parser::ast::ActionManageType::UserSupportCases => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionManageType::UserSupportCases,
+                        )?
+                }
+                sqltk_parser::ast::ActionManageType::Warehouses => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionManageType::Warehouses,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ActionModifyType {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::ActionModifyType::LogLevel => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionModifyType::LogLevel,
+                        )?
+                }
+                sqltk_parser::ast::ActionModifyType::TraceLevel => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionModifyType::TraceLevel,
+                        )?
+                }
+                sqltk_parser::ast::ActionModifyType::SessionLogLevel => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionModifyType::SessionLogLevel,
+                        )?
+                }
+                sqltk_parser::ast::ActionModifyType::SessionTraceLevel => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionModifyType::SessionTraceLevel,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ActionMonitorType {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::ActionMonitorType::Execution => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionMonitorType::Execution,
+                        )?
+                }
+                sqltk_parser::ast::ActionMonitorType::Security => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionMonitorType::Security,
+                        )?
+                }
+                sqltk_parser::ast::ActionMonitorType::Usage => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::ActionMonitorType::Usage,
+                        )?
                 }
             }
         };
@@ -212,6 +806,36 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterColumnOperatio
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterConnectorOwner {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::AlterConnectorOwner::User(field0) => {
+                    sqltk_parser::ast::AlterConnectorOwner::User(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::AlterConnectorOwner::Role(field0) => {
+                    sqltk_parser::ast::AlterConnectorOwner::Role(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterIndexOperation {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -345,6 +969,54 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterRoleOperation 
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterTableAlgorithm {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::AlterTableAlgorithm::Default => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::AlterTableAlgorithm::Default,
+                        )?
+                }
+                sqltk_parser::ast::AlterTableAlgorithm::Instant => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::AlterTableAlgorithm::Instant,
+                        )?
+                }
+                sqltk_parser::ast::AlterTableAlgorithm::Inplace => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::AlterTableAlgorithm::Inplace,
+                        )?
+                }
+                sqltk_parser::ast::AlterTableAlgorithm::Copy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::AlterTableAlgorithm::Copy,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterTableOperation {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -447,27 +1119,27 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterTableOperation
                 sqltk_parser::ast::AlterTableOperation::DropConstraint {
                     if_exists,
                     name,
-                    cascade,
+                    drop_behavior,
                 } => {
                     sqltk_parser::ast::AlterTableOperation::DropConstraint {
                         if_exists: if_exists
                             .apply_transform_with_path(transformer, node_path)?,
                         name: name.apply_transform_with_path(transformer, node_path)?,
-                        cascade: cascade
+                        drop_behavior: drop_behavior
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
                 sqltk_parser::ast::AlterTableOperation::DropColumn {
                     column_name,
                     if_exists,
-                    cascade,
+                    drop_behavior,
                 } => {
                     sqltk_parser::ast::AlterTableOperation::DropColumn {
                         column_name: column_name
                             .apply_transform_with_path(transformer, node_path)?,
                         if_exists: if_exists
                             .apply_transform_with_path(transformer, node_path)?,
-                        cascade: cascade
+                        drop_behavior: drop_behavior
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
@@ -703,6 +1375,185 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterTableOperation
                             sqltk_parser::ast::AlterTableOperation::ResumeRecluster,
                         )?
                 }
+                sqltk_parser::ast::AlterTableOperation::Algorithm {
+                    equals,
+                    algorithm,
+                } => {
+                    sqltk_parser::ast::AlterTableOperation::Algorithm {
+                        equals: equals
+                            .apply_transform_with_path(transformer, node_path)?,
+                        algorithm: algorithm
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::AlterTableOperation::AutoIncrement {
+                    equals,
+                    value,
+                } => {
+                    sqltk_parser::ast::AlterTableOperation::AutoIncrement {
+                        equals: equals
+                            .apply_transform_with_path(transformer, node_path)?,
+                        value: value.apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterType {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { name, operation } = self;
+            Self {
+                name: name.apply_transform_with_path(transformer, node_path)?,
+                operation: operation.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterTypeAddValue {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { if_not_exists, value, position } = self;
+            Self {
+                if_not_exists: if_not_exists
+                    .apply_transform_with_path(transformer, node_path)?,
+                value: value.apply_transform_with_path(transformer, node_path)?,
+                position: position.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterTypeAddValuePosition {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::AlterTypeAddValuePosition::Before(field0) => {
+                    sqltk_parser::ast::AlterTypeAddValuePosition::Before(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::AlterTypeAddValuePosition::After(field0) => {
+                    sqltk_parser::ast::AlterTypeAddValuePosition::After(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterTypeOperation {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::AlterTypeOperation::Rename(field0) => {
+                    sqltk_parser::ast::AlterTypeOperation::Rename(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::AlterTypeOperation::AddValue(field0) => {
+                    sqltk_parser::ast::AlterTypeOperation::AddValue(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::AlterTypeOperation::RenameValue(field0) => {
+                    sqltk_parser::ast::AlterTypeOperation::RenameValue(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterTypeRename {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { new_name } = self;
+            Self {
+                new_name: new_name.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::AlterTypeRenameValue {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { from, to } = self;
+            Self {
+                from: from.apply_transform_with_path(transformer, node_path)?,
+                to: to.apply_transform_with_path(transformer, node_path)?,
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -946,6 +1797,35 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::BeginTransactionKin
                             node_path,
                             sqltk_parser::ast::BeginTransactionKind::Work,
                         )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::BinaryLength {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::BinaryLength::IntegerLength { length } => {
+                    sqltk_parser::ast::BinaryLength::IntegerLength {
+                        length: length.apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::BinaryLength::Max => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::BinaryLength::Max)?
                 }
             }
         };
@@ -1258,6 +2138,170 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::BinaryOperator {
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
+                sqltk_parser::ast::BinaryOperator::Overlaps => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::Overlaps,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::DoubleHash => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::DoubleHash,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::LtDashGt => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::LtDashGt,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::AndLt => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::BinaryOperator::AndLt)?
+                }
+                sqltk_parser::ast::BinaryOperator::AndGt => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::BinaryOperator::AndGt)?
+                }
+                sqltk_parser::ast::BinaryOperator::LtLtPipe => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::LtLtPipe,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::PipeGtGt => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::PipeGtGt,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::AndLtPipe => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::AndLtPipe,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::PipeAndGt => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::PipeAndGt,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::LtCaret => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::LtCaret,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::GtCaret => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::GtCaret,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::QuestionHash => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::QuestionHash,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::QuestionDash => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::QuestionDash,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::QuestionDashPipe => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::QuestionDashPipe,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::QuestionDoublePipe => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::QuestionDoublePipe,
+                        )?
+                }
+                sqltk_parser::ast::BinaryOperator::At => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::BinaryOperator::At)?
+                }
+                sqltk_parser::ast::BinaryOperator::TildeEq => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::BinaryOperator::TildeEq,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CascadeOption {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::CascadeOption::Cascade => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::CascadeOption::Cascade)?
+                }
+                sqltk_parser::ast::CascadeOption::Restrict => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::CascadeOption::Restrict,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CaseWhen {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { condition, result } = self;
+            Self {
+                condition: condition.apply_transform_with_path(transformer, node_path)?,
+                result: result.apply_transform_with_path(transformer, node_path)?,
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -1515,11 +2559,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ColumnDef {
     {
         node_path.push(self);
         let transformed = {
-            let Self { name, data_type, collation, options } = self;
+            let Self { name, data_type, options } = self;
             Self {
                 name: name.apply_transform_with_path(transformer, node_path)?,
                 data_type: data_type.apply_transform_with_path(transformer, node_path)?,
-                collation: collation.apply_transform_with_path(transformer, node_path)?,
                 options: options.apply_transform_with_path(transformer, node_path)?,
             }
         };
@@ -1612,6 +2655,11 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ColumnOption {
                 }
                 sqltk_parser::ast::ColumnOption::CharacterSet(field0) => {
                     sqltk_parser::ast::ColumnOption::CharacterSet(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::ColumnOption::Collation(field0) => {
+                    sqltk_parser::ast::ColumnOption::Collation(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
@@ -1960,6 +3008,40 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ContextModifier {
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CopyIntoSnowflakeKind {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::CopyIntoSnowflakeKind::Table => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::CopyIntoSnowflakeKind::Table,
+                        )?
+                }
+                sqltk_parser::ast::CopyIntoSnowflakeKind::Location => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::CopyIntoSnowflakeKind::Location,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CopyLegacyCsvOption {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -2189,6 +3271,43 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CopyTarget {
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CreateConnector {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self {
+                name,
+                if_not_exists,
+                connector_type,
+                url,
+                comment,
+                with_dcproperties,
+            } = self;
+            Self {
+                name: name.apply_transform_with_path(transformer, node_path)?,
+                if_not_exists: if_not_exists
+                    .apply_transform_with_path(transformer, node_path)?,
+                connector_type: connector_type
+                    .apply_transform_with_path(transformer, node_path)?,
+                url: url.apply_transform_with_path(transformer, node_path)?,
+                comment: comment.apply_transform_with_path(transformer, node_path)?,
+                with_dcproperties: with_dcproperties
+                    .apply_transform_with_path(transformer, node_path)?,
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -2482,6 +3601,7 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CreateTable {
                 if_not_exists,
                 transient,
                 volatile,
+                iceberg,
                 name,
                 columns,
                 constraints,
@@ -2518,6 +3638,11 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CreateTable {
                 with_aggregation_policy,
                 with_row_access_policy,
                 with_tags,
+                external_volume,
+                base_location,
+                catalog,
+                catalog_sync,
+                storage_serialization_policy,
             } = self;
             Self {
                 or_replace: or_replace
@@ -2529,6 +3654,7 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CreateTable {
                     .apply_transform_with_path(transformer, node_path)?,
                 transient: transient.apply_transform_with_path(transformer, node_path)?,
                 volatile: volatile.apply_transform_with_path(transformer, node_path)?,
+                iceberg: iceberg.apply_transform_with_path(transformer, node_path)?,
                 name: name.apply_transform_with_path(transformer, node_path)?,
                 columns: columns.apply_transform_with_path(transformer, node_path)?,
                 constraints: constraints
@@ -2587,6 +3713,15 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CreateTable {
                 with_row_access_policy: with_row_access_policy
                     .apply_transform_with_path(transformer, node_path)?,
                 with_tags: with_tags.apply_transform_with_path(transformer, node_path)?,
+                external_volume: external_volume
+                    .apply_transform_with_path(transformer, node_path)?,
+                base_location: base_location
+                    .apply_transform_with_path(transformer, node_path)?,
+                catalog: catalog.apply_transform_with_path(transformer, node_path)?,
+                catalog_sync: catalog_sync
+                    .apply_transform_with_path(transformer, node_path)?,
+                storage_serialization_policy: storage_serialization_policy
+                    .apply_transform_with_path(transformer, node_path)?,
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -2623,6 +3758,105 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CreateTableOptions 
                     sqltk_parser::ast::CreateTableOptions::Options(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CreateViewAlgorithm {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::CreateViewAlgorithm::Undefined => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::CreateViewAlgorithm::Undefined,
+                        )?
+                }
+                sqltk_parser::ast::CreateViewAlgorithm::Merge => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::CreateViewAlgorithm::Merge,
+                        )?
+                }
+                sqltk_parser::ast::CreateViewAlgorithm::TempTable => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::CreateViewAlgorithm::TempTable,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CreateViewParams {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { algorithm, definer, security } = self;
+            Self {
+                algorithm: algorithm.apply_transform_with_path(transformer, node_path)?,
+                definer: definer.apply_transform_with_path(transformer, node_path)?,
+                security: security.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::CreateViewSecurity {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::CreateViewSecurity::Definer => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::CreateViewSecurity::Definer,
+                        )?
+                }
+                sqltk_parser::ast::CreateViewSecurity::Invoker => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::CreateViewSecurity::Invoker,
+                        )?
                 }
             }
         };
@@ -2706,6 +3940,11 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DataType {
         node_path.push(self);
         let transformed = {
             match self {
+                sqltk_parser::ast::DataType::Table(field0) => {
+                    sqltk_parser::ast::DataType::Table(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
                 sqltk_parser::ast::DataType::Character(field0) => {
                     sqltk_parser::ast::DataType::Character(
                         field0.apply_transform_with_path(transformer, node_path)?,
@@ -2821,8 +4060,8 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DataType {
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
-                sqltk_parser::ast::DataType::UnsignedTinyInt(field0) => {
-                    sqltk_parser::ast::DataType::UnsignedTinyInt(
+                sqltk_parser::ast::DataType::TinyIntUnsigned(field0) => {
+                    sqltk_parser::ast::DataType::TinyIntUnsigned(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
@@ -2831,8 +4070,8 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DataType {
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
-                sqltk_parser::ast::DataType::UnsignedInt2(field0) => {
-                    sqltk_parser::ast::DataType::UnsignedInt2(
+                sqltk_parser::ast::DataType::Int2Unsigned(field0) => {
+                    sqltk_parser::ast::DataType::Int2Unsigned(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
@@ -2841,8 +4080,8 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DataType {
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
-                sqltk_parser::ast::DataType::UnsignedSmallInt(field0) => {
-                    sqltk_parser::ast::DataType::UnsignedSmallInt(
+                sqltk_parser::ast::DataType::SmallIntUnsigned(field0) => {
+                    sqltk_parser::ast::DataType::SmallIntUnsigned(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
@@ -2851,8 +4090,8 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DataType {
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
-                sqltk_parser::ast::DataType::UnsignedMediumInt(field0) => {
-                    sqltk_parser::ast::DataType::UnsignedMediumInt(
+                sqltk_parser::ast::DataType::MediumIntUnsigned(field0) => {
+                    sqltk_parser::ast::DataType::MediumIntUnsigned(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
@@ -2893,18 +4132,18 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DataType {
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
-                sqltk_parser::ast::DataType::UnsignedInt(field0) => {
-                    sqltk_parser::ast::DataType::UnsignedInt(
+                sqltk_parser::ast::DataType::IntUnsigned(field0) => {
+                    sqltk_parser::ast::DataType::IntUnsigned(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
-                sqltk_parser::ast::DataType::UnsignedInt4(field0) => {
-                    sqltk_parser::ast::DataType::UnsignedInt4(
+                sqltk_parser::ast::DataType::Int4Unsigned(field0) => {
+                    sqltk_parser::ast::DataType::Int4Unsigned(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
-                sqltk_parser::ast::DataType::UnsignedInteger(field0) => {
-                    sqltk_parser::ast::DataType::UnsignedInteger(
+                sqltk_parser::ast::DataType::IntegerUnsigned(field0) => {
+                    sqltk_parser::ast::DataType::IntegerUnsigned(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
@@ -2936,15 +4175,37 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DataType {
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
-                sqltk_parser::ast::DataType::UnsignedBigInt(field0) => {
-                    sqltk_parser::ast::DataType::UnsignedBigInt(
+                sqltk_parser::ast::DataType::BigIntUnsigned(field0) => {
+                    sqltk_parser::ast::DataType::BigIntUnsigned(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
-                sqltk_parser::ast::DataType::UnsignedInt8(field0) => {
-                    sqltk_parser::ast::DataType::UnsignedInt8(
+                sqltk_parser::ast::DataType::Int8Unsigned(field0) => {
+                    sqltk_parser::ast::DataType::Int8Unsigned(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
+                }
+                sqltk_parser::ast::DataType::Signed => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::DataType::Signed)?
+                }
+                sqltk_parser::ast::DataType::SignedInteger => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::DataType::SignedInteger,
+                        )?
+                }
+                sqltk_parser::ast::DataType::Unsigned => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::DataType::Unsigned)?
+                }
+                sqltk_parser::ast::DataType::UnsignedInteger => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::DataType::UnsignedInteger,
+                        )?
                 }
                 sqltk_parser::ast::DataType::Float4 => {
                     transformer
@@ -2965,9 +4226,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DataType {
                     transformer
                         .transform(node_path, sqltk_parser::ast::DataType::Float8)?
                 }
-                sqltk_parser::ast::DataType::Double => {
-                    transformer
-                        .transform(node_path, sqltk_parser::ast::DataType::Double)?
+                sqltk_parser::ast::DataType::Double(field0) => {
+                    sqltk_parser::ast::DataType::Double(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
                 }
                 sqltk_parser::ast::DataType::DoublePrecision => {
                     transformer
@@ -3065,6 +4327,11 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DataType {
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
+                sqltk_parser::ast::DataType::VarBit(field0) => {
+                    sqltk_parser::ast::DataType::VarBit(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
                 sqltk_parser::ast::DataType::Custom(field0, field1) => {
                     sqltk_parser::ast::DataType::Custom(
                         field0.apply_transform_with_path(transformer, node_path)?,
@@ -3132,6 +4399,15 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DataType {
                     transformer
                         .transform(node_path, sqltk_parser::ast::DataType::Trigger)?
                 }
+                sqltk_parser::ast::DataType::AnyType => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::DataType::AnyType)?
+                }
+                sqltk_parser::ast::DataType::GeometricType(field0) => {
+                    sqltk_parser::ast::DataType::GeometricType(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -3156,14 +4432,26 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DateTimeField {
                     transformer
                         .transform(node_path, sqltk_parser::ast::DateTimeField::Year)?
                 }
+                sqltk_parser::ast::DateTimeField::Years => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::DateTimeField::Years)?
+                }
                 sqltk_parser::ast::DateTimeField::Month => {
                     transformer
                         .transform(node_path, sqltk_parser::ast::DateTimeField::Month)?
+                }
+                sqltk_parser::ast::DateTimeField::Months => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::DateTimeField::Months)?
                 }
                 sqltk_parser::ast::DateTimeField::Week(field0) => {
                     sqltk_parser::ast::DateTimeField::Week(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
+                }
+                sqltk_parser::ast::DateTimeField::Weeks => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::DateTimeField::Weeks)?
                 }
                 sqltk_parser::ast::DateTimeField::Day => {
                     transformer
@@ -3183,6 +4471,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DateTimeField {
                             sqltk_parser::ast::DateTimeField::DayOfYear,
                         )?
                 }
+                sqltk_parser::ast::DateTimeField::Days => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::DateTimeField::Days)?
+                }
                 sqltk_parser::ast::DateTimeField::Date => {
                     transformer
                         .transform(node_path, sqltk_parser::ast::DateTimeField::Date)?
@@ -3198,13 +4490,25 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DateTimeField {
                     transformer
                         .transform(node_path, sqltk_parser::ast::DateTimeField::Hour)?
                 }
+                sqltk_parser::ast::DateTimeField::Hours => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::DateTimeField::Hours)?
+                }
                 sqltk_parser::ast::DateTimeField::Minute => {
                     transformer
                         .transform(node_path, sqltk_parser::ast::DateTimeField::Minute)?
                 }
+                sqltk_parser::ast::DateTimeField::Minutes => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::DateTimeField::Minutes)?
+                }
                 sqltk_parser::ast::DateTimeField::Second => {
                     transformer
                         .transform(node_path, sqltk_parser::ast::DateTimeField::Second)?
+                }
+                sqltk_parser::ast::DateTimeField::Seconds => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::DateTimeField::Seconds)?
                 }
                 sqltk_parser::ast::DateTimeField::Century => {
                     transformer
@@ -3744,6 +5048,34 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DollarQuotedString 
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DropBehavior {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::DropBehavior::Restrict => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::DropBehavior::Restrict)?
+                }
+                sqltk_parser::ast::DropBehavior::Cascade => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::DropBehavior::Cascade)?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::DuplicateTreatment {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -3956,16 +5288,17 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Expr {
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
+                sqltk_parser::ast::Expr::CompoundFieldAccess { root, access_chain } => {
+                    sqltk_parser::ast::Expr::CompoundFieldAccess {
+                        root: root.apply_transform_with_path(transformer, node_path)?,
+                        access_chain: access_chain
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
                 sqltk_parser::ast::Expr::JsonAccess { value, path } => {
                     sqltk_parser::ast::Expr::JsonAccess {
                         value: value.apply_transform_with_path(transformer, node_path)?,
                         path: path.apply_transform_with_path(transformer, node_path)?,
-                    }
-                }
-                sqltk_parser::ast::Expr::CompositeAccess { expr, key } => {
-                    sqltk_parser::ast::Expr::CompositeAccess {
-                        expr: expr.apply_transform_with_path(transformer, node_path)?,
-                        key: key.apply_transform_with_path(transformer, node_path)?,
                     }
                 }
                 sqltk_parser::ast::Expr::IsFalse(field0) => {
@@ -4019,6 +5352,14 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Expr {
                         field0.apply_transform_with_path(transformer, node_path)?,
                         field1.apply_transform_with_path(transformer, node_path)?,
                     )
+                }
+                sqltk_parser::ast::Expr::IsNormalized { expr, form, negated } => {
+                    sqltk_parser::ast::Expr::IsNormalized {
+                        expr: expr.apply_transform_with_path(transformer, node_path)?,
+                        form: form.apply_transform_with_path(transformer, node_path)?,
+                        negated: negated
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
                 }
                 sqltk_parser::ast::Expr::InList { expr, list, negated } => {
                     sqltk_parser::ast::Expr::InList {
@@ -4291,35 +5632,16 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Expr {
                         value: value.apply_transform_with_path(transformer, node_path)?,
                     }
                 }
-                sqltk_parser::ast::Expr::MapAccess { column, keys } => {
-                    sqltk_parser::ast::Expr::MapAccess {
-                        column: column
-                            .apply_transform_with_path(transformer, node_path)?,
-                        keys: keys.apply_transform_with_path(transformer, node_path)?,
-                    }
-                }
                 sqltk_parser::ast::Expr::Function(field0) => {
                     sqltk_parser::ast::Expr::Function(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
-                sqltk_parser::ast::Expr::Method(field0) => {
-                    sqltk_parser::ast::Expr::Method(
-                        field0.apply_transform_with_path(transformer, node_path)?,
-                    )
-                }
-                sqltk_parser::ast::Expr::Case {
-                    operand,
-                    conditions,
-                    results,
-                    else_result,
-                } => {
+                sqltk_parser::ast::Expr::Case { operand, conditions, else_result } => {
                     sqltk_parser::ast::Expr::Case {
                         operand: operand
                             .apply_transform_with_path(transformer, node_path)?,
                         conditions: conditions
-                            .apply_transform_with_path(transformer, node_path)?,
-                        results: results
                             .apply_transform_with_path(transformer, node_path)?,
                         else_result: else_result
                             .apply_transform_with_path(transformer, node_path)?,
@@ -4380,13 +5702,6 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Expr {
                     sqltk_parser::ast::Expr::Map(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
-                }
-                sqltk_parser::ast::Expr::Subscript { expr, subscript } => {
-                    sqltk_parser::ast::Expr::Subscript {
-                        expr: expr.apply_transform_with_path(transformer, node_path)?,
-                        subscript: subscript
-                            .apply_transform_with_path(transformer, node_path)?,
-                    }
                 }
                 sqltk_parser::ast::Expr::Array(field0) => {
                     sqltk_parser::ast::Expr::Array(
@@ -5476,6 +6791,75 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::GeneratedExpression
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::GeometricTypeKind {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::GeometricTypeKind::Point => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::GeometricTypeKind::Point,
+                        )?
+                }
+                sqltk_parser::ast::GeometricTypeKind::Line => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::GeometricTypeKind::Line,
+                        )?
+                }
+                sqltk_parser::ast::GeometricTypeKind::LineSegment => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::GeometricTypeKind::LineSegment,
+                        )?
+                }
+                sqltk_parser::ast::GeometricTypeKind::GeometricBox => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::GeometricTypeKind::GeometricBox,
+                        )?
+                }
+                sqltk_parser::ast::GeometricTypeKind::GeometricPath => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::GeometricTypeKind::GeometricPath,
+                        )?
+                }
+                sqltk_parser::ast::GeometricTypeKind::Polygon => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::GeometricTypeKind::Polygon,
+                        )?
+                }
+                sqltk_parser::ast::GeometricTypeKind::Circle => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::GeometricTypeKind::Circle,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::GrantObjects {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -5500,6 +6884,11 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::GrantObjects {
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
+                sqltk_parser::ast::GrantObjects::Databases(field0) => {
+                    sqltk_parser::ast::GrantObjects::Databases(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
                 sqltk_parser::ast::GrantObjects::Schemas(field0) => {
                     sqltk_parser::ast::GrantObjects::Schemas(
                         field0.apply_transform_with_path(transformer, node_path)?,
@@ -5514,6 +6903,141 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::GrantObjects {
                     sqltk_parser::ast::GrantObjects::Tables(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
+                }
+                sqltk_parser::ast::GrantObjects::Views(field0) => {
+                    sqltk_parser::ast::GrantObjects::Views(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::GrantObjects::Warehouses(field0) => {
+                    sqltk_parser::ast::GrantObjects::Warehouses(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::GrantObjects::Integrations(field0) => {
+                    sqltk_parser::ast::GrantObjects::Integrations(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Grantee {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { grantee_type, name } = self;
+            Self {
+                grantee_type: grantee_type
+                    .apply_transform_with_path(transformer, node_path)?,
+                name: name.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::GranteeName {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::GranteeName::ObjectName(field0) => {
+                    sqltk_parser::ast::GranteeName::ObjectName(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::GranteeName::UserHost { user, host } => {
+                    sqltk_parser::ast::GranteeName::UserHost {
+                        user: user.apply_transform_with_path(transformer, node_path)?,
+                        host: host.apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::GranteesType {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::GranteesType::Role => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::GranteesType::Role)?
+                }
+                sqltk_parser::ast::GranteesType::Share => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::GranteesType::Share)?
+                }
+                sqltk_parser::ast::GranteesType::User => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::GranteesType::User)?
+                }
+                sqltk_parser::ast::GranteesType::Group => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::GranteesType::Group)?
+                }
+                sqltk_parser::ast::GranteesType::Public => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::GranteesType::Public)?
+                }
+                sqltk_parser::ast::GranteesType::DatabaseRole => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::GranteesType::DatabaseRole,
+                        )?
+                }
+                sqltk_parser::ast::GranteesType::Application => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::GranteesType::Application,
+                        )?
+                }
+                sqltk_parser::ast::GranteesType::ApplicationRole => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::GranteesType::ApplicationRole,
+                        )?
+                }
+                sqltk_parser::ast::GranteesType::None => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::GranteesType::None)?
                 }
             }
         };
@@ -5586,6 +7110,11 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::GroupByWithModifier
                             node_path,
                             sqltk_parser::ast::GroupByWithModifier::Totals,
                         )?
+                }
+                sqltk_parser::ast::GroupByWithModifier::GroupingSets(field0) => {
+                    sqltk_parser::ast::GroupByWithModifier::GroupingSets(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
                 }
             }
         };
@@ -6219,6 +7748,29 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::IndexType {
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::InputFormatClause {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { ident, values } = self;
+            Self {
+                ident: ident.apply_transform_with_path(transformer, node_path)?,
+                values: values.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Insert {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -6234,42 +7786,50 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Insert {
                 or,
                 ignore,
                 into,
-                table_name,
+                table,
                 table_alias,
                 columns,
                 overwrite,
                 source,
+                assignments,
                 partitioned,
                 after_columns,
-                table,
+                has_table_keyword,
                 on,
                 returning,
                 replace_into,
                 priority,
                 insert_alias,
+                settings,
+                format_clause,
             } = self;
             Self {
                 or: or.apply_transform_with_path(transformer, node_path)?,
                 ignore: ignore.apply_transform_with_path(transformer, node_path)?,
                 into: into.apply_transform_with_path(transformer, node_path)?,
-                table_name: table_name
-                    .apply_transform_with_path(transformer, node_path)?,
+                table: table.apply_transform_with_path(transformer, node_path)?,
                 table_alias: table_alias
                     .apply_transform_with_path(transformer, node_path)?,
                 columns: columns.apply_transform_with_path(transformer, node_path)?,
                 overwrite: overwrite.apply_transform_with_path(transformer, node_path)?,
                 source: source.apply_transform_with_path(transformer, node_path)?,
+                assignments: assignments
+                    .apply_transform_with_path(transformer, node_path)?,
                 partitioned: partitioned
                     .apply_transform_with_path(transformer, node_path)?,
                 after_columns: after_columns
                     .apply_transform_with_path(transformer, node_path)?,
-                table: table.apply_transform_with_path(transformer, node_path)?,
+                has_table_keyword: has_table_keyword
+                    .apply_transform_with_path(transformer, node_path)?,
                 on: on.apply_transform_with_path(transformer, node_path)?,
                 returning: returning.apply_transform_with_path(transformer, node_path)?,
                 replace_into: replace_into
                     .apply_transform_with_path(transformer, node_path)?,
                 priority: priority.apply_transform_with_path(transformer, node_path)?,
                 insert_alias: insert_alias
+                    .apply_transform_with_path(transformer, node_path)?,
+                settings: settings.apply_transform_with_path(transformer, node_path)?,
+                format_clause: format_clause
                     .apply_transform_with_path(transformer, node_path)?,
             }
         };
@@ -6462,13 +8022,28 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::JoinOperator {
         node_path.push(self);
         let transformed = {
             match self {
+                sqltk_parser::ast::JoinOperator::Join(field0) => {
+                    sqltk_parser::ast::JoinOperator::Join(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
                 sqltk_parser::ast::JoinOperator::Inner(field0) => {
                     sqltk_parser::ast::JoinOperator::Inner(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
+                sqltk_parser::ast::JoinOperator::Left(field0) => {
+                    sqltk_parser::ast::JoinOperator::Left(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
                 sqltk_parser::ast::JoinOperator::LeftOuter(field0) => {
                     sqltk_parser::ast::JoinOperator::LeftOuter(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::JoinOperator::Right(field0) => {
+                    sqltk_parser::ast::JoinOperator::Right(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
@@ -6940,6 +8515,30 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::LockClause {
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::LockTable {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { table, alias, lock_type } = self;
+            Self {
+                table: table.apply_transform_with_path(transformer, node_path)?,
+                alias: alias.apply_transform_with_path(transformer, node_path)?,
+                lock_type: lock_type.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::LockTableType {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -6963,110 +8562,6 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::LockTableType {
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
-                sqltk_parser::ast::LockTableType::AccessShare => {
-                    transformer
-                        .transform(
-                            node_path,
-                            sqltk_parser::ast::LockTableType::AccessShare,
-                        )?
-                }
-                sqltk_parser::ast::LockTableType::RowShare => {
-                    transformer
-                        .transform(
-                            node_path,
-                            sqltk_parser::ast::LockTableType::RowShare,
-                        )?
-                }
-                sqltk_parser::ast::LockTableType::RowExclusive => {
-                    transformer
-                        .transform(
-                            node_path,
-                            sqltk_parser::ast::LockTableType::RowExclusive,
-                        )?
-                }
-                sqltk_parser::ast::LockTableType::ShareUpdateExclusive => {
-                    transformer
-                        .transform(
-                            node_path,
-                            sqltk_parser::ast::LockTableType::ShareUpdateExclusive,
-                        )?
-                }
-                sqltk_parser::ast::LockTableType::Share => {
-                    transformer
-                        .transform(node_path, sqltk_parser::ast::LockTableType::Share)?
-                }
-                sqltk_parser::ast::LockTableType::ShareRowExclusive => {
-                    transformer
-                        .transform(
-                            node_path,
-                            sqltk_parser::ast::LockTableType::ShareRowExclusive,
-                        )?
-                }
-                sqltk_parser::ast::LockTableType::Exclusive => {
-                    transformer
-                        .transform(
-                            node_path,
-                            sqltk_parser::ast::LockTableType::Exclusive,
-                        )?
-                }
-                sqltk_parser::ast::LockTableType::AccessExclusive => {
-                    transformer
-                        .transform(
-                            node_path,
-                            sqltk_parser::ast::LockTableType::AccessExclusive,
-                        )?
-                }
-                _ => unreachable!(),
-            }
-        };
-        let transformed = transformer.transform(node_path, transformed)?;
-        node_path.pop();
-        Ok(transformed)
-    }
-}
-#[automatically_derived]
-impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::LockTables {
-    fn apply_transform_with_path<T>(
-        &'ast self,
-        transformer: &mut T,
-        node_path: &mut crate::NodePath<'ast>,
-    ) -> Result<Self, T::Error>
-    where
-        T: crate::Transform<'ast>,
-    {
-        node_path.push(self);
-        let transformed = {
-            match self {
-                sqltk_parser::ast::LockTables::MySql {
-                    pluralized_table_keyword,
-                    tables,
-                } => {
-                    sqltk_parser::ast::LockTables::MySql {
-                        pluralized_table_keyword: pluralized_table_keyword
-                            .apply_transform_with_path(transformer, node_path)?,
-                        tables: tables.apply_transform_with_path(transformer, node_path)?,
-                    }
-                }
-                sqltk_parser::ast::LockTables::Postgres {
-                    tables,
-                    lock_mode,
-                    has_table_keyword,
-                    only,
-                    no_wait,
-                } => {
-                    sqltk_parser::ast::LockTables::Postgres {
-                        tables: tables
-                            .apply_transform_with_path(transformer, node_path)?,
-                        lock_mode: lock_mode
-                            .apply_transform_with_path(transformer, node_path)?,
-                        has_table_keyword: has_table_keyword
-                            .apply_transform_with_path(transformer, node_path)?,
-                        only: only.apply_transform_with_path(transformer, node_path)?,
-                        no_wait: no_wait
-                            .apply_transform_with_path(transformer, node_path)?,
-                    }
-                }
-                _ => unreachable!(),
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -7170,63 +8665,6 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Map {
             let Self { entries } = self;
             Self {
                 entries: entries.apply_transform_with_path(transformer, node_path)?,
-            }
-        };
-        let transformed = transformer.transform(node_path, transformed)?;
-        node_path.pop();
-        Ok(transformed)
-    }
-}
-#[automatically_derived]
-impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::MapAccessKey {
-    fn apply_transform_with_path<T>(
-        &'ast self,
-        transformer: &mut T,
-        node_path: &mut crate::NodePath<'ast>,
-    ) -> Result<Self, T::Error>
-    where
-        T: crate::Transform<'ast>,
-    {
-        node_path.push(self);
-        let transformed = {
-            let Self { key, syntax } = self;
-            Self {
-                key: key.apply_transform_with_path(transformer, node_path)?,
-                syntax: syntax.apply_transform_with_path(transformer, node_path)?,
-            }
-        };
-        let transformed = transformer.transform(node_path, transformed)?;
-        node_path.pop();
-        Ok(transformed)
-    }
-}
-#[automatically_derived]
-impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::MapAccessSyntax {
-    fn apply_transform_with_path<T>(
-        &'ast self,
-        transformer: &mut T,
-        node_path: &mut crate::NodePath<'ast>,
-    ) -> Result<Self, T::Error>
-    where
-        T: crate::Transform<'ast>,
-    {
-        node_path.push(self);
-        let transformed = {
-            match self {
-                sqltk_parser::ast::MapAccessSyntax::Bracket => {
-                    transformer
-                        .transform(
-                            node_path,
-                            sqltk_parser::ast::MapAccessSyntax::Bracket,
-                        )?
-                }
-                sqltk_parser::ast::MapAccessSyntax::Period => {
-                    transformer
-                        .transform(
-                            node_path,
-                            sqltk_parser::ast::MapAccessSyntax::Period,
-                        )?
-                }
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -7625,30 +9063,6 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::MySQLColumnPosition
     }
 }
 #[automatically_derived]
-impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::MySqlTableLock {
-    fn apply_transform_with_path<T>(
-        &'ast self,
-        transformer: &mut T,
-        node_path: &mut crate::NodePath<'ast>,
-    ) -> Result<Self, T::Error>
-    where
-        T: crate::Transform<'ast>,
-    {
-        node_path.push(self);
-        let transformed = {
-            let Self { table, alias, lock_type } = self;
-            Self {
-                table: table.apply_transform_with_path(transformer, node_path)?,
-                alias: alias.apply_transform_with_path(transformer, node_path)?,
-                lock_type: lock_type.apply_transform_with_path(transformer, node_path)?,
-            }
-        };
-        let transformed = transformer.transform(node_path, transformed)?;
-        node_path.pop();
-        Ok(transformed)
-    }
-}
-#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::MysqlInsertPriority {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -7771,6 +9185,48 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::NonBlock {
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::NormalizationForm {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::NormalizationForm::NFC => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::NormalizationForm::NFC)?
+                }
+                sqltk_parser::ast::NormalizationForm::NFD => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::NormalizationForm::NFD)?
+                }
+                sqltk_parser::ast::NormalizationForm::NFKC => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::NormalizationForm::NFKC,
+                        )?
+                }
+                sqltk_parser::ast::NormalizationForm::NFKD => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::NormalizationForm::NFKD,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::NullTreatment {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -7859,6 +9315,31 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ObjectName {
         let transformed = {
             let Self(field0) = self;
             Self(field0.apply_transform_with_path(transformer, node_path)?)
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ObjectNamePart {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::ObjectNamePart::Identifier(field0) => {
+                    sqltk_parser::ast::ObjectNamePart::Identifier(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+            }
         };
         let transformed = transformer.transform(node_path, transformed)?;
         node_path.pop();
@@ -8156,9 +9637,9 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::OrderBy {
     {
         node_path.push(self);
         let transformed = {
-            let Self { exprs, interpolate } = self;
+            let Self { kind, interpolate } = self;
             Self {
-                exprs: exprs.apply_transform_with_path(transformer, node_path)?,
+                kind: kind.apply_transform_with_path(transformer, node_path)?,
                 interpolate: interpolate
                     .apply_transform_with_path(transformer, node_path)?,
             }
@@ -8180,13 +9661,65 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::OrderByExpr {
     {
         node_path.push(self);
         let transformed = {
-            let Self { expr, asc, nulls_first, with_fill } = self;
+            let Self { expr, options, with_fill } = self;
             Self {
                 expr: expr.apply_transform_with_path(transformer, node_path)?,
+                options: options.apply_transform_with_path(transformer, node_path)?,
+                with_fill: with_fill.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::OrderByKind {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::OrderByKind::All(field0) => {
+                    sqltk_parser::ast::OrderByKind::All(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::OrderByKind::Expressions(field0) => {
+                    sqltk_parser::ast::OrderByKind::Expressions(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::OrderByOptions {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { asc, nulls_first } = self;
+            Self {
                 asc: asc.apply_transform_with_path(transformer, node_path)?,
                 nulls_first: nulls_first
                     .apply_transform_with_path(transformer, node_path)?,
-                with_fill: with_fill.apply_transform_with_path(transformer, node_path)?,
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -8487,6 +10020,44 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Query {
                 settings: settings.apply_transform_with_path(transformer, node_path)?,
                 format_clause: format_clause
                     .apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::RaisErrorOption {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::RaisErrorOption::Log => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::RaisErrorOption::Log)?
+                }
+                sqltk_parser::ast::RaisErrorOption::NoWait => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::RaisErrorOption::NoWait,
+                        )?
+                }
+                sqltk_parser::ast::RaisErrorOption::SetError => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::RaisErrorOption::SetError,
+                        )?
+                }
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -9035,6 +10606,7 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Select {
                 window_before_qualify,
                 value_table_mode,
                 connect_by,
+                flavor,
             } = self;
             Self {
                 select_token: select_token
@@ -9065,7 +10637,47 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Select {
                     .apply_transform_with_path(transformer, node_path)?,
                 value_table_mode: value_table_mode
                     .apply_transform_with_path(transformer, node_path)?,
-                connect_by: connect_by.apply_transform_with_path(transformer, node_path)?,
+                connect_by: connect_by
+                    .apply_transform_with_path(transformer, node_path)?,
+                flavor: flavor.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::SelectFlavor {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::SelectFlavor::Standard => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::SelectFlavor::Standard)?
+                }
+                sqltk_parser::ast::SelectFlavor::FromFirst => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::SelectFlavor::FromFirst,
+                        )?
+                }
+                sqltk_parser::ast::SelectFlavor::FromFirstNoSelect => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::SelectFlavor::FromFirstNoSelect,
+                        )?
+                }
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -9141,6 +10753,39 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::SelectItem {
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast>
+for sqltk_parser::ast::SelectItemQualifiedWildcardKind {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::SelectItemQualifiedWildcardKind::ObjectName(
+                    field0,
+                ) => {
+                    sqltk_parser::ast::SelectItemQualifiedWildcardKind::ObjectName(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::SelectItemQualifiedWildcardKind::Expr(field0) => {
+                    sqltk_parser::ast::SelectItemQualifiedWildcardKind::Expr(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::SequenceOptions {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -9184,6 +10829,82 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::SequenceOptions {
                     sqltk_parser::ast::SequenceOptions::Cycle(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::SessionParamStatsTopic {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::SessionParamStatsTopic::IO => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::SessionParamStatsTopic::IO,
+                        )?
+                }
+                sqltk_parser::ast::SessionParamStatsTopic::Profile => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::SessionParamStatsTopic::Profile,
+                        )?
+                }
+                sqltk_parser::ast::SessionParamStatsTopic::Time => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::SessionParamStatsTopic::Time,
+                        )?
+                }
+                sqltk_parser::ast::SessionParamStatsTopic::Xml => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::SessionParamStatsTopic::Xml,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::SessionParamValue {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::SessionParamValue::On => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::SessionParamValue::On)?
+                }
+                sqltk_parser::ast::SessionParamValue::Off => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::SessionParamValue::Off)?
                 }
             }
         };
@@ -9320,6 +11041,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::SetOperator {
                     transformer
                         .transform(node_path, sqltk_parser::ast::SetOperator::Intersect)?
                 }
+                sqltk_parser::ast::SetOperator::Minus => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::SetOperator::Minus)?
+                }
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -9373,6 +11098,139 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::SetQuantifier {
                     transformer
                         .transform(node_path, sqltk_parser::ast::SetQuantifier::None)?
                 }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::SetSessionParamGeneric {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { names, value } = self;
+            Self {
+                names: names.apply_transform_with_path(transformer, node_path)?,
+                value: value.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast>
+for sqltk_parser::ast::SetSessionParamIdentityInsert {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { obj, value } = self;
+            Self {
+                obj: obj.apply_transform_with_path(transformer, node_path)?,
+                value: value.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::SetSessionParamKind {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::SetSessionParamKind::Generic(field0) => {
+                    sqltk_parser::ast::SetSessionParamKind::Generic(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::SetSessionParamKind::IdentityInsert(field0) => {
+                    sqltk_parser::ast::SetSessionParamKind::IdentityInsert(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::SetSessionParamKind::Offsets(field0) => {
+                    sqltk_parser::ast::SetSessionParamKind::Offsets(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::SetSessionParamKind::Statistics(field0) => {
+                    sqltk_parser::ast::SetSessionParamKind::Statistics(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::SetSessionParamOffsets {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { keywords, value } = self;
+            Self {
+                keywords: keywords.apply_transform_with_path(transformer, node_path)?,
+                value: value.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::SetSessionParamStatistics {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { topic, value } = self;
+            Self {
+                topic: topic.apply_transform_with_path(transformer, node_path)?,
+                value: value.apply_transform_with_path(transformer, node_path)?,
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -9455,6 +11313,30 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ShowCreateObject {
                     transformer
                         .transform(node_path, sqltk_parser::ast::ShowCreateObject::View)?
                 }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ShowObjects {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { terse, show_options } = self;
+            Self {
+                terse: terse.apply_transform_with_path(transformer, node_path)?,
+                show_options: show_options
+                    .apply_transform_with_path(transformer, node_path)?,
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -9800,6 +11682,7 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                     cache_metadata,
                     noscan,
                     compute_statistics,
+                    has_table_keyword,
                 } => {
                     sqltk_parser::ast::Statement::Analyze {
                         table_name: table_name
@@ -9815,6 +11698,8 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                         noscan: noscan
                             .apply_transform_with_path(transformer, node_path)?,
                         compute_statistics: compute_statistics
+                            .apply_transform_with_path(transformer, node_path)?,
+                        has_table_keyword: has_table_keyword
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
@@ -9922,26 +11807,32 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                     }
                 }
                 sqltk_parser::ast::Statement::CopyIntoSnowflake {
+                    kind,
                     into,
-                    from_stage,
-                    from_stage_alias,
+                    from_obj,
+                    from_obj_alias,
                     stage_params,
                     from_transformations,
+                    from_query,
                     files,
                     pattern,
                     file_format,
                     copy_options,
                     validation_mode,
+                    partition,
                 } => {
                     sqltk_parser::ast::Statement::CopyIntoSnowflake {
+                        kind: kind.apply_transform_with_path(transformer, node_path)?,
                         into: into.apply_transform_with_path(transformer, node_path)?,
-                        from_stage: from_stage
+                        from_obj: from_obj
                             .apply_transform_with_path(transformer, node_path)?,
-                        from_stage_alias: from_stage_alias
+                        from_obj_alias: from_obj_alias
                             .apply_transform_with_path(transformer, node_path)?,
                         stage_params: stage_params
                             .apply_transform_with_path(transformer, node_path)?,
                         from_transformations: from_transformations
+                            .apply_transform_with_path(transformer, node_path)?,
+                        from_query: from_query
                             .apply_transform_with_path(transformer, node_path)?,
                         files: files.apply_transform_with_path(transformer, node_path)?,
                         pattern: pattern
@@ -9951,6 +11842,8 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                         copy_options: copy_options
                             .apply_transform_with_path(transformer, node_path)?,
                         validation_mode: validation_mode
+                            .apply_transform_with_path(transformer, node_path)?,
+                        partition: partition
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
@@ -9997,6 +11890,7 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                     if_not_exists,
                     temporary,
                     to,
+                    params,
                 } => {
                     sqltk_parser::ast::Statement::CreateView {
                         or_replace: or_replace
@@ -10020,6 +11914,7 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                         temporary: temporary
                             .apply_transform_with_path(transformer, node_path)?,
                         to: to.apply_transform_with_path(transformer, node_path)?,
+                        params: params.apply_transform_with_path(transformer, node_path)?,
                     }
                 }
                 sqltk_parser::ast::Statement::CreateTable(field0) => {
@@ -10150,6 +12045,11 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
+                sqltk_parser::ast::Statement::CreateConnector(field0) => {
+                    sqltk_parser::ast::Statement::CreateConnector(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
                 sqltk_parser::ast::Statement::AlterTable {
                     name,
                     if_exists,
@@ -10193,6 +12093,11 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
+                sqltk_parser::ast::Statement::AlterType(field0) => {
+                    sqltk_parser::ast::Statement::AlterType(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
                 sqltk_parser::ast::Statement::AlterRole { name, operation } => {
                     sqltk_parser::ast::Statement::AlterRole {
                         name: name.apply_transform_with_path(transformer, node_path)?,
@@ -10210,6 +12115,27 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                         table_name: table_name
                             .apply_transform_with_path(transformer, node_path)?,
                         operation: operation
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::Statement::AlterConnector {
+                    name,
+                    properties,
+                    url,
+                    owner,
+                } => {
+                    sqltk_parser::ast::Statement::AlterConnector {
+                        name: name.apply_transform_with_path(transformer, node_path)?,
+                        properties: properties
+                            .apply_transform_with_path(transformer, node_path)?,
+                        url: url.apply_transform_with_path(transformer, node_path)?,
+                        owner: owner.apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::Statement::AlterSession { set, session_params } => {
+                    sqltk_parser::ast::Statement::AlterSession {
+                        set: set.apply_transform_with_path(transformer, node_path)?,
+                        session_params: session_params
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
@@ -10288,27 +12214,29 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                 sqltk_parser::ast::Statement::DropFunction {
                     if_exists,
                     func_desc,
-                    option,
+                    drop_behavior,
                 } => {
                     sqltk_parser::ast::Statement::DropFunction {
                         if_exists: if_exists
                             .apply_transform_with_path(transformer, node_path)?,
                         func_desc: func_desc
                             .apply_transform_with_path(transformer, node_path)?,
-                        option: option.apply_transform_with_path(transformer, node_path)?,
+                        drop_behavior: drop_behavior
+                            .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
                 sqltk_parser::ast::Statement::DropProcedure {
                     if_exists,
                     proc_desc,
-                    option,
+                    drop_behavior,
                 } => {
                     sqltk_parser::ast::Statement::DropProcedure {
                         if_exists: if_exists
                             .apply_transform_with_path(transformer, node_path)?,
                         proc_desc: proc_desc
                             .apply_transform_with_path(transformer, node_path)?,
-                        option: option.apply_transform_with_path(transformer, node_path)?,
+                        drop_behavior: drop_behavior
+                            .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
                 sqltk_parser::ast::Statement::DropSecret {
@@ -10331,7 +12259,7 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                     if_exists,
                     name,
                     table_name,
-                    option,
+                    drop_behavior,
                 } => {
                     sqltk_parser::ast::Statement::DropPolicy {
                         if_exists: if_exists
@@ -10339,7 +12267,15 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                         name: name.apply_transform_with_path(transformer, node_path)?,
                         table_name: table_name
                             .apply_transform_with_path(transformer, node_path)?,
-                        option: option.apply_transform_with_path(transformer, node_path)?,
+                        drop_behavior: drop_behavior
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::Statement::DropConnector { if_exists, name } => {
+                    sqltk_parser::ast::Statement::DropConnector {
+                        if_exists: if_exists
+                            .apply_transform_with_path(transformer, node_path)?,
+                        name: name.apply_transform_with_path(transformer, node_path)?,
                     }
                 }
                 sqltk_parser::ast::Statement::Declare { stmts } => {
@@ -10363,6 +12299,19 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                         schema: schema
                             .apply_transform_with_path(transformer, node_path)?,
                         version: version
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::Statement::DropExtension {
+                    names,
+                    if_exists,
+                    cascade_or_restrict,
+                } => {
+                    sqltk_parser::ast::Statement::DropExtension {
+                        names: names.apply_transform_with_path(transformer, node_path)?,
+                        if_exists: if_exists
+                            .apply_transform_with_path(transformer, node_path)?,
+                        cascade_or_restrict: cascade_or_restrict
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
@@ -10528,6 +12477,11 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
+                sqltk_parser::ast::Statement::ShowObjects(field0) => {
+                    sqltk_parser::ast::Statement::ShowObjects(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
                 sqltk_parser::ast::Statement::ShowTables {
                     terse,
                     history,
@@ -10577,6 +12531,9 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                     begin,
                     transaction,
                     modifier,
+                    statements,
+                    exception_statements,
+                    has_end_keyword,
                 } => {
                     sqltk_parser::ast::Statement::StartTransaction {
                         modes: modes.apply_transform_with_path(transformer, node_path)?,
@@ -10584,6 +12541,12 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                         transaction: transaction
                             .apply_transform_with_path(transformer, node_path)?,
                         modifier: modifier
+                            .apply_transform_with_path(transformer, node_path)?,
+                        statements: statements
+                            .apply_transform_with_path(transformer, node_path)?,
+                        exception_statements: exception_statements
+                            .apply_transform_with_path(transformer, node_path)?,
+                        has_end_keyword: has_end_keyword
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
@@ -10617,9 +12580,12 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
-                sqltk_parser::ast::Statement::Commit { chain } => {
+                sqltk_parser::ast::Statement::Commit { chain, end, modifier } => {
                     sqltk_parser::ast::Statement::Commit {
                         chain: chain.apply_transform_with_path(transformer, node_path)?,
+                        end: end.apply_transform_with_path(transformer, node_path)?,
+                        modifier: modifier
+                            .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
                 sqltk_parser::ast::Statement::Rollback { chain, savepoint } => {
@@ -10844,6 +12810,8 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                     name,
                     parameters,
                     has_parentheses,
+                    immediate,
+                    into,
                     using,
                 } => {
                     sqltk_parser::ast::Statement::Execute {
@@ -10852,6 +12820,9 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                             .apply_transform_with_path(transformer, node_path)?,
                         has_parentheses: has_parentheses
                             .apply_transform_with_path(transformer, node_path)?,
+                        immediate: immediate
+                            .apply_transform_with_path(transformer, node_path)?,
+                        into: into.apply_transform_with_path(transformer, node_path)?,
                         using: using.apply_transform_with_path(transformer, node_path)?,
                     }
                 }
@@ -10893,6 +12864,7 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                     analyze,
                     verbose,
                     query_plan,
+                    estimate,
                     statement,
                     format,
                     options,
@@ -10905,6 +12877,8 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                         verbose: verbose
                             .apply_transform_with_path(transformer, node_path)?,
                         query_plan: query_plan
+                            .apply_transform_with_path(transformer, node_path)?,
+                        estimate: estimate
                             .apply_transform_with_path(transformer, node_path)?,
                         statement: statement
                             .apply_transform_with_path(transformer, node_path)?,
@@ -11004,15 +12978,17 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                         is_eq: is_eq.apply_transform_with_path(transformer, node_path)?,
                     }
                 }
-                sqltk_parser::ast::Statement::LockTables(field0) => {
-                    sqltk_parser::ast::Statement::LockTables(
-                        field0.apply_transform_with_path(transformer, node_path)?,
-                    )
+                sqltk_parser::ast::Statement::LockTables { tables } => {
+                    sqltk_parser::ast::Statement::LockTables {
+                        tables: tables.apply_transform_with_path(transformer, node_path)?,
+                    }
                 }
-                sqltk_parser::ast::Statement::UnlockTables(field0) => {
-                    sqltk_parser::ast::Statement::UnlockTables(
-                        field0.apply_transform_with_path(transformer, node_path)?,
-                    )
+                sqltk_parser::ast::Statement::UnlockTables => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::Statement::UnlockTables,
+                        )?
                 }
                 sqltk_parser::ast::Statement::Unload { query, to, with } => {
                     sqltk_parser::ast::Statement::Unload {
@@ -11081,6 +13057,79 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                         table_format: table_format
                             .apply_transform_with_path(transformer, node_path)?,
                     }
+                }
+                sqltk_parser::ast::Statement::RenameTable(field0) => {
+                    sqltk_parser::ast::Statement::RenameTable(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::Statement::List(field0) => {
+                    sqltk_parser::ast::Statement::List(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::Statement::Remove(field0) => {
+                    sqltk_parser::ast::Statement::Remove(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::Statement::SetSessionParam(field0) => {
+                    sqltk_parser::ast::Statement::SetSessionParam(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::Statement::RaisError {
+                    message,
+                    severity,
+                    state,
+                    arguments,
+                    options,
+                } => {
+                    sqltk_parser::ast::Statement::RaisError {
+                        message: message
+                            .apply_transform_with_path(transformer, node_path)?,
+                        severity: severity
+                            .apply_transform_with_path(transformer, node_path)?,
+                        state: state.apply_transform_with_path(transformer, node_path)?,
+                        arguments: arguments
+                            .apply_transform_with_path(transformer, node_path)?,
+                        options: options
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::StorageSerializationPolicy {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::StorageSerializationPolicy::Compatible => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::StorageSerializationPolicy::Compatible,
+                        )?
+                }
+                sqltk_parser::ast::StorageSerializationPolicy::Optimized => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::StorageSerializationPolicy::Optimized,
+                        )?
                 }
             }
         };
@@ -11458,6 +13507,8 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableFactor {
                     with_ordinality,
                     partitions,
                     json_path,
+                    sample,
+                    index_hints,
                 } => {
                     sqltk_parser::ast::TableFactor::Table {
                         name: name.apply_transform_with_path(transformer, node_path)?,
@@ -11472,6 +13523,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableFactor {
                         partitions: partitions
                             .apply_transform_with_path(transformer, node_path)?,
                         json_path: json_path
+                            .apply_transform_with_path(transformer, node_path)?,
+                        sample: sample
+                            .apply_transform_with_path(transformer, node_path)?,
+                        index_hints: index_hints
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
@@ -11663,6 +13718,174 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableFunctionArgs {
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableIndexHintForClause {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::TableIndexHintForClause::Join => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableIndexHintForClause::Join,
+                        )?
+                }
+                sqltk_parser::ast::TableIndexHintForClause::OrderBy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableIndexHintForClause::OrderBy,
+                        )?
+                }
+                sqltk_parser::ast::TableIndexHintForClause::GroupBy => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableIndexHintForClause::GroupBy,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableIndexHintType {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::TableIndexHintType::Use => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableIndexHintType::Use,
+                        )?
+                }
+                sqltk_parser::ast::TableIndexHintType::Ignore => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableIndexHintType::Ignore,
+                        )?
+                }
+                sqltk_parser::ast::TableIndexHintType::Force => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableIndexHintType::Force,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableIndexHints {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { hint_type, index_type, for_clause, index_names } = self;
+            Self {
+                hint_type: hint_type.apply_transform_with_path(transformer, node_path)?,
+                index_type: index_type
+                    .apply_transform_with_path(transformer, node_path)?,
+                for_clause: for_clause
+                    .apply_transform_with_path(transformer, node_path)?,
+                index_names: index_names
+                    .apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableIndexType {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::TableIndexType::Index => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::TableIndexType::Index)?
+                }
+                sqltk_parser::ast::TableIndexType::Key => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::TableIndexType::Key)?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableObject {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::TableObject::TableName(field0) => {
+                    sqltk_parser::ast::TableObject::TableName(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::TableObject::TableFunction(field0) => {
+                    sqltk_parser::ast::TableObject::TableFunction(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableOptionsClustered {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -11702,6 +13925,279 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableOptionsCluster
     }
 }
 #[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableSample {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { modifier, name, quantity, seed, bucket, offset } = self;
+            Self {
+                modifier: modifier.apply_transform_with_path(transformer, node_path)?,
+                name: name.apply_transform_with_path(transformer, node_path)?,
+                quantity: quantity.apply_transform_with_path(transformer, node_path)?,
+                seed: seed.apply_transform_with_path(transformer, node_path)?,
+                bucket: bucket.apply_transform_with_path(transformer, node_path)?,
+                offset: offset.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableSampleBucket {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { bucket, total, on } = self;
+            Self {
+                bucket: bucket.apply_transform_with_path(transformer, node_path)?,
+                total: total.apply_transform_with_path(transformer, node_path)?,
+                on: on.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableSampleKind {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::TableSampleKind::BeforeTableAlias(field0) => {
+                    sqltk_parser::ast::TableSampleKind::BeforeTableAlias(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::TableSampleKind::AfterTableAlias(field0) => {
+                    sqltk_parser::ast::TableSampleKind::AfterTableAlias(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableSampleMethod {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::TableSampleMethod::Row => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::TableSampleMethod::Row)?
+                }
+                sqltk_parser::ast::TableSampleMethod::Bernoulli => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableSampleMethod::Bernoulli,
+                        )?
+                }
+                sqltk_parser::ast::TableSampleMethod::System => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableSampleMethod::System,
+                        )?
+                }
+                sqltk_parser::ast::TableSampleMethod::Block => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableSampleMethod::Block,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableSampleModifier {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::TableSampleModifier::Sample => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableSampleModifier::Sample,
+                        )?
+                }
+                sqltk_parser::ast::TableSampleModifier::TableSample => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableSampleModifier::TableSample,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableSampleQuantity {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { parenthesized, value, unit } = self;
+            Self {
+                parenthesized: parenthesized
+                    .apply_transform_with_path(transformer, node_path)?,
+                value: value.apply_transform_with_path(transformer, node_path)?,
+                unit: unit.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableSampleSeed {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { modifier, value } = self;
+            Self {
+                modifier: modifier.apply_transform_with_path(transformer, node_path)?,
+                value: value.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableSampleSeedModifier {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::TableSampleSeedModifier::Repeatable => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableSampleSeedModifier::Repeatable,
+                        )?
+                }
+                sqltk_parser::ast::TableSampleSeedModifier::Seed => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableSampleSeedModifier::Seed,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableSampleUnit {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::TableSampleUnit::Rows => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::TableSampleUnit::Rows)?
+                }
+                sqltk_parser::ast::TableSampleUnit::Percent => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TableSampleUnit::Percent,
+                        )?
+                }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableVersion {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -11716,6 +14212,11 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TableVersion {
             match self {
                 sqltk_parser::ast::TableVersion::ForSystemTimeAsOf(field0) => {
                     sqltk_parser::ast::TableVersion::ForSystemTimeAsOf(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::TableVersion::Function(field0) => {
+                    sqltk_parser::ast::TableVersion::Function(
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
@@ -11966,6 +14467,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TransactionIsolatio
                             sqltk_parser::ast::TransactionIsolationLevel::Serializable,
                         )?
                 }
+                sqltk_parser::ast::TransactionIsolationLevel::Snapshot => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TransactionIsolationLevel::Snapshot,
+                        )?
+                }
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -12035,6 +14543,20 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TransactionModifier
                         .transform(
                             node_path,
                             sqltk_parser::ast::TransactionModifier::Exclusive,
+                        )?
+                }
+                sqltk_parser::ast::TransactionModifier::Try => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TransactionModifier::Try,
+                        )?
+                }
+                sqltk_parser::ast::TransactionModifier::Catch => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::TransactionModifier::Catch,
                         )?
                 }
             }
@@ -12303,40 +14825,6 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TrimWhereField {
     }
 }
 #[automatically_derived]
-impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TruncateCascadeOption {
-    fn apply_transform_with_path<T>(
-        &'ast self,
-        transformer: &mut T,
-        node_path: &mut crate::NodePath<'ast>,
-    ) -> Result<Self, T::Error>
-    where
-        T: crate::Transform<'ast>,
-    {
-        node_path.push(self);
-        let transformed = {
-            match self {
-                sqltk_parser::ast::TruncateCascadeOption::Cascade => {
-                    transformer
-                        .transform(
-                            node_path,
-                            sqltk_parser::ast::TruncateCascadeOption::Cascade,
-                        )?
-                }
-                sqltk_parser::ast::TruncateCascadeOption::Restrict => {
-                    transformer
-                        .transform(
-                            node_path,
-                            sqltk_parser::ast::TruncateCascadeOption::Restrict,
-                        )?
-                }
-            }
-        };
-        let transformed = transformer.transform(node_path, transformed)?;
-        node_path.pop();
-        Ok(transformed)
-    }
-}
-#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::TruncateIdentityOption {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -12460,6 +14948,38 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::UnaryOperator {
                     transformer
                         .transform(node_path, sqltk_parser::ast::UnaryOperator::BangNot)?
                 }
+                sqltk_parser::ast::UnaryOperator::Hash => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::UnaryOperator::Hash)?
+                }
+                sqltk_parser::ast::UnaryOperator::AtDashAt => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::UnaryOperator::AtDashAt,
+                        )?
+                }
+                sqltk_parser::ast::UnaryOperator::DoubleAt => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::UnaryOperator::DoubleAt,
+                        )?
+                }
+                sqltk_parser::ast::UnaryOperator::QuestionDash => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::UnaryOperator::QuestionDash,
+                        )?
+                }
+                sqltk_parser::ast::UnaryOperator::QuestionPipe => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::UnaryOperator::QuestionPipe,
+                        )?
+                }
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -12484,6 +15004,36 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::UnionField {
                 field_name: field_name
                     .apply_transform_with_path(transformer, node_path)?,
                 field_type: field_type.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::UpdateTableFromKind {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::UpdateTableFromKind::BeforeSet(field0) => {
+                    sqltk_parser::ast::UpdateTableFromKind::BeforeSet(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
+                sqltk_parser::ast::UpdateTableFromKind::AfterSet(field0) => {
+                    sqltk_parser::ast::UpdateTableFromKind::AfterSet(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
+                }
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -12782,6 +15332,29 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ValueTableMode {
                             sqltk_parser::ast::ValueTableMode::AsValue,
                         )?
                 }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::ValueWithSpan {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { value, span } = self;
+            Self {
+                value: value.apply_transform_with_path(transformer, node_path)?,
+                span: span.apply_transform_with_path(transformer, node_path)?,
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -13105,7 +15678,7 @@ for sqltk_parser::ast::helpers::attached_token::AttachedToken {
 }
 #[automatically_derived]
 impl<'ast> crate::Transformable<'ast>
-for sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOption {
+for sqltk_parser::ast::helpers::key_value_options::KeyValueOption {
     fn apply_transform_with_path<T>(
         &'ast self,
         transformer: &mut T,
@@ -13132,7 +15705,7 @@ for sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOption {
 }
 #[automatically_derived]
 impl<'ast> crate::Transformable<'ast>
-for sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOptionType {
+for sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType {
     fn apply_transform_with_path<T>(
         &'ast self,
         transformer: &mut T,
@@ -13144,25 +15717,32 @@ for sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOptionType {
         node_path.push(self);
         let transformed = {
             match self {
-                sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOptionType::STRING => {
+                sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType::STRING => {
                     transformer
                         .transform(
                             node_path,
-                            sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOptionType::STRING,
+                            sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType::STRING,
                         )?
                 }
-                sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOptionType::BOOLEAN => {
+                sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType::BOOLEAN => {
                     transformer
                         .transform(
                             node_path,
-                            sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOptionType::BOOLEAN,
+                            sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType::BOOLEAN,
                         )?
                 }
-                sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOptionType::ENUM => {
+                sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType::ENUM => {
                     transformer
                         .transform(
                             node_path,
-                            sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOptionType::ENUM,
+                            sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType::ENUM,
+                        )?
+                }
+                sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType::NUMBER => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType::NUMBER,
                         )?
                 }
             }
@@ -13174,7 +15754,7 @@ for sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOptionType {
 }
 #[automatically_derived]
 impl<'ast> crate::Transformable<'ast>
-for sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOptions {
+for sqltk_parser::ast::helpers::key_value_options::KeyValueOptions {
     fn apply_transform_with_path<T>(
         &'ast self,
         transformer: &mut T,
@@ -13188,6 +15768,30 @@ for sqltk_parser::ast::helpers::stmt_data_loading::DataLoadingOptions {
             let Self { options } = self;
             Self {
                 options: options.apply_transform_with_path(transformer, node_path)?,
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast>
+for sqltk_parser::ast::helpers::stmt_data_loading::FileStagingCommand {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { stage, pattern } = self;
+            Self {
+                stage: stage.apply_transform_with_path(transformer, node_path)?,
+                pattern: pattern.apply_transform_with_path(transformer, node_path)?,
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -13323,6 +15927,17 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::AGGREGATION,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::ALERT => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::ALERT)?
+                }
+                sqltk_parser::keywords::Keyword::ALGORITHM => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::ALGORITHM,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::ALIAS => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::ALIAS)?
@@ -13369,6 +15984,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::APPLY => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::APPLY)?
+                }
+                sqltk_parser::keywords::Keyword::APPLYBUDGET => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::APPLYBUDGET,
+                        )?
                 }
                 sqltk_parser::keywords::Keyword::ARCHIVE => {
                     transformer
@@ -13431,6 +16053,17 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::ATTACH)?
                 }
+                sqltk_parser::keywords::Keyword::AUDIT => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::AUDIT)?
+                }
+                sqltk_parser::keywords::Keyword::AUTHENTICATION => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::AUTHENTICATION,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::AUTHORIZATION => {
                     transformer
                         .transform(
@@ -13472,6 +16105,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::BASE64)?
                 }
+                sqltk_parser::keywords::Keyword::BASE_LOCATION => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::BASE_LOCATION,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::BEFORE => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::BEFORE)?
@@ -13492,6 +16132,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                         .transform(
                             node_path,
                             sqltk_parser::keywords::Keyword::BEGIN_PARTITION,
+                        )?
+                }
+                sqltk_parser::keywords::Keyword::BERNOULLI => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::BERNOULLI,
                         )?
                 }
                 sqltk_parser::keywords::Keyword::BETWEEN => {
@@ -13520,6 +16167,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::BINARY)?
                 }
+                sqltk_parser::keywords::Keyword::BIND => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::BIND)?
+                }
                 sqltk_parser::keywords::Keyword::BINDING => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::BINDING)?
@@ -13531,6 +16182,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::BLOB => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::BLOB)?
+                }
+                sqltk_parser::keywords::Keyword::BLOCK => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::BLOCK)?
                 }
                 sqltk_parser::keywords::Keyword::BLOOMFILTER => {
                     transformer
@@ -13551,6 +16206,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::BOTH)?
                 }
+                sqltk_parser::keywords::Keyword::BOX => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::BOX)?
+                }
                 sqltk_parser::keywords::Keyword::BROWSE => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::BROWSE)?
@@ -13558,6 +16217,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::BTREE => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::BTREE)?
+                }
+                sqltk_parser::keywords::Keyword::BUCKET => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::BUCKET)?
                 }
                 sqltk_parser::keywords::Keyword::BUCKETS => {
                     transformer
@@ -13613,6 +16276,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::CASE)?
                 }
+                sqltk_parser::keywords::Keyword::CASES => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::CASES)?
+                }
                 sqltk_parser::keywords::Keyword::CAST => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::CAST)?
@@ -13620,6 +16287,17 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::CATALOG => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::CATALOG)?
+                }
+                sqltk_parser::keywords::Keyword::CATALOG_SYNC => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::CATALOG_SYNC,
+                        )?
+                }
+                sqltk_parser::keywords::Keyword::CATCH => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::CATCH)?
                 }
                 sqltk_parser::keywords::Keyword::CEIL => {
                     transformer
@@ -13691,6 +16369,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::CHECK => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::CHECK)?
+                }
+                sqltk_parser::keywords::Keyword::CIRCLE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::CIRCLE)?
                 }
                 sqltk_parser::keywords::Keyword::CLEAR => {
                     transformer
@@ -13782,6 +16464,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::COMMITTED,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::COMPATIBLE => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::COMPATIBLE,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::COMPRESSION => {
                     transformer
                         .transform(
@@ -13820,6 +16509,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                         .transform(
                             node_path,
                             sqltk_parser::keywords::Keyword::CONNECTION,
+                        )?
+                }
+                sqltk_parser::keywords::Keyword::CONNECTOR => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::CONNECTOR,
                         )?
                 }
                 sqltk_parser::keywords::Keyword::CONSTRAINT => {
@@ -14070,6 +16766,17 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::DAYOFYEAR,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::DAYS => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::DAYS)?
+                }
+                sqltk_parser::keywords::Keyword::DCPROPERTIES => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::DCPROPERTIES,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::DEALLOCATE => {
                     transformer
                         .transform(
@@ -14129,6 +16836,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::DEFINED => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::DEFINED)?
+                }
+                sqltk_parser::keywords::Keyword::DEFINER => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::DEFINER)?
                 }
                 sqltk_parser::keywords::Keyword::DELAYED => {
                     transformer
@@ -14377,6 +17088,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::ESCAPED)?
                 }
+                sqltk_parser::keywords::Keyword::ESTIMATE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::ESTIMATE)?
+                }
                 sqltk_parser::keywords::Keyword::EVENT => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::EVENT)?
@@ -14384,6 +17099,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::EVERY => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::EVERY)?
+                }
+                sqltk_parser::keywords::Keyword::EVOLVE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::EVOLVE)?
                 }
                 sqltk_parser::keywords::Keyword::EXCEPT => {
                     transformer
@@ -14395,6 +17114,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             node_path,
                             sqltk_parser::keywords::Keyword::EXCEPTION,
                         )?
+                }
+                sqltk_parser::keywords::Keyword::EXCHANGE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::EXCHANGE)?
                 }
                 sqltk_parser::keywords::Keyword::EXCLUDE => {
                     transformer
@@ -14414,6 +17137,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::EXECUTE => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::EXECUTE)?
+                }
+                sqltk_parser::keywords::Keyword::EXECUTION => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::EXECUTION,
+                        )?
                 }
                 sqltk_parser::keywords::Keyword::EXISTS => {
                     transformer
@@ -14457,6 +17187,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::EXTERNAL)?
                 }
+                sqltk_parser::keywords::Keyword::EXTERNAL_VOLUME => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::EXTERNAL_VOLUME,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::EXTRACT => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::EXTRACT)?
@@ -14464,6 +17201,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::FAIL => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::FAIL)?
+                }
+                sqltk_parser::keywords::Keyword::FAILOVER => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::FAILOVER)?
                 }
                 sqltk_parser::keywords::Keyword::FALSE => {
                     transformer
@@ -14632,6 +17373,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::FSCK)?
                 }
+                sqltk_parser::keywords::Keyword::FULFILLMENT => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::FULFILLMENT,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::FULL => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::FULL)?
@@ -14760,6 +17508,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::HOURS)?
                 }
+                sqltk_parser::keywords::Keyword::ICEBERG => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::ICEBERG)?
+                }
                 sqltk_parser::keywords::Keyword::ID => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::ID)?
@@ -14767,6 +17519,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::IDENTITY => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::IDENTITY)?
+                }
+                sqltk_parser::keywords::Keyword::IDENTITY_INSERT => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::IDENTITY_INSERT,
+                        )?
                 }
                 sqltk_parser::keywords::Keyword::IF => {
                     transformer
@@ -14793,6 +17552,14 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             node_path,
                             sqltk_parser::keywords::Keyword::IMMUTABLE,
                         )?
+                }
+                sqltk_parser::keywords::Keyword::IMPORT => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::IMPORT)?
+                }
+                sqltk_parser::keywords::Keyword::IMPORTED => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::IMPORTED)?
                 }
                 sqltk_parser::keywords::Keyword::IN => {
                     transformer
@@ -14850,6 +17617,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::INPATH)?
                 }
+                sqltk_parser::keywords::Keyword::INPLACE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::INPLACE)?
+                }
                 sqltk_parser::keywords::Keyword::INPUT => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::INPUT)?
@@ -14875,6 +17646,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::INSTALL => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::INSTALL)?
+                }
+                sqltk_parser::keywords::Keyword::INSTANT => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::INSTANT)?
                 }
                 sqltk_parser::keywords::Keyword::INSTEAD => {
                     transformer
@@ -14920,6 +17695,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::INTEGER)?
                 }
+                sqltk_parser::keywords::Keyword::INTEGRATION => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::INTEGRATION,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::INTERPOLATE => {
                     transformer
                         .transform(
@@ -14948,6 +17730,14 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::INTO => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::INTO)?
+                }
+                sqltk_parser::keywords::Keyword::INVOKER => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::INVOKER)?
+                }
+                sqltk_parser::keywords::Keyword::IO => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::IO)?
                 }
                 sqltk_parser::keywords::Keyword::IS => {
                     transformer
@@ -15077,13 +17867,25 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::LIMIT)?
                 }
+                sqltk_parser::keywords::Keyword::LINE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::LINE)?
+                }
                 sqltk_parser::keywords::Keyword::LINES => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::LINES)?
                 }
+                sqltk_parser::keywords::Keyword::LIST => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::LIST)?
+                }
                 sqltk_parser::keywords::Keyword::LISTEN => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::LISTEN)?
+                }
+                sqltk_parser::keywords::Keyword::LISTING => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::LISTING)?
                 }
                 sqltk_parser::keywords::Keyword::LN => {
                     transformer
@@ -15123,6 +17925,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::LOCKED)?
                 }
+                sqltk_parser::keywords::Keyword::LOG => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::LOG)?
+                }
                 sqltk_parser::keywords::Keyword::LOGIN => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::LOGIN)?
@@ -15157,9 +17963,25 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::LOW_PRIORITY,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::LS => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::LS)?
+                }
+                sqltk_parser::keywords::Keyword::LSEG => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::LSEG)?
+                }
                 sqltk_parser::keywords::Keyword::MACRO => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::MACRO)?
+                }
+                sqltk_parser::keywords::Keyword::MANAGE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::MANAGE)?
+                }
+                sqltk_parser::keywords::Keyword::MANAGED => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::MANAGED)?
                 }
                 sqltk_parser::keywords::Keyword::MANAGEDLOCATION => {
                     transformer
@@ -15272,6 +18094,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::METHOD)?
                 }
+                sqltk_parser::keywords::Keyword::METRIC => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::METRIC)?
+                }
                 sqltk_parser::keywords::Keyword::MICROSECOND => {
                     transformer
                         .transform(
@@ -15318,9 +18144,17 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::MIN)?
                 }
+                sqltk_parser::keywords::Keyword::MINUS => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::MINUS)?
+                }
                 sqltk_parser::keywords::Keyword::MINUTE => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::MINUTE)?
+                }
+                sqltk_parser::keywords::Keyword::MINUTES => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::MINUTES)?
                 }
                 sqltk_parser::keywords::Keyword::MINVALUE => {
                     transformer
@@ -15346,9 +18180,17 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::MODULE)?
                 }
+                sqltk_parser::keywords::Keyword::MONITOR => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::MONITOR)?
+                }
                 sqltk_parser::keywords::Keyword::MONTH => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::MONTH)?
+                }
+                sqltk_parser::keywords::Keyword::MONTHS => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::MONTHS)?
                 }
                 sqltk_parser::keywords::Keyword::MSCK => {
                     transformer
@@ -15400,6 +18242,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::NESTED)?
                 }
+                sqltk_parser::keywords::Keyword::NETWORK => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::NETWORK)?
+                }
                 sqltk_parser::keywords::Keyword::NEW => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::NEW)?
@@ -15407,6 +18253,22 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::NEXT => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::NEXT)?
+                }
+                sqltk_parser::keywords::Keyword::NFC => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::NFC)?
+                }
+                sqltk_parser::keywords::Keyword::NFD => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::NFD)?
+                }
+                sqltk_parser::keywords::Keyword::NFKC => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::NFKC)?
+                }
+                sqltk_parser::keywords::Keyword::NFKD => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::NFKD)?
                 }
                 sqltk_parser::keywords::Keyword::NO => {
                     transformer
@@ -15464,6 +18326,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                         .transform(
                             node_path,
                             sqltk_parser::keywords::Keyword::NORMALIZE,
+                        )?
+                }
+                sqltk_parser::keywords::Keyword::NORMALIZED => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::NORMALIZED,
                         )?
                 }
                 sqltk_parser::keywords::Keyword::NOSCAN => {
@@ -15539,6 +18408,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::OBJECT)?
                 }
+                sqltk_parser::keywords::Keyword::OBJECTS => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::OBJECTS)?
+                }
                 sqltk_parser::keywords::Keyword::OCCURRENCES_REGEX => {
                     transformer
                         .transform(
@@ -15561,9 +18434,17 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::OF)?
                 }
+                sqltk_parser::keywords::Keyword::OFF => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::OFF)?
+                }
                 sqltk_parser::keywords::Keyword::OFFSET => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::OFFSET)?
+                }
+                sqltk_parser::keywords::Keyword::OFFSETS => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::OFFSETS)?
                 }
                 sqltk_parser::keywords::Keyword::OLD => {
                     transformer
@@ -15593,13 +18474,31 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::OPENJSON)?
                 }
+                sqltk_parser::keywords::Keyword::OPERATE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::OPERATE)?
+                }
                 sqltk_parser::keywords::Keyword::OPERATOR => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::OPERATOR)?
                 }
+                sqltk_parser::keywords::Keyword::OPTIMIZATION => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::OPTIMIZATION,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::OPTIMIZE => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::OPTIMIZE)?
+                }
+                sqltk_parser::keywords::Keyword::OPTIMIZED => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::OPTIMIZED,
+                        )?
                 }
                 sqltk_parser::keywords::Keyword::OPTIMIZER_COSTS => {
                     transformer
@@ -15635,6 +18534,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::ORDINALITY,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::ORGANIZATION => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::ORGANIZATION,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::OUT => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::OUT)?
@@ -15666,6 +18572,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::OVERLAY)?
                 }
+                sqltk_parser::keywords::Keyword::OVERRIDE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::OVERRIDE)?
+                }
                 sqltk_parser::keywords::Keyword::OVERWRITE => {
                     transformer
                         .transform(
@@ -15680,6 +18590,21 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::OWNER => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::OWNER)?
+                }
+                sqltk_parser::keywords::Keyword::OWNERSHIP => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::OWNERSHIP,
+                        )?
+                }
+                sqltk_parser::keywords::Keyword::PACKAGE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::PACKAGE)?
+                }
+                sqltk_parser::keywords::Keyword::PACKAGES => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::PACKAGES)?
                 }
                 sqltk_parser::keywords::Keyword::PARALLEL => {
                     transformer
@@ -15800,9 +18725,21 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::PLANS)?
                 }
+                sqltk_parser::keywords::Keyword::POINT => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::POINT)?
+                }
                 sqltk_parser::keywords::Keyword::POLICY => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::POLICY)?
+                }
+                sqltk_parser::keywords::Keyword::POLYGON => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::POLYGON)?
+                }
+                sqltk_parser::keywords::Keyword::POOL => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::POOL)?
                 }
                 sqltk_parser::keywords::Keyword::PORTION => {
                     transformer
@@ -15879,6 +18816,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::PROCEDURE,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::PROFILE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::PROFILE)?
+                }
                 sqltk_parser::keywords::Keyword::PROGRAM => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::PROGRAM)?
@@ -15889,6 +18830,14 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             node_path,
                             sqltk_parser::keywords::Keyword::PROJECTION,
                         )?
+                }
+                sqltk_parser::keywords::Keyword::PUBLIC => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::PUBLIC)?
+                }
+                sqltk_parser::keywords::Keyword::PURCHASE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::PURCHASE)?
                 }
                 sqltk_parser::keywords::Keyword::PURGE => {
                     transformer
@@ -15909,6 +18858,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::QUOTE => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::QUOTE)?
+                }
+                sqltk_parser::keywords::Keyword::RAISERROR => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::RAISERROR,
+                        )?
                 }
                 sqltk_parser::keywords::Keyword::RANGE => {
                     transformer
@@ -16048,9 +19004,17 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::RELEASE)?
                 }
+                sqltk_parser::keywords::Keyword::RELEASES => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::RELEASES)?
+                }
                 sqltk_parser::keywords::Keyword::REMOTE => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::REMOTE)?
+                }
+                sqltk_parser::keywords::Keyword::REMOVE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::REMOVE)?
                 }
                 sqltk_parser::keywords::Keyword::RENAME => {
                     transformer
@@ -16079,6 +19043,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::REPLICA)?
                 }
+                sqltk_parser::keywords::Keyword::REPLICATE => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::REPLICATE,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::REPLICATION => {
                     transformer
                         .transform(
@@ -16089,6 +19060,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::RESET => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::RESET)?
+                }
+                sqltk_parser::keywords::Keyword::RESOLVE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::RESOLVE)?
                 }
                 sqltk_parser::keywords::Keyword::RESPECT => {
                     transformer
@@ -16107,6 +19082,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                         .transform(
                             node_path,
                             sqltk_parser::keywords::Keyword::RESTRICTED,
+                        )?
+                }
+                sqltk_parser::keywords::Keyword::RESTRICTIONS => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::RESTRICTIONS,
                         )?
                 }
                 sqltk_parser::keywords::Keyword::RESTRICTIVE => {
@@ -16161,6 +19143,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::RLIKE => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::RLIKE)?
+                }
+                sqltk_parser::keywords::Keyword::RM => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::RM)?
                 }
                 sqltk_parser::keywords::Keyword::ROLE => {
                     transformer
@@ -16220,6 +19206,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::SAFE_CAST,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::SAMPLE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::SAMPLE)?
+                }
                 sqltk_parser::keywords::Keyword::SAVEPOINT => {
                     transformer
                         .transform(
@@ -16258,6 +19248,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::SECONDARY,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::SECONDS => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::SECONDS)?
+                }
                 sqltk_parser::keywords::Keyword::SECRET => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::SECRET)?
@@ -16265,6 +19259,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::SECURITY => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::SECURITY)?
+                }
+                sqltk_parser::keywords::Keyword::SEED => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::SEED)?
                 }
                 sqltk_parser::keywords::Keyword::SELECT => {
                     transformer
@@ -16324,6 +19322,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::SERIALIZABLE,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::SERVICE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::SERVICE)?
+                }
                 sqltk_parser::keywords::Keyword::SESSION => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::SESSION)?
@@ -16339,6 +19341,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::SET)?
                 }
+                sqltk_parser::keywords::Keyword::SETERROR => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::SETERROR)?
+                }
                 sqltk_parser::keywords::Keyword::SETS => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::SETS)?
@@ -16351,9 +19357,17 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::SHARE)?
                 }
+                sqltk_parser::keywords::Keyword::SHARING => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::SHARING)?
+                }
                 sqltk_parser::keywords::Keyword::SHOW => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::SHOW)?
+                }
+                sqltk_parser::keywords::Keyword::SIGNED => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::SIGNED)?
                 }
                 sqltk_parser::keywords::Keyword::SIMILAR => {
                     transformer
@@ -16503,6 +19517,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::STORAGE_INTEGRATION,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::STORAGE_SERIALIZATION_POLICY => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::STORAGE_SERIALIZATION_POLICY,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::STORED => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::STORED)?
@@ -16558,6 +19579,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             node_path,
                             sqltk_parser::keywords::Keyword::SUPERUSER,
                         )?
+                }
+                sqltk_parser::keywords::Keyword::SUPPORT => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::SUPPORT)?
                 }
                 sqltk_parser::keywords::Keyword::SUSPEND => {
                     transformer
@@ -16619,6 +19644,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::TARGET)?
                 }
+                sqltk_parser::keywords::Keyword::TASK => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::TASK)?
+                }
                 sqltk_parser::keywords::Keyword::TBLPROPERTIES => {
                     transformer
                         .transform(
@@ -16635,6 +19664,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                         .transform(
                             node_path,
                             sqltk_parser::keywords::Keyword::TEMPORARY,
+                        )?
+                }
+                sqltk_parser::keywords::Keyword::TEMPTABLE => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::TEMPTABLE,
                         )?
                 }
                 sqltk_parser::keywords::Keyword::TERMINATED => {
@@ -16742,6 +19778,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::TOTALS)?
                 }
+                sqltk_parser::keywords::Keyword::TRACE => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::TRACE)?
+                }
                 sqltk_parser::keywords::Keyword::TRAILING => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::TRAILING)?
@@ -16808,6 +19848,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::TRUNCATE)?
                 }
+                sqltk_parser::keywords::Keyword::TRY => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::TRY)?
+                }
                 sqltk_parser::keywords::Keyword::TRY_CAST => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::TRY_CAST)?
@@ -16873,6 +19917,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::UNCOMMITTED,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::UNDEFINED => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::UNDEFINED,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::UNFREEZE => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::UNFREEZE)?
@@ -16923,6 +19974,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::UNSAFE => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::UNSAFE)?
+                }
+                sqltk_parser::keywords::Keyword::UNSET => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::UNSET)?
                 }
                 sqltk_parser::keywords::Keyword::UNSIGNED => {
                     transformer
@@ -17005,6 +20060,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::VARBINARY,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::VARBIT => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::VARBIT)?
+                }
                 sqltk_parser::keywords::Keyword::VARCHAR => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::VARCHAR)?
@@ -17043,6 +20102,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::VERSIONING,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::VERSIONS => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::VERSIONS)?
+                }
                 sqltk_parser::keywords::Keyword::VIEW => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::VIEW)?
@@ -17059,6 +20122,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::VOLATILE)?
                 }
+                sqltk_parser::keywords::Keyword::VOLUME => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::VOLUME)?
+                }
                 sqltk_parser::keywords::Keyword::WAREHOUSE => {
                     transformer
                         .transform(
@@ -17066,9 +20133,20 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                             sqltk_parser::keywords::Keyword::WAREHOUSE,
                         )?
                 }
+                sqltk_parser::keywords::Keyword::WAREHOUSES => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::keywords::Keyword::WAREHOUSES,
+                        )?
+                }
                 sqltk_parser::keywords::Keyword::WEEK => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::WEEK)?
+                }
+                sqltk_parser::keywords::Keyword::WEEKS => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::WEEKS)?
                 }
                 sqltk_parser::keywords::Keyword::WHEN => {
                     transformer
@@ -17131,6 +20209,10 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::keywords::Keyword {
                 sqltk_parser::keywords::Keyword::YEAR => {
                     transformer
                         .transform(node_path, sqltk_parser::keywords::Keyword::YEAR)?
+                }
+                sqltk_parser::keywords::Keyword::YEARS => {
+                    transformer
+                        .transform(node_path, sqltk_parser::keywords::Keyword::YEARS)?
                 }
                 sqltk_parser::keywords::Keyword::ZONE => {
                     transformer
@@ -17465,6 +20547,13 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::tokenizer::Token {
                     transformer
                         .transform(node_path, sqltk_parser::tokenizer::Token::Sharp)?
                 }
+                sqltk_parser::tokenizer::Token::DoubleSharp => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::DoubleSharp,
+                        )?
+                }
                 sqltk_parser::tokenizer::Token::Tilde => {
                     transformer
                         .transform(node_path, sqltk_parser::tokenizer::Token::Tilde)?
@@ -17585,6 +20674,108 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::tokenizer::Token {
                 sqltk_parser::tokenizer::Token::HashArrow => {
                     transformer
                         .transform(node_path, sqltk_parser::tokenizer::Token::HashArrow)?
+                }
+                sqltk_parser::tokenizer::Token::AtDashAt => {
+                    transformer
+                        .transform(node_path, sqltk_parser::tokenizer::Token::AtDashAt)?
+                }
+                sqltk_parser::tokenizer::Token::QuestionMarkDash => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::QuestionMarkDash,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::AmpersandLeftAngleBracket => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::AmpersandLeftAngleBracket,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::AmpersandRightAngleBracket => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::AmpersandRightAngleBracket,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::AmpersandLeftAngleBracketVerticalBar => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::AmpersandLeftAngleBracketVerticalBar,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::VerticalBarAmpersandRightAngleBracket => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::VerticalBarAmpersandRightAngleBracket,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::TwoWayArrow => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::TwoWayArrow,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::LeftAngleBracketCaret => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::LeftAngleBracketCaret,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::RightAngleBracketCaret => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::RightAngleBracketCaret,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::QuestionMarkSharp => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::QuestionMarkSharp,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::QuestionMarkDashVerticalBar => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::QuestionMarkDashVerticalBar,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::QuestionMarkDoubleVerticalBar => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::QuestionMarkDoubleVerticalBar,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::TildeEqual => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::TildeEqual,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::ShiftLeftVerticalBar => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::ShiftLeftVerticalBar,
+                        )?
+                }
+                sqltk_parser::tokenizer::Token::VerticalBarShiftRight => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::tokenizer::Token::VerticalBarShiftRight,
+                        )?
                 }
                 sqltk_parser::tokenizer::Token::HashLongArrow => {
                     transformer

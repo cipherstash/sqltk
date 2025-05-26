@@ -39,27 +39,18 @@ fn test_square_brackets_over_db_schema_table_name() {
     assert_eq!(
         select.from[0],
         TableWithJoins {
-            relation: TableFactor::Table {
-                name: ObjectName(vec![
-                    Ident {
-                        value: "test_schema".to_string(),
-                        quote_style: Some('['),
-                        span: Span::empty(),
-                    },
-                    Ident {
-                        value: "test_table".to_string(),
-                        quote_style: Some('['),
-                        span: Span::empty(),
-                    }
-                ]),
-                alias: None,
-                args: None,
-                with_hints: vec![],
-                version: None,
-                partitions: vec![],
-                with_ordinality: false,
-                json_path: None,
-            },
+            relation: table_from_name(ObjectName::from(vec![
+                Ident {
+                    value: "test_schema".to_string(),
+                    quote_style: Some('['),
+                    span: Span::empty(),
+                },
+                Ident {
+                    value: "test_table".to_string(),
+                    quote_style: Some('['),
+                    span: Span::empty(),
+                }
+            ])),
             joins: vec![],
         }
     );
@@ -90,27 +81,18 @@ fn test_double_quotes_over_db_schema_table_name() {
     assert_eq!(
         select.from[0],
         TableWithJoins {
-            relation: TableFactor::Table {
-                name: ObjectName(vec![
-                    Ident {
-                        value: "test_schema".to_string(),
-                        quote_style: Some('"'),
-                        span: Span::empty(),
-                    },
-                    Ident {
-                        value: "test_table".to_string(),
-                        quote_style: Some('"'),
-                        span: Span::empty(),
-                    }
-                ]),
-                alias: None,
-                args: None,
-                with_hints: vec![],
-                version: None,
-                partitions: vec![],
-                with_ordinality: false,
-                json_path: None,
-            },
+            relation: table_from_name(ObjectName::from(vec![
+                Ident {
+                    value: "test_schema".to_string(),
+                    quote_style: Some('"'),
+                    span: Span::empty(),
+                },
+                Ident {
+                    value: "test_table".to_string(),
+                    quote_style: Some('"'),
+                    span: Span::empty(),
+                }
+            ])),
             joins: vec![],
         }
     );
@@ -130,11 +112,12 @@ fn parse_delimited_identifiers() {
             args,
             with_hints,
             version,
-            with_ordinality: _,
-            partitions: _,
-            json_path: _,
+            ..
         } => {
-            assert_eq!(vec![Ident::with_quote('"', "a table")], name.0);
+            assert_eq!(
+                ObjectName::from(vec![Ident::with_quote('"', "a table")]),
+                name
+            );
             assert_eq!(Ident::with_quote('"', "alias"), alias.unwrap().name);
             assert!(args.is_none());
             assert!(with_hints.is_empty());
@@ -153,7 +136,7 @@ fn parse_delimited_identifiers() {
     );
     assert_eq!(
         &Expr::Function(Function {
-            name: ObjectName(vec![Ident::with_quote('"', "myfun")]),
+            name: ObjectName::from(vec![Ident::with_quote('"', "myfun")]),
             uses_odbc_syntax: false,
             parameters: FunctionArguments::None,
             args: FunctionArguments::List(FunctionArgumentList {
@@ -177,6 +160,8 @@ fn parse_delimited_identifiers() {
     }
 
     redshift().verified_stmt(r#"CREATE TABLE "foo" ("bar" "int")"#);
+    // An alias starting with a number
+    redshift().verified_stmt(r#"CREATE TABLE "foo" ("1" INT)"#);
     redshift().verified_stmt(r#"ALTER TABLE foo ADD CONSTRAINT "bar" PRIMARY KEY (baz)"#);
     //TODO verified_stmt(r#"UPDATE foo SET "bar" = 5"#);
 }
@@ -223,7 +208,7 @@ fn test_redshift_json_path() {
             path: JsonPath {
                 path: vec![
                     JsonPathElem::Bracket {
-                        key: Expr::Value(Value::Number("0".parse().unwrap(), false))
+                        key: Expr::value(number("0"))
                     },
                     JsonPathElem::Dot {
                         key: "o_orderkey".to_string(),
@@ -246,10 +231,12 @@ fn test_redshift_json_path() {
             path: JsonPath {
                 path: vec![
                     JsonPathElem::Bracket {
-                        key: Expr::Value(Value::Number("0".parse().unwrap(), false))
+                        key: Expr::value(number("0"))
                     },
                     JsonPathElem::Bracket {
-                        key: Expr::Value(Value::SingleQuotedString("id".to_owned()))
+                        key: Expr::Value(
+                            (Value::SingleQuotedString("id".to_owned())).with_empty_span()
+                        )
                     }
                 ]
             }
@@ -270,10 +257,37 @@ fn test_redshift_json_path() {
             path: JsonPath {
                 path: vec![
                     JsonPathElem::Bracket {
-                        key: Expr::Value(Value::Number("0".parse().unwrap(), false))
+                        key: Expr::value(number("0"))
                     },
                     JsonPathElem::Bracket {
-                        key: Expr::Value(Value::SingleQuotedString("id".to_owned()))
+                        key: Expr::Value(
+                            (Value::SingleQuotedString("id".to_owned())).with_empty_span()
+                        )
+                    }
+                ]
+            }
+        },
+        expr_from_projection(only(&select.projection))
+    );
+
+    let sql = r#"SELECT db1.sc1.tbl1.col1[0]."id" FROM customer_orders_lineitem"#;
+    let select = dialects.verified_only_select(sql);
+    assert_eq!(
+        &Expr::JsonAccess {
+            value: Box::new(Expr::CompoundIdentifier(vec![
+                Ident::new("db1"),
+                Ident::new("sc1"),
+                Ident::new("tbl1"),
+                Ident::new("col1")
+            ])),
+            path: JsonPath {
+                path: vec![
+                    JsonPathElem::Bracket {
+                        key: Expr::value(number("0"))
+                    },
+                    JsonPathElem::Dot {
+                        key: "id".to_string(),
+                        quoted: true,
                     }
                 ]
             }
@@ -290,13 +304,13 @@ fn test_parse_json_path_from() {
         TableFactor::Table {
             name, json_path, ..
         } => {
-            assert_eq!(name, &ObjectName(vec![Ident::new("src")]));
+            assert_eq!(name, &ObjectName::from(vec![Ident::new("src")]));
             assert_eq!(
                 json_path,
                 &Some(JsonPath {
                     path: vec![
                         JsonPathElem::Bracket {
-                            key: Expr::Value(Value::Number("0".parse().unwrap(), false))
+                            key: Expr::value(number("0"))
                         },
                         JsonPathElem::Dot {
                             key: "a".to_string(),
@@ -314,20 +328,22 @@ fn test_parse_json_path_from() {
         TableFactor::Table {
             name, json_path, ..
         } => {
-            assert_eq!(name, &ObjectName(vec![Ident::new("src")]));
+            assert_eq!(name, &ObjectName::from(vec![Ident::new("src")]));
             assert_eq!(
                 json_path,
                 &Some(JsonPath {
                     path: vec![
                         JsonPathElem::Bracket {
-                            key: Expr::Value(Value::Number("0".parse().unwrap(), false))
+                            key: Expr::value(number("0"))
                         },
                         JsonPathElem::Dot {
                             key: "a".to_string(),
                             quoted: false
                         },
                         JsonPathElem::Bracket {
-                            key: Expr::Value(Value::Number("1".parse().unwrap(), false))
+                            key: Expr::Value(
+                                (Value::Number("1".parse().unwrap(), false)).with_empty_span()
+                            )
                         },
                         JsonPathElem::Dot {
                             key: "b".to_string(),
@@ -347,10 +363,31 @@ fn test_parse_json_path_from() {
         } => {
             assert_eq!(
                 name,
-                &ObjectName(vec![Ident::new("src"), Ident::new("a"), Ident::new("b")])
+                &ObjectName::from(vec![Ident::new("src"), Ident::new("a"), Ident::new("b")])
             );
             assert_eq!(json_path, &None);
         }
         _ => panic!(),
     }
+}
+
+#[test]
+fn test_parse_select_numbered_columns() {
+    // An alias starting with a number
+    redshift_and_generic().verified_stmt(r#"SELECT 1 AS "1" FROM a"#);
+    redshift_and_generic().verified_stmt(r#"SELECT 1 AS "1abc" FROM a"#);
+}
+
+#[test]
+fn test_parse_nested_quoted_identifier() {
+    redshift().verified_stmt(r#"SELECT 1 AS ["1"] FROM a"#);
+    redshift().verified_stmt(r#"SELECT 1 AS ["[="] FROM a"#);
+    redshift().verified_stmt(r#"SELECT 1 AS ["=]"] FROM a"#);
+    redshift().verified_stmt(r#"SELECT 1 AS ["a[b]"] FROM a"#);
+    // trim spaces
+    redshift().one_statement_parses_to(r#"SELECT 1 AS [ " 1 " ]"#, r#"SELECT 1 AS [" 1 "]"#);
+    // invalid query
+    assert!(redshift()
+        .parse_sql_statements(r#"SELECT 1 AS ["1]"#)
+        .is_err());
 }

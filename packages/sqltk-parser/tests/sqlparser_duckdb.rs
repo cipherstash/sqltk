@@ -60,7 +60,6 @@ fn test_struct() {
         vec![ColumnDef {
             name: "s".into(),
             data_type: struct_type1.clone(),
-            collation: None,
             options: vec![],
         }]
     );
@@ -75,7 +74,6 @@ fn test_struct() {
                 Box::new(struct_type1),
                 None
             )),
-            collation: None,
             options: vec![],
         }]
     );
@@ -120,7 +118,6 @@ fn test_struct() {
                 Box::new(struct_type2),
                 None
             )),
-            collation: None,
             options: vec![],
         }]
     );
@@ -160,7 +157,7 @@ fn test_select_wildcard_with_exclude() {
     let select =
         duckdb().verified_only_select("SELECT name.* EXCLUDE department_id FROM employee_table");
     let expected = SelectItem::QualifiedWildcard(
-        ObjectName(vec![Ident::new("name")]),
+        SelectItemQualifiedWildcardKind::ObjectName(ObjectName::from(vec![Ident::new("name")])),
         WildcardAdditionalOptions {
             opt_exclude: Some(ExcludeSelectItem::Single(Ident::new("department_id"))),
             ..Default::default()
@@ -191,7 +188,7 @@ fn test_create_macro() {
     let expected = Statement::CreateMacro {
         or_replace: false,
         temporary: false,
-        name: ObjectName(vec![Ident::new("schema"), Ident::new("add")]),
+        name: ObjectName::from(vec![Ident::new("schema"), Ident::new("add")]),
         args: Some(vec![MacroArg::new("a"), MacroArg::new("b")]),
         definition: MacroDefinition::Expr(Expr::BinaryOp {
             left: Box::new(Expr::Identifier(Ident::new("a"))),
@@ -208,12 +205,12 @@ fn test_create_macro_default_args() {
     let expected = Statement::CreateMacro {
         or_replace: false,
         temporary: false,
-        name: ObjectName(vec![Ident::new("add_default")]),
+        name: ObjectName::from(vec![Ident::new("add_default")]),
         args: Some(vec![
             MacroArg::new("a"),
             MacroArg {
                 name: Ident::new("b"),
-                default_expr: Some(Expr::Value(number("5"))),
+                default_expr: Some(Expr::value(number("5"))),
             },
         ]),
         definition: MacroDefinition::Expr(Expr::BinaryOp {
@@ -236,7 +233,7 @@ fn test_create_table_macro() {
     let expected = Statement::CreateMacro {
         or_replace: true,
         temporary: true,
-        name: ObjectName(vec![Ident::new("dynamic_table")]),
+        name: ObjectName::from(vec![Ident::new("dynamic_table")]),
         args: Some(vec![
             MacroArg::new("col1_value"),
             MacroArg::new("col2_value"),
@@ -268,20 +265,11 @@ fn test_select_union_by_name() {
                 top_before_distinct: false,
                 into: None,
                 from: vec![TableWithJoins {
-                    relation: TableFactor::Table {
-                        name: ObjectName(vec![Ident {
-                            value: "capitals".to_string(),
-                            quote_style: None,
-                            span: Span::empty(),
-                        }]),
-                        alias: None,
-                        args: None,
-                        with_hints: vec![],
-                        version: None,
-                        partitions: vec![],
-                        with_ordinality: false,
-                        json_path: None,
-                    },
+                    relation: table_from_name(ObjectName::from(vec![Ident {
+                        value: "capitals".to_string(),
+                        quote_style: None,
+                        span: Span::empty(),
+                    }])),
                     joins: vec![],
                 }],
                 lateral_views: vec![],
@@ -297,6 +285,7 @@ fn test_select_union_by_name() {
                 qualify: None,
                 value_table_mode: None,
                 connect_by: None,
+                flavor: SelectFlavor::Standard,
             }))),
             right: Box::<SetExpr>::new(SetExpr::Select(Box::new(Select {
                 select_token: AttachedToken::empty(),
@@ -306,20 +295,11 @@ fn test_select_union_by_name() {
                 top_before_distinct: false,
                 into: None,
                 from: vec![TableWithJoins {
-                    relation: TableFactor::Table {
-                        name: ObjectName(vec![Ident {
-                            value: "weather".to_string(),
-                            quote_style: None,
-                            span: Span::empty(),
-                        }]),
-                        alias: None,
-                        args: None,
-                        with_hints: vec![],
-                        version: None,
-                        partitions: vec![],
-                        with_ordinality: false,
-                        json_path: None,
-                    },
+                    relation: table_from_name(ObjectName::from(vec![Ident {
+                        value: "weather".to_string(),
+                        quote_style: None,
+                        span: Span::empty(),
+                    }])),
                     joins: vec![],
                 }],
                 lateral_views: vec![],
@@ -335,6 +315,7 @@ fn test_select_union_by_name() {
                 qualify: None,
                 value_table_mode: None,
                 connect_by: None,
+                flavor: SelectFlavor::Standard,
             }))),
         });
         assert_eq!(ast.body, expected);
@@ -382,15 +363,15 @@ fn test_duckdb_struct_literal() {
         &Expr::Dictionary(vec![
             DictionaryField {
                 key: Ident::with_quote('\'', "a"),
-                value: Box::new(Expr::Value(number("1"))),
+                value: Box::new(Expr::value(number("1"))),
             },
             DictionaryField {
                 key: Ident::with_quote('\'', "b"),
-                value: Box::new(Expr::Value(number("2"))),
+                value: Box::new(Expr::value(number("2"))),
             },
             DictionaryField {
                 key: Ident::with_quote('\'', "c"),
-                value: Box::new(Expr::Value(number("3"))),
+                value: Box::new(Expr::value(number("3"))),
             },
         ],),
         expr_from_projection(&select.projection[0])
@@ -400,7 +381,9 @@ fn test_duckdb_struct_literal() {
         &Expr::Array(Array {
             elem: vec![Expr::Dictionary(vec![DictionaryField {
                 key: Ident::with_quote('\'', "a"),
-                value: Box::new(Expr::Value(Value::SingleQuotedString("abc".to_string()))),
+                value: Box::new(Expr::Value(
+                    (Value::SingleQuotedString("abc".to_string())).with_empty_span()
+                )),
             },],)],
             named: false
         }),
@@ -410,7 +393,7 @@ fn test_duckdb_struct_literal() {
         &Expr::Dictionary(vec![
             DictionaryField {
                 key: Ident::with_quote('\'', "a"),
-                value: Box::new(Expr::Value(number("1"))),
+                value: Box::new(Expr::value(number("1"))),
             },
             DictionaryField {
                 key: Ident::with_quote('\'', "b"),
@@ -429,11 +412,14 @@ fn test_duckdb_struct_literal() {
         &Expr::Dictionary(vec![
             DictionaryField {
                 key: Ident::with_quote('\'', "a"),
-                value: Expr::Value(number("1")).into(),
+                value: Expr::value(number("1")).into(),
             },
             DictionaryField {
                 key: Ident::with_quote('\'', "b"),
-                value: Expr::Value(Value::SingleQuotedString("abc".to_string())).into(),
+                value: Expr::Value(
+                    (Value::SingleQuotedString("abc".to_string())).with_empty_span()
+                )
+                .into(),
             },
         ],),
         expr_from_projection(&select.projection[3])
@@ -450,7 +436,7 @@ fn test_duckdb_struct_literal() {
             key: Ident::with_quote('\'', "a"),
             value: Expr::Dictionary(vec![DictionaryField {
                 key: Ident::with_quote('\'', "aa"),
-                value: Expr::Value(number("1")).into(),
+                value: Expr::value(number("1")).into(),
             }],)
             .into(),
         }],),
@@ -605,7 +591,7 @@ fn test_duckdb_named_argument_function_with_assignment_operator() {
     let select = duckdb_and_generic().verified_only_select(sql);
     assert_eq!(
         &Expr::Function(Function {
-            name: ObjectName(vec![Ident::new("FUN")]),
+            name: ObjectName::from(vec![Ident::new("FUN")]),
             uses_odbc_syntax: false,
             parameters: FunctionArguments::None,
             args: FunctionArguments::List(FunctionArgumentList {
@@ -613,16 +599,16 @@ fn test_duckdb_named_argument_function_with_assignment_operator() {
                 args: vec![
                     FunctionArg::Named {
                         name: Ident::new("a"),
-                        arg: FunctionArgExpr::Expr(Expr::Value(Value::SingleQuotedString(
-                            "1".to_owned()
-                        ))),
+                        arg: FunctionArgExpr::Expr(Expr::Value(
+                            (Value::SingleQuotedString("1".to_owned())).with_empty_span()
+                        )),
                         operator: FunctionArgOperator::Assignment
                     },
                     FunctionArg::Named {
                         name: Ident::new("b"),
-                        arg: FunctionArgExpr::Expr(Expr::Value(Value::SingleQuotedString(
-                            "2".to_owned()
-                        ))),
+                        arg: FunctionArgExpr::Expr(Expr::Value(
+                            (Value::SingleQuotedString("2".to_owned())).with_empty_span()
+                        )),
                         operator: FunctionArgOperator::Assignment
                     },
                 ],
@@ -648,18 +634,18 @@ fn test_array_index() {
         _ => panic!("Expected an expression with alias"),
     };
     assert_eq!(
-        &Expr::Subscript {
-            expr: Box::new(Expr::Array(Array {
+        &Expr::CompoundFieldAccess {
+            root: Box::new(Expr::Array(Array {
                 elem: vec![
-                    Expr::Value(Value::SingleQuotedString("a".to_owned())),
-                    Expr::Value(Value::SingleQuotedString("b".to_owned())),
-                    Expr::Value(Value::SingleQuotedString("c".to_owned()))
+                    Expr::Value((Value::SingleQuotedString("a".to_owned())).with_empty_span()),
+                    Expr::Value((Value::SingleQuotedString("b".to_owned())).with_empty_span()),
+                    Expr::Value((Value::SingleQuotedString("c".to_owned())).with_empty_span())
                 ],
                 named: false
             })),
-            subscript: Box::new(Subscript::Index {
-                index: Expr::Value(number("3"))
-            })
+            access_chain: vec![AccessExpr::Subscript(Subscript::Index {
+                index: Expr::value(number("3"))
+            })]
         },
         expr
     );
@@ -678,7 +664,8 @@ fn test_duckdb_union_datatype() {
             if_not_exists: Default::default(),
             transient: Default::default(),
             volatile: Default::default(),
-            name: ObjectName(vec!["tbl1".into()]),
+            iceberg: Default::default(),
+            name: ObjectName::from(vec!["tbl1".into()]),
             columns: vec![
                 ColumnDef {
                     name: "one".into(),
@@ -686,7 +673,6 @@ fn test_duckdb_union_datatype() {
                         field_name: "a".into(),
                         field_type: DataType::Int(None)
                     }]),
-                    collation: Default::default(),
                     options: Default::default()
                 },
                 ColumnDef {
@@ -701,7 +687,6 @@ fn test_duckdb_union_datatype() {
                             field_type: DataType::Int(None)
                         }
                     ]),
-                    collation: Default::default(),
                     options: Default::default()
                 },
                 ColumnDef {
@@ -713,7 +698,6 @@ fn test_duckdb_union_datatype() {
                             field_type: DataType::Int(None)
                         }])
                     }]),
-                    collation: Default::default(),
                     options: Default::default()
                 }
             ],
@@ -755,7 +739,12 @@ fn test_duckdb_union_datatype() {
             default_ddl_collation: Default::default(),
             with_aggregation_policy: Default::default(),
             with_row_access_policy: Default::default(),
-            with_tags: Default::default()
+            with_tags: Default::default(),
+            base_location: Default::default(),
+            external_volume: Default::default(),
+            catalog: Default::default(),
+            catalog_sync: Default::default(),
+            storage_serialization_policy: Default::default(),
         }),
         stmt
     );
@@ -777,7 +766,7 @@ fn parse_use() {
         // Test single identifier without quotes
         assert_eq!(
             duckdb().verified_stmt(&format!("USE {}", object_name)),
-            Statement::Use(Use::Object(ObjectName(vec![Ident::new(
+            Statement::Use(Use::Object(ObjectName::from(vec![Ident::new(
                 object_name.to_string()
             )])))
         );
@@ -785,7 +774,7 @@ fn parse_use() {
             // Test single identifier with different type of quotes
             assert_eq!(
                 duckdb().verified_stmt(&format!("USE {0}{1}{0}", quote, object_name)),
-                Statement::Use(Use::Object(ObjectName(vec![Ident::with_quote(
+                Statement::Use(Use::Object(ObjectName::from(vec![Ident::with_quote(
                     quote,
                     object_name.to_string(),
                 )])))
@@ -797,7 +786,7 @@ fn parse_use() {
         // Test double identifier with different type of quotes
         assert_eq!(
             duckdb().verified_stmt(&format!("USE {0}CATALOG{0}.{0}my_schema{0}", quote)),
-            Statement::Use(Use::Object(ObjectName(vec![
+            Statement::Use(Use::Object(ObjectName::from(vec![
                 Ident::with_quote(quote, "CATALOG"),
                 Ident::with_quote(quote, "my_schema")
             ])))
@@ -806,7 +795,7 @@ fn parse_use() {
     // Test double identifier without quotes
     assert_eq!(
         duckdb().verified_stmt("USE mydb.my_schema"),
-        Statement::Use(Use::Object(ObjectName(vec![
+        Statement::Use(Use::Object(ObjectName::from(vec![
             Ident::new("mydb"),
             Ident::new("my_schema")
         ])))

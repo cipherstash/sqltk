@@ -19,11 +19,15 @@
 use alloc::boxed::Box;
 
 use crate::{
-    ast::{BinaryOperator, Expr, LockTableType, LockTables, MySqlTableLock, Statement},
+    ast::{BinaryOperator, Expr, LockTable, LockTableType, Statement},
     dialect::Dialect,
     keywords::Keyword,
     parser::{Parser, ParserError},
 };
+
+use super::keywords;
+
+const RESERVED_FOR_TABLE_ALIAS_MYSQL: &[Keyword] = &[Keyword::USE, Keyword::IGNORE, Keyword::FORCE];
 
 /// A [`Dialect`] for [MySQL](https://www.mysql.com/)
 #[derive(Debug)]
@@ -81,14 +85,10 @@ impl Dialect for MySqlDialect {
     }
 
     fn parse_statement(&self, parser: &mut Parser) -> Option<Result<Statement, ParserError>> {
-        if parser.parse_keywords(&[Keyword::LOCK, Keyword::TABLE]) {
-            Some(parse_lock_tables(parser, false))
-        } else if parser.parse_keywords(&[Keyword::LOCK, Keyword::TABLES]) {
-            Some(parse_lock_tables(parser, true))
-        } else if parser.parse_keywords(&[Keyword::UNLOCK, Keyword::TABLE]) {
-            Some(parse_unlock_tables(parser, false))
+        if parser.parse_keywords(&[Keyword::LOCK, Keyword::TABLES]) {
+            Some(parse_lock_tables(parser))
         } else if parser.parse_keywords(&[Keyword::UNLOCK, Keyword::TABLES]) {
-            Some(parse_unlock_tables(parser, true))
+            Some(parse_unlock_tables(parser))
         } else {
             None
         }
@@ -102,36 +102,57 @@ impl Dialect for MySqlDialect {
         true
     }
 
-    /// see <https://dev.mysql.com/doc/refman/8.4/en/create-table-select.html>
+    /// See: <https://dev.mysql.com/doc/refman/8.4/en/create-table-select.html>
     fn supports_create_table_select(&self) -> bool {
+        true
+    }
+
+    /// See: <https://dev.mysql.com/doc/refman/8.4/en/insert.html>
+    fn supports_insert_set(&self) -> bool {
+        true
+    }
+
+    fn supports_user_host_grantee(&self) -> bool {
+        true
+    }
+
+    fn is_table_factor_alias(&self, explicit: bool, kw: &Keyword, _parser: &mut Parser) -> bool {
+        explicit
+            || (!keywords::RESERVED_FOR_TABLE_ALIAS.contains(kw)
+                && !RESERVED_FOR_TABLE_ALIAS_MYSQL.contains(kw))
+    }
+
+    fn supports_table_hints(&self) -> bool {
+        true
+    }
+
+    fn requires_single_line_comment_whitespace(&self) -> bool {
+        true
+    }
+
+    fn supports_match_against(&self) -> bool {
         true
     }
 }
 
 /// `LOCK TABLES`
 /// <https://dev.mysql.com/doc/refman/8.0/en/lock-tables.html>
-fn parse_lock_tables(
-    parser: &mut Parser,
-    pluralized_table_keyword: bool,
-) -> Result<Statement, ParserError> {
+fn parse_lock_tables(parser: &mut Parser) -> Result<Statement, ParserError> {
     let tables = parser.parse_comma_separated(parse_lock_table)?;
-    Ok(Statement::LockTables(LockTables::MySql {
-        pluralized_table_keyword,
-        tables,
-    }))
+    Ok(Statement::LockTables { tables })
 }
 
 // tbl_name [[AS] alias] lock_type
-fn parse_lock_table(parser: &mut Parser) -> Result<MySqlTableLock, ParserError> {
-    let table = parser.parse_object_name(false)?;
+fn parse_lock_table(parser: &mut Parser) -> Result<LockTable, ParserError> {
+    let table = parser.parse_identifier()?;
     let alias =
         parser.parse_optional_alias(&[Keyword::READ, Keyword::WRITE, Keyword::LOW_PRIORITY])?;
     let lock_type = parse_lock_tables_type(parser)?;
 
-    Ok(MySqlTableLock {
+    Ok(LockTable {
         table,
         alias,
-        lock_type: Some(lock_type),
+        lock_type,
     })
 }
 
@@ -156,9 +177,6 @@ fn parse_lock_tables_type(parser: &mut Parser) -> Result<LockTableType, ParserEr
 
 /// UNLOCK TABLES
 /// <https://dev.mysql.com/doc/refman/8.0/en/lock-tables.html>
-fn parse_unlock_tables(
-    _parser: &mut Parser,
-    pluralized_table: bool,
-) -> Result<Statement, ParserError> {
-    Ok(Statement::UnlockTables(pluralized_table))
+fn parse_unlock_tables(_parser: &mut Parser) -> Result<Statement, ParserError> {
+    Ok(Statement::UnlockTables)
 }

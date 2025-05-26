@@ -33,7 +33,7 @@ use core::fmt::Debug;
 
 use crate::dialect::*;
 use crate::parser::{Parser, ParserError};
-use crate::tokenizer::Tokenizer;
+use crate::tokenizer::{Token, Tokenizer};
 use crate::{ast::*, parser::ParserOptions};
 
 #[cfg(test)]
@@ -154,7 +154,6 @@ impl TestedDialects {
     pub fn one_statement_parses_to(&self, sql: &str, canonical: &str) -> Statement {
         let mut statements = self.parse_sql_statements(sql).expect(sql);
         assert_eq!(statements.len(), 1);
-
         if !canonical.is_empty() && sql != canonical {
             assert_eq!(self.parse_sql_statements(canonical).unwrap(), statements);
         }
@@ -237,6 +236,22 @@ impl TestedDialects {
     /// string (is not modified after a serialization round-trip).
     pub fn verified_expr(&self, sql: &str) -> Expr {
         self.expr_parses_to(sql, sql)
+    }
+
+    /// Check that the tokenizer returns the expected tokens for the given SQL.
+    pub fn tokenizes_to(&self, sql: &str, expected: Vec<Token>) {
+        if self.dialects.is_empty() {
+            panic!("No dialects to test");
+        }
+
+        self.dialects.iter().for_each(|dialect| {
+            let mut tokenizer = Tokenizer::new(&**dialect, sql);
+            if let Some(options) = &self.options {
+                tokenizer = tokenizer.with_unescape(options.unescape);
+            }
+            let tokens = tokenizer.tokenize().unwrap();
+            assert_eq!(expected, tokens, "Tokenized differently for {:?}", dialect);
+        });
     }
 }
 
@@ -338,7 +353,7 @@ pub fn table_alias(name: impl Into<String>) -> Option<TableAlias> {
 
 pub fn table(name: impl Into<String>) -> TableFactor {
     TableFactor::Table {
-        name: ObjectName(vec![Ident::new(name.into())]),
+        name: ObjectName::from(vec![Ident::new(name.into())]),
         alias: None,
         args: None,
         with_hints: vec![],
@@ -346,12 +361,29 @@ pub fn table(name: impl Into<String>) -> TableFactor {
         partitions: vec![],
         with_ordinality: false,
         json_path: None,
+        sample: None,
+        index_hints: vec![],
+    }
+}
+
+pub fn table_from_name(name: ObjectName) -> TableFactor {
+    TableFactor::Table {
+        name,
+        alias: None,
+        args: None,
+        with_hints: vec![],
+        version: None,
+        partitions: vec![],
+        with_ordinality: false,
+        json_path: None,
+        sample: None,
+        index_hints: vec![],
     }
 }
 
 pub fn table_with_alias(name: impl Into<String>, alias: impl Into<String>) -> TableFactor {
     TableFactor::Table {
-        name: ObjectName(vec![Ident::new(name)]),
+        name: ObjectName::from(vec![Ident::new(name)]),
         alias: Some(TableAlias {
             name: Ident::new(alias),
             columns: vec![],
@@ -362,6 +394,8 @@ pub fn table_with_alias(name: impl Into<String>, alias: impl Into<String>) -> Ta
         partitions: vec![],
         with_ordinality: false,
         json_path: None,
+        sample: None,
+        index_hints: vec![],
     }
 }
 
@@ -369,13 +403,13 @@ pub fn join(relation: TableFactor) -> Join {
     Join {
         relation,
         global: false,
-        join_operator: JoinOperator::Inner(JoinConstraint::Natural),
+        join_operator: JoinOperator::Join(JoinConstraint::Natural),
     }
 }
 
 pub fn call(function: &str, args: impl IntoIterator<Item = Expr>) -> Expr {
     Expr::Function(Function {
-        name: ObjectName(vec![Ident::new(function)]),
+        name: ObjectName::from(vec![Ident::new(function)]),
         uses_odbc_syntax: false,
         parameters: FunctionArguments::None,
         args: FunctionArguments::List(FunctionArgumentList {

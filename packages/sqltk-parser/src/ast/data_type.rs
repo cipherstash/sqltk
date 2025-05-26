@@ -45,6 +45,10 @@ pub enum EnumMember {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub enum DataType {
+    /// Table type in [postgresql]. e.g. CREATE FUNCTION RETURNS TABLE(...)
+    ///
+    /// [postgresql]: https://www.postgresql.org/docs/15/sql-createfunction.html
+    Table(Vec<ColumnDef>),
     /// Fixed-length character type e.g. CHARACTER(10)
     Character(Option<CharacterLength>),
     /// Fixed-length char type e.g. CHAR(10)
@@ -81,7 +85,7 @@ pub enum DataType {
     ///
     /// [standard]: https://jakewheat.github.io/sql-overview/sql-2016-foundation-grammar.html#binary-string-type
     /// [MS SQL Server]: https://learn.microsoft.com/pt-br/sql/t-sql/data-types/binary-and-varbinary-transact-sql?view=sql-server-ver16
-    Varbinary(Option<u64>),
+    Varbinary(Option<BinaryLength>),
     /// Large binary object with optional length e.g. BLOB, BLOB(1000), [standard], [Oracle]
     ///
     /// [standard]: https://jakewheat.github.io/sql-overview/sql-2016-foundation-grammar.html#binary-large-object-string-type
@@ -128,19 +132,19 @@ pub enum DataType {
     /// Tiny integer with optional display width e.g. TINYINT or TINYINT(3)
     TinyInt(Option<u64>),
     /// Unsigned tiny integer with optional display width e.g. TINYINT UNSIGNED or TINYINT(3) UNSIGNED
-    UnsignedTinyInt(Option<u64>),
+    TinyIntUnsigned(Option<u64>),
     /// Int2 as alias for SmallInt in [postgresql]
     /// Note: Int2 mean 2 bytes in postgres (not 2 bits)
     /// Int2 with optional display width e.g. INT2 or INT2(5)
     ///
     /// [postgresql]: https://www.postgresql.org/docs/15/datatype.html
     Int2(Option<u64>),
-    /// Unsigned Int2 with optional display width e.g. INT2 Unsigned or INT2(5) Unsigned
-    UnsignedInt2(Option<u64>),
+    /// Unsigned Int2 with optional display width e.g. INT2 UNSIGNED or INT2(5) UNSIGNED
+    Int2Unsigned(Option<u64>),
     /// Small integer with optional display width e.g. SMALLINT or SMALLINT(5)
     SmallInt(Option<u64>),
     /// Unsigned small integer with optional display width e.g. SMALLINT UNSIGNED or SMALLINT(5) UNSIGNED
-    UnsignedSmallInt(Option<u64>),
+    SmallIntUnsigned(Option<u64>),
     /// MySQL medium integer ([1]) with optional display width e.g. MEDIUMINT or MEDIUMINT(5)
     ///
     /// [1]: https://dev.mysql.com/doc/refman/8.0/en/integer-types.html
@@ -148,7 +152,7 @@ pub enum DataType {
     /// Unsigned medium integer ([1]) with optional display width e.g. MEDIUMINT UNSIGNED or MEDIUMINT(5) UNSIGNED
     ///
     /// [1]: https://dev.mysql.com/doc/refman/8.0/en/integer-types.html
-    UnsignedMediumInt(Option<u64>),
+    MediumIntUnsigned(Option<u64>),
     /// Int with optional display width e.g. INT or INT(11)
     Int(Option<u64>),
     /// Int4 as alias for Integer in [postgresql]
@@ -193,11 +197,11 @@ pub enum DataType {
     /// Integer with optional display width e.g. INTEGER or INTEGER(11)
     Integer(Option<u64>),
     /// Unsigned int with optional display width e.g. INT UNSIGNED or INT(11) UNSIGNED
-    UnsignedInt(Option<u64>),
+    IntUnsigned(Option<u64>),
     /// Unsigned int4 with optional display width e.g. INT4 UNSIGNED or INT4(11) UNSIGNED
-    UnsignedInt4(Option<u64>),
+    Int4Unsigned(Option<u64>),
     /// Unsigned integer with optional display width e.g. INTEGER UNSIGNED or INTEGER(11) UNSIGNED
-    UnsignedInteger(Option<u64>),
+    IntegerUnsigned(Option<u64>),
     /// Unsigned integer type in [clickhouse]
     /// Note: UInt8 mean 8 bits in [clickhouse]
     ///
@@ -231,9 +235,29 @@ pub enum DataType {
     /// Big integer with optional display width e.g. BIGINT or BIGINT(20)
     BigInt(Option<u64>),
     /// Unsigned big integer with optional display width e.g. BIGINT UNSIGNED or BIGINT(20) UNSIGNED
-    UnsignedBigInt(Option<u64>),
+    BigIntUnsigned(Option<u64>),
     /// Unsigned Int8 with optional display width e.g. INT8 UNSIGNED or INT8(11) UNSIGNED
-    UnsignedInt8(Option<u64>),
+    Int8Unsigned(Option<u64>),
+    /// Signed integer as used in [MySQL CAST] target types, without optional `INTEGER` suffix:
+    /// `SIGNED`
+    ///
+    /// [MySQL CAST]: https://dev.mysql.com/doc/refman/8.4/en/cast-functions.html
+    Signed,
+    /// Signed integer as used in [MySQL CAST] target types, with optional `INTEGER` suffix:
+    /// `SIGNED INTEGER`
+    ///
+    /// [MySQL CAST]: https://dev.mysql.com/doc/refman/8.4/en/cast-functions.html
+    SignedInteger,
+    /// Signed integer as used in [MySQL CAST] target types, without optional `INTEGER` suffix:
+    /// `SIGNED`
+    ///
+    /// [MySQL CAST]: https://dev.mysql.com/doc/refman/8.4/en/cast-functions.html
+    Unsigned,
+    /// Unsigned integer as used in [MySQL CAST] target types, with optional `INTEGER` suffix:
+    /// `UNSIGNED INTEGER`
+    ///
+    /// [MySQL CAST]: https://dev.mysql.com/doc/refman/8.4/en/cast-functions.html
+    UnsignedInteger,
     /// Float4 as alias for Real in [postgresql]
     ///
     /// [postgresql]: https://www.postgresql.org/docs/15/datatype.html
@@ -254,7 +278,7 @@ pub enum DataType {
     /// [postgresql]: https://www.postgresql.org/docs/15/datatype.html
     Float8,
     /// Double
-    Double,
+    Double(ExactNumberInfo),
     /// Double PRECISION e.g. [standard], [postgresql]
     ///
     /// [standard]: https://jakewheat.github.io/sql-overview/sql-2016-foundation-grammar.html#approximate-numeric-type
@@ -324,10 +348,15 @@ pub enum DataType {
     /// [MySQL]: https://dev.mysql.com/doc/refman/9.1/en/bit-type.html
     /// [MSSQL]: https://learn.microsoft.com/en-us/sql/t-sql/data-types/bit-transact-sql?view=sql-server-ver16
     Bit(Option<u64>),
-    /// Variable-length bit string e.g. [Postgres]
+    /// `BIT VARYING(n)`: Variable-length bit string e.g. [Postgres]
     ///
     /// [Postgres]: https://www.postgresql.org/docs/current/datatype-bit.html
     BitVarying(Option<u64>),
+    /// `VARBIT(n)`: Variable-length bit string. [Postgres] alias for `BIT VARYING`
+    ///
+    /// [Postgres]: https://www.postgresql.org/docs/current/datatype.html
+    VarBit(Option<u64>),
+    ///
     /// Custom type such as enums
     Custom(ObjectName, Vec<String>),
     /// Arrays
@@ -373,6 +402,14 @@ pub enum DataType {
     ///
     /// [postgresql]: https://www.postgresql.org/docs/current/plpgsql-trigger.html
     Trigger,
+    /// Any data type, used in BigQuery UDF definitions for templated parameters
+    ///
+    /// [bigquery]: https://cloud.google.com/bigquery/docs/user-defined-functions#templated-sql-udf-parameters
+    AnyType,
+    /// geometric type
+    ///
+    /// [Postgres]: https://www.postgresql.org/docs/9.5/functions-geometry.html
+    GeometricType(GeometricTypeKind),
 }
 
 impl fmt::Display for DataType {
@@ -383,7 +420,6 @@ impl fmt::Display for DataType {
             DataType::CharacterVarying(size) => {
                 format_character_string_type(f, "CHARACTER VARYING", size)
             }
-
             DataType::CharVarying(size) => format_character_string_type(f, "CHAR VARYING", size),
             DataType::Varchar(size) => format_character_string_type(f, "VARCHAR", size),
             DataType::Nvarchar(size) => format_character_string_type(f, "NVARCHAR", size),
@@ -396,9 +432,7 @@ impl fmt::Display for DataType {
             }
             DataType::Clob(size) => format_type_with_optional_length(f, "CLOB", size, false),
             DataType::Binary(size) => format_type_with_optional_length(f, "BINARY", size, false),
-            DataType::Varbinary(size) => {
-                format_type_with_optional_length(f, "VARBINARY", size, false)
-            }
+            DataType::Varbinary(size) => format_varbinary_type(f, "VARBINARY", size),
             DataType::Blob(size) => format_type_with_optional_length(f, "BLOB", size, false),
             DataType::TinyBlob => write!(f, "TINYBLOB"),
             DataType::MediumBlob => write!(f, "MEDIUMBLOB"),
@@ -419,29 +453,29 @@ impl fmt::Display for DataType {
             DataType::TinyInt(zerofill) => {
                 format_type_with_optional_length(f, "TINYINT", zerofill, false)
             }
-            DataType::UnsignedTinyInt(zerofill) => {
+            DataType::TinyIntUnsigned(zerofill) => {
                 format_type_with_optional_length(f, "TINYINT", zerofill, true)
             }
             DataType::Int2(zerofill) => {
                 format_type_with_optional_length(f, "INT2", zerofill, false)
             }
-            DataType::UnsignedInt2(zerofill) => {
+            DataType::Int2Unsigned(zerofill) => {
                 format_type_with_optional_length(f, "INT2", zerofill, true)
             }
             DataType::SmallInt(zerofill) => {
                 format_type_with_optional_length(f, "SMALLINT", zerofill, false)
             }
-            DataType::UnsignedSmallInt(zerofill) => {
+            DataType::SmallIntUnsigned(zerofill) => {
                 format_type_with_optional_length(f, "SMALLINT", zerofill, true)
             }
             DataType::MediumInt(zerofill) => {
                 format_type_with_optional_length(f, "MEDIUMINT", zerofill, false)
             }
-            DataType::UnsignedMediumInt(zerofill) => {
+            DataType::MediumIntUnsigned(zerofill) => {
                 format_type_with_optional_length(f, "MEDIUMINT", zerofill, true)
             }
             DataType::Int(zerofill) => format_type_with_optional_length(f, "INT", zerofill, false),
-            DataType::UnsignedInt(zerofill) => {
+            DataType::IntUnsigned(zerofill) => {
                 format_type_with_optional_length(f, "INT", zerofill, true)
             }
             DataType::Int4(zerofill) => {
@@ -465,22 +499,22 @@ impl fmt::Display for DataType {
             DataType::Int256 => {
                 write!(f, "Int256")
             }
-            DataType::UnsignedInt4(zerofill) => {
+            DataType::Int4Unsigned(zerofill) => {
                 format_type_with_optional_length(f, "INT4", zerofill, true)
             }
             DataType::Integer(zerofill) => {
                 format_type_with_optional_length(f, "INTEGER", zerofill, false)
             }
-            DataType::UnsignedInteger(zerofill) => {
+            DataType::IntegerUnsigned(zerofill) => {
                 format_type_with_optional_length(f, "INTEGER", zerofill, true)
             }
             DataType::BigInt(zerofill) => {
                 format_type_with_optional_length(f, "BIGINT", zerofill, false)
             }
-            DataType::UnsignedBigInt(zerofill) => {
+            DataType::BigIntUnsigned(zerofill) => {
                 format_type_with_optional_length(f, "BIGINT", zerofill, true)
             }
-            DataType::UnsignedInt8(zerofill) => {
+            DataType::Int8Unsigned(zerofill) => {
                 format_type_with_optional_length(f, "INT8", zerofill, true)
             }
             DataType::UInt8 => {
@@ -501,11 +535,23 @@ impl fmt::Display for DataType {
             DataType::UInt256 => {
                 write!(f, "UInt256")
             }
+            DataType::Signed => {
+                write!(f, "SIGNED")
+            }
+            DataType::SignedInteger => {
+                write!(f, "SIGNED INTEGER")
+            }
+            DataType::Unsigned => {
+                write!(f, "UNSIGNED")
+            }
+            DataType::UnsignedInteger => {
+                write!(f, "UNSIGNED INTEGER")
+            }
             DataType::Real => write!(f, "REAL"),
             DataType::Float4 => write!(f, "FLOAT4"),
             DataType::Float32 => write!(f, "Float32"),
             DataType::Float64 => write!(f, "FLOAT64"),
-            DataType::Double => write!(f, "DOUBLE"),
+            DataType::Double(info) => write!(f, "DOUBLE{info}"),
             DataType::Float8 => write!(f, "FLOAT8"),
             DataType::DoublePrecision => write!(f, "DOUBLE PRECISION"),
             DataType::Bool => write!(f, "BOOL"),
@@ -543,6 +589,7 @@ impl fmt::Display for DataType {
             DataType::BitVarying(size) => {
                 format_type_with_optional_length(f, "BIT VARYING", size, false)
             }
+            DataType::VarBit(size) => format_type_with_optional_length(f, "VARBIT", size, false),
             DataType::Array(ty) => match ty {
                 ArrayElemTypeDef::None => write!(f, "ARRAY"),
                 ArrayElemTypeDef::SquareBracket(t, None) => write!(f, "{t}[]"),
@@ -626,6 +673,9 @@ impl fmt::Display for DataType {
             }
             DataType::Unspecified => Ok(()),
             DataType::Trigger => write!(f, "TRIGGER"),
+            DataType::AnyType => write!(f, "ANY TYPE"),
+            DataType::Table(fields) => write!(f, "TABLE({})", display_comma_separated(fields)),
+            DataType::GeometricType(kind) => write!(f, "{}", kind),
         }
     }
 }
@@ -650,6 +700,18 @@ fn format_character_string_type(
     f: &mut fmt::Formatter,
     sql_type: &str,
     size: &Option<CharacterLength>,
+) -> fmt::Result {
+    write!(f, "{sql_type}")?;
+    if let Some(size) = size {
+        write!(f, "({size})")?;
+    }
+    Ok(())
+}
+
+fn format_varbinary_type(
+    f: &mut fmt::Formatter,
+    sql_type: &str,
+    size: &Option<BinaryLength>,
 ) -> fmt::Result {
     write!(f, "{sql_type}")?;
     if let Some(size) = size {
@@ -847,6 +909,32 @@ impl fmt::Display for CharLengthUnits {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub enum BinaryLength {
+    IntegerLength {
+        /// Default (if VARYING)
+        length: u64,
+    },
+    /// VARBINARY(MAX) used in T-SQL (Microsoft SQL Server)
+    Max,
+}
+
+impl fmt::Display for BinaryLength {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BinaryLength::IntegerLength { length } => {
+                write!(f, "{}", length)?;
+            }
+            BinaryLength::Max => {
+                write!(f, "MAX")?;
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Represents the data type of the elements in an array (if any) as well as
 /// the syntax used to declare the array.
 ///
@@ -863,4 +951,35 @@ pub enum ArrayElemTypeDef {
     SquareBracket(Box<DataType>, Option<u64>),
     /// `Array(Int64)`
     Parenthesis(Box<DataType>),
+}
+
+/// Represents different types of geometric shapes which are commonly used in
+/// PostgreSQL/Redshift for spatial operations and geometry-related computations.
+///
+/// [Postgres]: https://www.postgresql.org/docs/9.5/functions-geometry.html
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub enum GeometricTypeKind {
+    Point,
+    Line,
+    LineSegment,
+    GeometricBox,
+    GeometricPath,
+    Polygon,
+    Circle,
+}
+
+impl fmt::Display for GeometricTypeKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            GeometricTypeKind::Point => write!(f, "point"),
+            GeometricTypeKind::Line => write!(f, "line"),
+            GeometricTypeKind::LineSegment => write!(f, "lseg"),
+            GeometricTypeKind::GeometricBox => write!(f, "box"),
+            GeometricTypeKind::GeometricPath => write!(f, "path"),
+            GeometricTypeKind::Polygon => write!(f, "polygon"),
+            GeometricTypeKind::Circle => write!(f, "circle"),
+        }
+    }
 }

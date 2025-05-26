@@ -28,19 +28,16 @@
 // limitations under the License.
 use log::debug;
 
-use crate::ast::{LockTableType, LockTables, ObjectName, Statement, UserDefinedTypeRepresentation};
 use crate::dialect::{Dialect, Precedence};
 use crate::keywords::Keyword;
 use crate::parser::{Parser, ParserError};
 use crate::tokenizer::Token;
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-
 /// A [`Dialect`] for [PostgreSQL](https://www.postgresql.org/)
 #[derive(Debug)]
 pub struct PostgreSqlDialect {}
 
+const PERIOD_PREC: u8 = 200;
 const DOUBLE_COLON_PREC: u8 = 140;
 const BRACKET_PREC: u8 = 130;
 const COLLATE_PREC: u8 = 120;
@@ -138,18 +135,6 @@ impl Dialect for PostgreSqlDialect {
         }
     }
 
-    fn parse_statement(&self, parser: &mut Parser) -> Option<Result<Statement, ParserError>> {
-        if parser.parse_keyword(Keyword::CREATE) {
-            parser.prev_token(); // unconsume the CREATE in case we don't end up parsing anything
-            parse_create(parser)
-        } else if parser.parse_keyword(Keyword::LOCK) {
-            parser.prev_token(); // unconsume the LOCK in case we don't end up parsing anything
-            Some(parse_lock_table(parser))
-        } else {
-            None
-        }
-    }
-
     fn supports_filter_during_aggregation(&self) -> bool {
         true
     }
@@ -160,6 +145,7 @@ impl Dialect for PostgreSqlDialect {
 
     fn prec_value(&self, prec: Precedence) -> u8 {
         match prec {
+            Precedence::Period => PERIOD_PREC,
             Precedence::DoubleColon => DOUBLE_COLON_PREC,
             Precedence::AtTz => AT_TZ_PREC,
             Precedence::MulDivModOp => MUL_DIV_MOD_OP_PREC,
@@ -237,86 +223,35 @@ impl Dialect for PostgreSqlDialect {
     fn supports_named_fn_args_with_expr_name(&self) -> bool {
         true
     }
-}
 
-pub fn parse_create(parser: &mut Parser) -> Option<Result<Statement, ParserError>> {
-    let name = parser.maybe_parse(|parser| -> Result<ObjectName, ParserError> {
-        parser.expect_keyword(Keyword::CREATE)?;
-        parser.expect_keyword(Keyword::TYPE)?;
-        let name = parser.parse_object_name(false)?;
-        parser.expect_keyword(Keyword::AS)?;
-        parser.expect_keyword(Keyword::ENUM)?;
-        Ok(name)
-    });
-
-    match name {
-        Ok(name) => name.map(|name| parse_create_type_as_enum(parser, name)),
-        Err(e) => Some(Err(e)),
-    }
-}
-
-// https://www.postgresql.org/docs/current/sql-createtype.html
-pub fn parse_create_type_as_enum(
-    parser: &mut Parser,
-    name: ObjectName,
-) -> Result<Statement, ParserError> {
-    if !parser.consume_token(&Token::LParen) {
-        return parser.expected("'(' after CREATE TYPE AS ENUM", parser.peek_token());
+    /// Return true if the dialect supports empty projections in SELECT statements
+    ///
+    /// Example
+    /// ```sql
+    /// SELECT from table_name
+    /// ```
+    fn supports_empty_projections(&self) -> bool {
+        true
     }
 
-    let labels = parser.parse_comma_separated0(|p| p.parse_identifier(false), Token::RParen)?;
-    parser.expect_token(&Token::RParen)?;
-
-    Ok(Statement::CreateType {
-        name,
-        representation: UserDefinedTypeRepresentation::Enum { labels },
-    })
-}
-
-pub fn parse_lock_table(parser: &mut Parser) -> Result<Statement, ParserError> {
-    parser.expect_keyword(Keyword::LOCK)?;
-    let has_table_keyword = parser.parse_keyword(Keyword::TABLE);
-    let only = parser.parse_keyword(Keyword::ONLY);
-    let tables: Vec<ObjectName> =
-        parser.parse_comma_separated(|parser| parser.parse_object_name(false))?;
-    let lock_mode = parse_lock_mode(parser)?;
-    let no_wait = parser.parse_keyword(Keyword::NOWAIT);
-
-    Ok(Statement::LockTables(LockTables::Postgres {
-        tables,
-        lock_mode,
-        has_table_keyword,
-        only,
-        no_wait,
-    }))
-}
-
-pub fn parse_lock_mode(parser: &mut Parser) -> Result<Option<LockTableType>, ParserError> {
-    if !parser.parse_keyword(Keyword::IN) {
-        return Ok(None);
+    fn supports_nested_comments(&self) -> bool {
+        true
     }
 
-    let lock_mode = if parser.parse_keywords(&[Keyword::ACCESS, Keyword::SHARE]) {
-        LockTableType::AccessShare
-    } else if parser.parse_keywords(&[Keyword::ACCESS, Keyword::EXCLUSIVE]) {
-        LockTableType::AccessExclusive
-    } else if parser.parse_keywords(&[Keyword::EXCLUSIVE]) {
-        LockTableType::Exclusive
-    } else if parser.parse_keywords(&[Keyword::ROW, Keyword::EXCLUSIVE]) {
-        LockTableType::RowExclusive
-    } else if parser.parse_keywords(&[Keyword::ROW, Keyword::SHARE]) {
-        LockTableType::RowShare
-    } else if parser.parse_keywords(&[Keyword::SHARE, Keyword::ROW, Keyword::EXCLUSIVE]) {
-        LockTableType::ShareRowExclusive
-    } else if parser.parse_keywords(&[Keyword::SHARE, Keyword::UPDATE, Keyword::EXCLUSIVE]) {
-        LockTableType::ShareUpdateExclusive
-    } else if parser.parse_keywords(&[Keyword::SHARE]) {
-        LockTableType::Share
-    } else {
-        return Err(ParserError::ParserError("Expected: ACCESS EXCLUSIVE | ACCESS SHARE | EXCLUSIVE | ROW EXCLUSIVE | ROW SHARE | SHARE | SHARE ROW EXCLUSIVE | SHARE ROW EXCLUSIVE".into()));
-    };
+    fn supports_string_escape_constant(&self) -> bool {
+        true
+    }
 
-    parser.expect_keyword(Keyword::MODE)?;
+    fn supports_numeric_literal_underscores(&self) -> bool {
+        true
+    }
 
-    Ok(Some(lock_mode))
+    /// See: <https://www.postgresql.org/docs/current/arrays.html#ARRAYS-DECLARATION>
+    fn supports_array_typedef_with_brackets(&self) -> bool {
+        true
+    }
+
+    fn supports_geometric_types(&self) -> bool {
+        true
+    }
 }

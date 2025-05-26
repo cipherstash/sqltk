@@ -26,14 +26,97 @@ use bigdecimal::BigDecimal;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::ast::Ident;
+use crate::{ast::Ident, tokenizer::Span};
 #[cfg(feature = "visitor")]
 use sqltk_parser_derive::{Visit, VisitMut};
+
+/// Wraps a primitive SQL [`Value`]  with its [`Span`] location
+///
+/// # Example: create a `ValueWithSpan` from a `Value`
+/// ```
+/// # use sqltk_parser::ast::{Value, ValueWithSpan};
+/// # use sqltk_parser::tokenizer::{Location, Span};
+/// let value = Value::SingleQuotedString(String::from("endpoint"));
+/// // from line 1, column 1 to line 1, column 7
+/// let span = Span::new(Location::new(1, 1), Location::new(1, 7));
+/// let value_with_span = value.with_span(span);
+/// ```
+///
+/// # Example: create a `ValueWithSpan` from a `Value` with an empty span
+///
+/// You can call [`Value::with_empty_span`] to create a `ValueWithSpan` with an empty span
+/// ```
+/// # use sqltk_parser::ast::{Value, ValueWithSpan};
+/// # use sqltk_parser::tokenizer::{Location, Span};
+/// let value = Value::SingleQuotedString(String::from("endpoint"));
+/// let value_with_span = value.with_empty_span();
+/// assert_eq!(value_with_span.span, Span::empty());
+/// ```
+///
+/// You can also use the [`From`] trait to convert  `ValueWithSpan` to/from `Value`s
+/// ```
+/// # use sqltk_parser::ast::{Value, ValueWithSpan};
+/// # use sqltk_parser::tokenizer::{Location, Span};
+/// let value = Value::SingleQuotedString(String::from("endpoint"));
+/// // converting `Value` to `ValueWithSpan` results in an empty span
+/// let value_with_span: ValueWithSpan = value.into();
+/// assert_eq!(value_with_span.span, Span::empty());
+/// // convert back to `Value`
+/// let value: Value = value_with_span.into();
+/// ```
+#[derive(Debug, Clone, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub struct ValueWithSpan {
+    pub value: Value,
+    pub span: Span,
+}
+
+impl PartialEq for ValueWithSpan {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
+
+impl Ord for ValueWithSpan {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.value.cmp(&other.value)
+    }
+}
+
+impl PartialOrd for ValueWithSpan {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(Ord::cmp(self, other))
+    }
+}
+
+impl core::hash::Hash for ValueWithSpan {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.value.hash(state);
+    }
+}
+
+impl From<Value> for ValueWithSpan {
+    fn from(value: Value) -> Self {
+        value.with_empty_span()
+    }
+}
+
+impl From<ValueWithSpan> for Value {
+    fn from(value: ValueWithSpan) -> Self {
+        value.value
+    }
+}
 
 /// Primitive SQL values such as number and string
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(
+    feature = "visitor",
+    derive(Visit, VisitMut),
+    visit(with = "visit_value")
+)]
+
 pub enum Value {
     /// Numeric literal
     #[cfg(not(feature = "bigdecimal"))]
@@ -97,6 +180,53 @@ pub enum Value {
     Placeholder(String),
 }
 
+impl ValueWithSpan {
+    /// If the underlying literal is a string, regardless of quote style, returns the associated string value
+    pub fn into_string(self) -> Option<String> {
+        self.value.into_string()
+    }
+}
+
+impl Value {
+    /// If the underlying literal is a string, regardless of quote style, returns the associated string value
+    pub fn into_string(self) -> Option<String> {
+        match self {
+            Value::SingleQuotedString(s)
+            | Value::DoubleQuotedString(s)
+            | Value::TripleSingleQuotedString(s)
+            | Value::TripleDoubleQuotedString(s)
+            | Value::SingleQuotedByteStringLiteral(s)
+            | Value::DoubleQuotedByteStringLiteral(s)
+            | Value::TripleSingleQuotedByteStringLiteral(s)
+            | Value::TripleDoubleQuotedByteStringLiteral(s)
+            | Value::SingleQuotedRawStringLiteral(s)
+            | Value::DoubleQuotedRawStringLiteral(s)
+            | Value::TripleSingleQuotedRawStringLiteral(s)
+            | Value::TripleDoubleQuotedRawStringLiteral(s)
+            | Value::EscapedStringLiteral(s)
+            | Value::UnicodeStringLiteral(s)
+            | Value::NationalStringLiteral(s)
+            | Value::HexStringLiteral(s) => Some(s),
+            Value::DollarQuotedString(s) => Some(s.value),
+            _ => None,
+        }
+    }
+
+    pub fn with_span(self, span: Span) -> ValueWithSpan {
+        ValueWithSpan { value: self, span }
+    }
+
+    pub fn with_empty_span(self) -> ValueWithSpan {
+        self.with_span(Span::empty())
+    }
+}
+
+impl fmt::Display for ValueWithSpan {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.value)
+    }
+}
+
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -155,7 +285,9 @@ impl fmt::Display for DollarQuotedString {
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub enum DateTimeField {
     Year,
+    Years,
     Month,
+    Months,
     /// Week optionally followed by a WEEKDAY.
     ///
     /// ```sql
@@ -164,14 +296,19 @@ pub enum DateTimeField {
     ///
     /// [BigQuery](https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions#extract)
     Week(Option<Ident>),
+    Weeks,
     Day,
     DayOfWeek,
     DayOfYear,
+    Days,
     Date,
     Datetime,
     Hour,
+    Hours,
     Minute,
+    Minutes,
     Second,
+    Seconds,
     Century,
     Decade,
     Dow,
@@ -210,7 +347,9 @@ impl fmt::Display for DateTimeField {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             DateTimeField::Year => write!(f, "YEAR"),
+            DateTimeField::Years => write!(f, "YEARS"),
             DateTimeField::Month => write!(f, "MONTH"),
+            DateTimeField::Months => write!(f, "MONTHS"),
             DateTimeField::Week(week_day) => {
                 write!(f, "WEEK")?;
                 if let Some(week_day) = week_day {
@@ -218,14 +357,19 @@ impl fmt::Display for DateTimeField {
                 }
                 Ok(())
             }
+            DateTimeField::Weeks => write!(f, "WEEKS"),
             DateTimeField::Day => write!(f, "DAY"),
             DateTimeField::DayOfWeek => write!(f, "DAYOFWEEK"),
             DateTimeField::DayOfYear => write!(f, "DAYOFYEAR"),
+            DateTimeField::Days => write!(f, "DAYS"),
             DateTimeField::Date => write!(f, "DATE"),
             DateTimeField::Datetime => write!(f, "DATETIME"),
             DateTimeField::Hour => write!(f, "HOUR"),
+            DateTimeField::Hours => write!(f, "HOURS"),
             DateTimeField::Minute => write!(f, "MINUTE"),
+            DateTimeField::Minutes => write!(f, "MINUTES"),
             DateTimeField::Second => write!(f, "SECOND"),
+            DateTimeField::Seconds => write!(f, "SECONDS"),
             DateTimeField::Century => write!(f, "CENTURY"),
             DateTimeField::Decade => write!(f, "DECADE"),
             DateTimeField::Dow => write!(f, "DOW"),
@@ -252,6 +396,35 @@ impl fmt::Display for DateTimeField {
             DateTimeField::TimezoneRegion => write!(f, "TIMEZONE_REGION"),
             DateTimeField::NoDateTime => write!(f, "NODATETIME"),
             DateTimeField::Custom(custom) => write!(f, "{custom}"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+/// The Unicode Standard defines four normalization forms, which are intended to eliminate
+/// certain distinctions between visually or functionally identical characters.
+///
+/// See [Unicode Normalization Forms](https://unicode.org/reports/tr15/) for details.
+pub enum NormalizationForm {
+    /// Canonical Decomposition, followed by Canonical Composition.
+    NFC,
+    /// Canonical Decomposition.
+    NFD,
+    /// Compatibility Decomposition, followed by Canonical Composition.
+    NFKC,
+    /// Compatibility Decomposition.
+    NFKD,
+}
+
+impl fmt::Display for NormalizationForm {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            NormalizationForm::NFC => write!(f, "NFC"),
+            NormalizationForm::NFD => write!(f, "NFD"),
+            NormalizationForm::NFKC => write!(f, "NFKC"),
+            NormalizationForm::NFKD => write!(f, "NFKD"),
         }
     }
 }

@@ -40,13 +40,13 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "visitor")]
 use sqltk_parser_derive::{Visit, VisitMut};
 
-use crate::ast::DollarQuotedString;
 use crate::dialect::Dialect;
 use crate::dialect::{
     BigQueryDialect, DuckDbDialect, GenericDialect, MySqlDialect, PostgreSqlDialect,
     SnowflakeDialect,
 };
 use crate::keywords::{Keyword, ALL_KEYWORDS, ALL_KEYWORDS_INDEX};
+use crate::{ast::DollarQuotedString, dialect::HiveDialect};
 
 /// SQL Token enumeration
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
@@ -170,8 +170,10 @@ pub enum Token {
     RBrace,
     /// Right Arrow `=>`
     RArrow,
-    /// Sharp `#` used for PostgreSQL Bitwise XOR operator
+    /// Sharp `#` used for PostgreSQL Bitwise XOR operator, also PostgreSQL/Redshift geometrical unary/binary operator (Number of points in path or polygon/Intersection)
     Sharp,
+    /// `##` PostgreSQL/Redshift geometrical binary operator (Point of closest proximity)
+    DoubleSharp,
     /// Tilde `~` used for PostgreSQL Bitwise NOT operator or case sensitive match regular expression operator
     Tilde,
     /// `~*` , a case insensitive match regular expression operator in PostgreSQL
@@ -198,7 +200,7 @@ pub enum Token {
     ExclamationMark,
     /// Double Exclamation Mark `!!` used for PostgreSQL prefix factorial operator
     DoubleExclamationMark,
-    /// AtSign `@` used for PostgreSQL abs operator
+    /// AtSign `@` used for PostgreSQL abs operator, also PostgreSQL/Redshift geometrical unary/binary operator (Center, Contained or on)
     AtSign,
     /// `^@`, a "starts with" string operator in PostgreSQL
     CaretAt,
@@ -214,6 +216,36 @@ pub enum Token {
     LongArrow,
     /// `#>`, extracts JSON sub-object at the specified path
     HashArrow,
+    /// `@-@` PostgreSQL/Redshift geometrical unary operator (Length or circumference)
+    AtDashAt,
+    /// `?-` PostgreSQL/Redshift geometrical unary/binary operator (Is horizontal?/Are horizontally aligned?)
+    QuestionMarkDash,
+    /// `&<` PostgreSQL/Redshift geometrical binary operator (Overlaps to left?)
+    AmpersandLeftAngleBracket,
+    /// `&>` PostgreSQL/Redshift geometrical binary operator (Overlaps to right?)`
+    AmpersandRightAngleBracket,
+    /// `&<|` PostgreSQL/Redshift geometrical binary operator (Does not extend above?)`
+    AmpersandLeftAngleBracketVerticalBar,
+    /// `|&>` PostgreSQL/Redshift geometrical binary operator (Does not extend below?)`
+    VerticalBarAmpersandRightAngleBracket,
+    /// `<->` PostgreSQL/Redshift geometrical binary operator (Distance between)
+    TwoWayArrow,
+    /// `<^` PostgreSQL/Redshift geometrical binary operator (Is below?)
+    LeftAngleBracketCaret,
+    /// `>^` PostgreSQL/Redshift geometrical binary operator (Is above?)
+    RightAngleBracketCaret,
+    /// `?#` PostgreSQL/Redshift geometrical binary operator (Intersects or overlaps)
+    QuestionMarkSharp,
+    /// `?-|` PostgreSQL/Redshift geometrical binary operator (Is perpendicular?)
+    QuestionMarkDashVerticalBar,
+    /// `?||` PostgreSQL/Redshift geometrical binary operator (Are parallel?)
+    QuestionMarkDoubleVerticalBar,
+    /// `~=` PostgreSQL/Redshift geometrical binary operator (Same as)
+    TildeEqual,
+    /// `<<| PostgreSQL/Redshift geometrical binary operator (Is strictly below?)
+    ShiftLeftVerticalBar,
+    /// `|>> PostgreSQL/Redshift geometrical binary operator (Is strictly above?)
+    VerticalBarShiftRight,
     /// `#>>`, extracts JSON sub-object at the specified path as text
     HashLongArrow,
     /// jsonb @> jsonb -> boolean: Test whether left json contains the right json
@@ -303,6 +335,7 @@ impl fmt::Display for Token {
             Token::RBrace => f.write_str("}"),
             Token::RArrow => f.write_str("=>"),
             Token::Sharp => f.write_str("#"),
+            Token::DoubleSharp => f.write_str("##"),
             Token::ExclamationMark => f.write_str("!"),
             Token::DoubleExclamationMark => f.write_str("!!"),
             Token::Tilde => f.write_str("~"),
@@ -320,6 +353,21 @@ impl fmt::Display for Token {
             Token::Overlap => f.write_str("&&"),
             Token::PGSquareRoot => f.write_str("|/"),
             Token::PGCubeRoot => f.write_str("||/"),
+            Token::AtDashAt => f.write_str("@-@"),
+            Token::QuestionMarkDash => f.write_str("?-"),
+            Token::AmpersandLeftAngleBracket => f.write_str("&<"),
+            Token::AmpersandRightAngleBracket => f.write_str("&>"),
+            Token::AmpersandLeftAngleBracketVerticalBar => f.write_str("&<|"),
+            Token::VerticalBarAmpersandRightAngleBracket => f.write_str("|&>"),
+            Token::TwoWayArrow => f.write_str("<->"),
+            Token::LeftAngleBracketCaret => f.write_str("<^"),
+            Token::RightAngleBracketCaret => f.write_str(">^"),
+            Token::QuestionMarkSharp => f.write_str("?#"),
+            Token::QuestionMarkDashVerticalBar => f.write_str("?-|"),
+            Token::QuestionMarkDoubleVerticalBar => f.write_str("?||"),
+            Token::TildeEqual => f.write_str("~="),
+            Token::ShiftLeftVerticalBar => f.write_str("<<|"),
+            Token::VerticalBarShiftRight => f.write_str("|>>"),
             Token::Placeholder(ref s) => write!(f, "{s}"),
             Token::Arrow => write!(f, "->"),
             Token::LongArrow => write!(f, "->>"),
@@ -971,7 +1019,10 @@ impl<'a> Tokenizer<'a> {
                     match chars.peek() {
                         Some('\'') => {
                             // N'...' - a <national character string literal>
-                            let s = self.tokenize_single_quoted_string(chars, '\'', true)?;
+                            let backslash_escape =
+                                self.dialect.supports_string_literal_backslash_escape();
+                            let s =
+                                self.tokenize_single_quoted_string(chars, '\'', backslash_escape)?;
                             Ok(Some(Token::NationalStringLiteral(s)))
                         }
                         _ => {
@@ -982,7 +1033,7 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
                 // PostgreSQL accepts "escape" string constants, which are an extension to the SQL standard.
-                x @ 'e' | x @ 'E' => {
+                x @ 'e' | x @ 'E' if self.dialect.supports_string_escape_constant() => {
                     let starting_loc = chars.location();
                     chars.next(); // consume, to check the next char
                     match chars.peek() {
@@ -1075,34 +1126,82 @@ impl<'a> Tokenizer<'a> {
                     Ok(Some(Token::DoubleQuotedString(s)))
                 }
                 // delimited (quoted) identifier
+                quote_start if self.dialect.is_delimited_identifier_start(ch) => {
+                    let word = self.tokenize_quoted_identifier(quote_start, chars)?;
+                    Ok(Some(Token::make_word(&word, Some(quote_start))))
+                }
+                // Potentially nested delimited (quoted) identifier
                 quote_start
-                    if self.dialect.is_delimited_identifier_start(ch)
+                    if self
+                        .dialect
+                        .is_nested_delimited_identifier_start(quote_start)
                         && self
                             .dialect
-                            .is_proper_identifier_inside_quotes(chars.peekable.clone()) =>
+                            .peek_nested_delimited_identifier_quotes(chars.peekable.clone())
+                            .is_some() =>
                 {
-                    let error_loc = chars.location();
-                    chars.next(); // consume the opening quote
-                    let quote_end = Word::matching_end_quote(quote_start);
-                    let (s, last_char) = self.parse_quoted_ident(chars, quote_end);
+                    let Some((quote_start, nested_quote_start)) = self
+                        .dialect
+                        .peek_nested_delimited_identifier_quotes(chars.peekable.clone())
+                    else {
+                        return self.tokenizer_error(
+                            chars.location(),
+                            format!("Expected nested delimiter '{quote_start}' before EOF."),
+                        );
+                    };
 
-                    if last_char == Some(quote_end) {
-                        Ok(Some(Token::make_word(&s, Some(quote_start))))
-                    } else {
-                        self.tokenizer_error(
+                    let Some(nested_quote_start) = nested_quote_start else {
+                        let word = self.tokenize_quoted_identifier(quote_start, chars)?;
+                        return Ok(Some(Token::make_word(&word, Some(quote_start))));
+                    };
+
+                    let mut word = vec![];
+                    let quote_end = Word::matching_end_quote(quote_start);
+                    let nested_quote_end = Word::matching_end_quote(nested_quote_start);
+                    let error_loc = chars.location();
+
+                    chars.next(); // skip the first delimiter
+                    peeking_take_while(chars, |ch| ch.is_whitespace());
+                    if chars.peek() != Some(&nested_quote_start) {
+                        return self.tokenizer_error(
+                            error_loc,
+                            format!("Expected nested delimiter '{nested_quote_start}' before EOF."),
+                        );
+                    }
+                    word.push(nested_quote_start.into());
+                    word.push(self.tokenize_quoted_identifier(nested_quote_end, chars)?);
+                    word.push(nested_quote_end.into());
+                    peeking_take_while(chars, |ch| ch.is_whitespace());
+                    if chars.peek() != Some(&quote_end) {
+                        return self.tokenizer_error(
                             error_loc,
                             format!("Expected close delimiter '{quote_end}' before EOF."),
-                        )
+                        );
                     }
+                    chars.next(); // skip close delimiter
+
+                    Ok(Some(Token::make_word(&word.concat(), Some(quote_start))))
                 }
                 // numbers and period
                 '0'..='9' | '.' => {
-                    let mut s = peeking_take_while(chars, |ch| ch.is_ascii_digit());
+                    // Some dialects support underscore as number separator
+                    // There can only be one at a time and it must be followed by another digit
+                    let is_number_separator = |ch: char, next_char: Option<char>| {
+                        self.dialect.supports_numeric_literal_underscores()
+                            && ch == '_'
+                            && next_char.is_some_and(|next_ch| next_ch.is_ascii_hexdigit())
+                    };
+
+                    let mut s = peeking_next_take_while(chars, |ch, next_ch| {
+                        ch.is_ascii_digit() || is_number_separator(ch, next_ch)
+                    });
 
                     // match binary literal that starts with 0x
                     if s == "0" && chars.peek() == Some(&'x') {
                         chars.next();
-                        let s2 = peeking_take_while(chars, |ch| ch.is_ascii_hexdigit());
+                        let s2 = peeking_next_take_while(chars, |ch, next_ch| {
+                            ch.is_ascii_hexdigit() || is_number_separator(ch, next_ch)
+                        });
                         return Ok(Some(Token::HexStringLiteral(s2)));
                     }
 
@@ -1111,7 +1210,10 @@ impl<'a> Tokenizer<'a> {
                         s.push('.');
                         chars.next();
                     }
-                    s += &peeking_take_while(chars, |ch| ch.is_ascii_digit());
+
+                    s += &peeking_next_take_while(chars, |ch, next_ch| {
+                        ch.is_ascii_digit() || is_number_separator(ch, next_ch)
+                    });
 
                     // No number -> Token::Period
                     if s == "." {
@@ -1175,14 +1277,26 @@ impl<'a> Tokenizer<'a> {
                 // operators
                 '-' => {
                     chars.next(); // consume the '-'
+
                     match chars.peek() {
                         Some('-') => {
-                            chars.next(); // consume the second '-', starting a single-line comment
-                            let comment = self.tokenize_single_line_comment(chars);
-                            Ok(Some(Token::Whitespace(Whitespace::SingleLineComment {
-                                prefix: "--".to_owned(),
-                                comment,
-                            })))
+                            let mut is_comment = true;
+                            if self.dialect.requires_single_line_comment_whitespace() {
+                                is_comment = Some(' ') == chars.peekable.clone().nth(1);
+                            }
+
+                            if is_comment {
+                                chars.next(); // consume second '-'
+                                let comment = self.tokenize_single_line_comment(chars);
+                                return Ok(Some(Token::Whitespace(
+                                    Whitespace::SingleLineComment {
+                                        prefix: "--".to_owned(),
+                                        comment,
+                                    },
+                                )));
+                            }
+
+                            self.start_binop(chars, "-", Token::Minus)
                         }
                         Some('>') => {
                             chars.next();
@@ -1242,6 +1356,28 @@ impl<'a> Tokenizer<'a> {
                                 _ => self.start_binop(chars, "||", Token::StringConcat),
                             }
                         }
+                        Some('&') if self.dialect.supports_geometric_types() => {
+                            chars.next(); // consume
+                            match chars.peek() {
+                                Some('>') => self.consume_for_binop(
+                                    chars,
+                                    "|&>",
+                                    Token::VerticalBarAmpersandRightAngleBracket,
+                                ),
+                                _ => self.start_binop_opt(chars, "|&", None),
+                            }
+                        }
+                        Some('>') if self.dialect.supports_geometric_types() => {
+                            chars.next(); // consume
+                            match chars.peek() {
+                                Some('>') => self.consume_for_binop(
+                                    chars,
+                                    "|>>",
+                                    Token::VerticalBarShiftRight,
+                                ),
+                                _ => self.start_binop_opt(chars, "|>", None),
+                            }
+                        }
                         // Bitshift '|' operator
                         _ => self.start_binop(chars, "|", Token::Pipe),
                     }
@@ -1290,8 +1426,34 @@ impl<'a> Tokenizer<'a> {
                                 _ => self.start_binop(chars, "<=", Token::LtEq),
                             }
                         }
+                        Some('|') if self.dialect.supports_geometric_types() => {
+                            self.consume_for_binop(chars, "<<|", Token::ShiftLeftVerticalBar)
+                        }
                         Some('>') => self.consume_for_binop(chars, "<>", Token::Neq),
+                        Some('<') if self.dialect.supports_geometric_types() => {
+                            chars.next(); // consume
+                            match chars.peek() {
+                                Some('|') => self.consume_for_binop(
+                                    chars,
+                                    "<<|",
+                                    Token::ShiftLeftVerticalBar,
+                                ),
+                                _ => self.start_binop(chars, "<<", Token::ShiftLeft),
+                            }
+                        }
                         Some('<') => self.consume_for_binop(chars, "<<", Token::ShiftLeft),
+                        Some('-') if self.dialect.supports_geometric_types() => {
+                            chars.next(); // consume
+                            match chars.peek() {
+                                Some('>') => {
+                                    self.consume_for_binop(chars, "<->", Token::TwoWayArrow)
+                                }
+                                _ => self.start_binop_opt(chars, "<-", None),
+                            }
+                        }
+                        Some('^') if self.dialect.supports_geometric_types() => {
+                            self.consume_for_binop(chars, "<^", Token::LeftAngleBracketCaret)
+                        }
                         Some('@') => self.consume_for_binop(chars, "<@", Token::ArrowAt),
                         _ => self.start_binop(chars, "<", Token::Lt),
                     }
@@ -1301,6 +1463,9 @@ impl<'a> Tokenizer<'a> {
                     match chars.peek() {
                         Some('=') => self.consume_for_binop(chars, ">=", Token::GtEq),
                         Some('>') => self.consume_for_binop(chars, ">>", Token::ShiftRight),
+                        Some('^') if self.dialect.supports_geometric_types() => {
+                            self.consume_for_binop(chars, ">^", Token::RightAngleBracketCaret)
+                        }
                         _ => self.start_binop(chars, ">", Token::Gt),
                     }
                 }
@@ -1319,6 +1484,22 @@ impl<'a> Tokenizer<'a> {
                 '&' => {
                     chars.next(); // consume the '&'
                     match chars.peek() {
+                        Some('>') if self.dialect.supports_geometric_types() => {
+                            chars.next();
+                            self.consume_and_return(chars, Token::AmpersandRightAngleBracket)
+                        }
+                        Some('<') if self.dialect.supports_geometric_types() => {
+                            chars.next(); // consume
+                            match chars.peek() {
+                                Some('|') => self.consume_and_return(
+                                    chars,
+                                    Token::AmpersandLeftAngleBracketVerticalBar,
+                                ),
+                                _ => {
+                                    self.start_binop(chars, "&<", Token::AmpersandLeftAngleBracket)
+                                }
+                            }
+                        }
                         Some('&') => {
                             chars.next(); // consume the second '&'
                             self.start_binop(chars, "&&", Token::Overlap)
@@ -1336,7 +1517,8 @@ impl<'a> Tokenizer<'a> {
                 }
                 '{' => self.consume_and_return(chars, Token::LBrace),
                 '}' => self.consume_and_return(chars, Token::RBrace),
-                '#' if dialect_of!(self is SnowflakeDialect | BigQueryDialect | MySqlDialect) => {
+                '#' if dialect_of!(self is SnowflakeDialect | BigQueryDialect | MySqlDialect | HiveDialect) =>
+                {
                     chars.next(); // consume the '#', starting a snowflake single-line comment
                     let comment = self.tokenize_single_line_comment(chars);
                     Ok(Some(Token::Whitespace(Whitespace::SingleLineComment {
@@ -1348,6 +1530,9 @@ impl<'a> Tokenizer<'a> {
                     chars.next(); // consume
                     match chars.peek() {
                         Some('*') => self.consume_for_binop(chars, "~*", Token::TildeAsterisk),
+                        Some('=') if self.dialect.supports_geometric_types() => {
+                            self.consume_for_binop(chars, "~=", Token::TildeEqual)
+                        }
                         Some('~') => {
                             chars.next();
                             match chars.peek() {
@@ -1374,6 +1559,9 @@ impl<'a> Tokenizer<'a> {
                             }
                         }
                         Some(' ') => Ok(Some(Token::Sharp)),
+                        Some('#') if self.dialect.supports_geometric_types() => {
+                            self.consume_for_binop(chars, "##", Token::DoubleSharp)
+                        }
                         Some(sch) if self.dialect.is_identifier_start('#') => {
                             self.tokenize_identifier_or_keyword([ch, *sch], chars)
                         }
@@ -1383,6 +1571,16 @@ impl<'a> Tokenizer<'a> {
                 '@' => {
                     chars.next();
                     match chars.peek() {
+                        Some('@') if self.dialect.supports_geometric_types() => {
+                            self.consume_and_return(chars, Token::AtAt)
+                        }
+                        Some('-') if self.dialect.supports_geometric_types() => {
+                            chars.next();
+                            match chars.peek() {
+                                Some('@') => self.consume_and_return(chars, Token::AtDashAt),
+                                _ => self.start_binop_opt(chars, "@-", None),
+                            }
+                        }
                         Some('>') => self.consume_and_return(chars, Token::AtArrow),
                         Some('?') => self.consume_and_return(chars, Token::AtQuestion),
                         Some('@') => {
@@ -1396,6 +1594,18 @@ impl<'a> Tokenizer<'a> {
                             }
                         }
                         Some(' ') => Ok(Some(Token::AtSign)),
+                        // We break on quotes here, because no dialect allows identifiers starting
+                        // with @ and containing quotation marks (e.g. `@'foo'`) unless they are
+                        // quoted, which is tokenized as a quoted string, not here (e.g.
+                        // `"@'foo'"`). Further, at least two dialects parse `@` followed by a
+                        // quoted string as two separate tokens, which this allows. For example,
+                        // Postgres parses `@'1'` as the absolute value of '1' which is implicitly
+                        // cast to a numeric type. And when parsing MySQL-style grantees (e.g.
+                        // `GRANT ALL ON *.* to 'root'@'localhost'`), we also want separate tokens
+                        // for the user, the `@`, and the host.
+                        Some('\'') => Ok(Some(Token::AtSign)),
+                        Some('\"') => Ok(Some(Token::AtSign)),
+                        Some('`') => Ok(Some(Token::AtSign)),
                         Some(sch) if self.dialect.is_identifier_start('@') => {
                             self.tokenize_identifier_or_keyword([ch, *sch], chars)
                         }
@@ -1403,11 +1613,30 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
                 // Postgres uses ? for jsonb operators, not prepared statements
-                '?' if dialect_of!(self is PostgreSqlDialect) => {
-                    chars.next();
+                '?' if self.dialect.supports_geometric_types() => {
+                    chars.next(); // consume
                     match chars.peek() {
-                        Some('|') => self.consume_and_return(chars, Token::QuestionPipe),
+                        Some('|') => {
+                            chars.next();
+                            match chars.peek() {
+                                Some('|') => self.consume_and_return(
+                                    chars,
+                                    Token::QuestionMarkDoubleVerticalBar,
+                                ),
+                                _ => Ok(Some(Token::QuestionPipe)),
+                            }
+                        }
+
                         Some('&') => self.consume_and_return(chars, Token::QuestionAnd),
+                        Some('-') => {
+                            chars.next(); // consume
+                            match chars.peek() {
+                                Some('|') => self
+                                    .consume_and_return(chars, Token::QuestionMarkDashVerticalBar),
+                                _ => Ok(Some(Token::QuestionMarkDash)),
+                            }
+                        }
+                        Some('#') => self.consume_and_return(chars, Token::QuestionMarkSharp),
                         _ => self.consume_and_return(chars, Token::Question),
                     }
                 }
@@ -1423,7 +1652,7 @@ impl<'a> Tokenizer<'a> {
                 }
                 '$' => Ok(Some(self.tokenize_dollar_preceded_value(chars)?)),
 
-                //whitespace check (including unicode chars) should be last as it covers some of the chars above
+                // whitespace check (including unicode chars) should be last as it covers some of the chars above
                 ch if ch.is_whitespace() => {
                     self.consume_and_return(chars, Token::Whitespace(Whitespace::Space))
                 }
@@ -1441,7 +1670,7 @@ impl<'a> Tokenizer<'a> {
         default: Token,
     ) -> Result<Option<Token>, TokenizerError> {
         chars.next(); // consume the first char
-        self.start_binop(chars, prefix, default)
+        self.start_binop_opt(chars, prefix, Some(default))
     }
 
     /// parse a custom binary operator
@@ -1450,6 +1679,16 @@ impl<'a> Tokenizer<'a> {
         chars: &mut State,
         prefix: &str,
         default: Token,
+    ) -> Result<Option<Token>, TokenizerError> {
+        self.start_binop_opt(chars, prefix, Some(default))
+    }
+
+    /// parse a custom binary operator
+    fn start_binop_opt(
+        &self,
+        chars: &mut State,
+        prefix: &str,
+        default: Option<Token>,
     ) -> Result<Option<Token>, TokenizerError> {
         let mut custom = None;
         while let Some(&ch) = chars.peek() {
@@ -1460,10 +1699,14 @@ impl<'a> Tokenizer<'a> {
             custom.get_or_insert_with(|| prefix.to_string()).push(ch);
             chars.next();
         }
-
-        Ok(Some(
-            custom.map(Token::CustomBinaryOperator).unwrap_or(default),
-        ))
+        match (custom, default) {
+            (Some(custom), _) => Ok(Token::CustomBinaryOperator(custom).into()),
+            (None, Some(tok)) => Ok(Some(tok)),
+            (None, None) => self.tokenizer_error(
+                chars.location(),
+                format!("Expected a valid binary operator after '{}'", prefix),
+            ),
+        }
     }
 
     /// Tokenize dollar preceded value (i.e: a string/placeholder)
@@ -1473,7 +1716,8 @@ impl<'a> Tokenizer<'a> {
 
         chars.next();
 
-        if let Some('$') = chars.peek() {
+        // If the dialect does not support dollar-quoted strings, then `$$` is rather a placeholder.
+        if matches!(chars.peek(), Some('$')) && !self.dialect.supports_dollar_placeholder() {
             chars.next();
 
             let mut is_terminated = false;
@@ -1507,52 +1751,43 @@ impl<'a> Tokenizer<'a> {
             };
         } else {
             value.push_str(&peeking_take_while(chars, |ch| {
-                ch.is_alphanumeric() || ch == '_'
+                ch.is_alphanumeric()
+                    || ch == '_'
+                    // Allow $ as a placeholder character if the dialect supports it
+                    || matches!(ch, '$' if self.dialect.supports_dollar_placeholder())
             }));
 
-            if let Some('$') = chars.peek() {
+            // If the dialect does not support dollar-quoted strings, don't look for the end delimiter.
+            if matches!(chars.peek(), Some('$')) && !self.dialect.supports_dollar_placeholder() {
                 chars.next();
 
-                'searching_for_end: loop {
-                    s.push_str(&peeking_take_while(chars, |ch| ch != '$'));
-                    match chars.peek() {
-                        Some('$') => {
-                            chars.next();
-                            let mut maybe_s = String::from("$");
-                            for c in value.chars() {
-                                if let Some(next_char) = chars.next() {
-                                    maybe_s.push(next_char);
-                                    if next_char != c {
-                                        // This doesn't match the dollar quote delimiter so this
-                                        // is not the end of the string.
-                                        s.push_str(&maybe_s);
-                                        continue 'searching_for_end;
-                                    }
-                                } else {
-                                    return self.tokenizer_error(
-                                        chars.location(),
-                                        "Unterminated dollar-quoted, expected $",
-                                    );
+                let mut temp = String::new();
+                let end_delimiter = format!("${}$", value);
+
+                loop {
+                    match chars.next() {
+                        Some(ch) => {
+                            temp.push(ch);
+
+                            if temp.ends_with(&end_delimiter) {
+                                if let Some(temp) = temp.strip_suffix(&end_delimiter) {
+                                    s.push_str(temp);
                                 }
-                            }
-                            if chars.peek() == Some(&'$') {
-                                chars.next();
-                                maybe_s.push('$');
-                                // maybe_s matches the end delimiter
-                                break 'searching_for_end;
-                            } else {
-                                // This also doesn't match the dollar quote delimiter as there are
-                                // more characters before the second dollar so this is not the end
-                                // of the string.
-                                s.push_str(&maybe_s);
-                                continue 'searching_for_end;
+                                break;
                             }
                         }
-                        _ => {
+                        None => {
+                            if temp.ends_with(&end_delimiter) {
+                                if let Some(temp) = temp.strip_suffix(&end_delimiter) {
+                                    s.push_str(temp);
+                                }
+                                break;
+                            }
+
                             return self.tokenizer_error(
                                 chars.location(),
                                 "Unterminated dollar-quoted, expected $",
-                            )
+                            );
                         }
                     }
                 }
@@ -1580,11 +1815,17 @@ impl<'a> Tokenizer<'a> {
 
     // Consume characters until newline
     fn tokenize_single_line_comment(&self, chars: &mut State) -> String {
-        let mut comment = peeking_take_while(chars, |ch| ch != '\n');
+        let mut comment = peeking_take_while(chars, |ch| match ch {
+            '\n' => false,                                           // Always stop at \n
+            '\r' if dialect_of!(self is PostgreSqlDialect) => false, // Stop at \r for Postgres
+            _ => true, // Keep consuming for other characters
+        });
+
         if let Some(ch) = chars.next() {
-            assert_eq!(ch, '\n');
+            assert!(ch == '\n' || ch == '\r');
             comment.push(ch);
         }
+
         comment
     }
 
@@ -1595,6 +1836,27 @@ impl<'a> Tokenizer<'a> {
             self.dialect.is_identifier_part(ch)
         }));
         s
+    }
+
+    /// Read a quoted identifier
+    fn tokenize_quoted_identifier(
+        &self,
+        quote_start: char,
+        chars: &mut State,
+    ) -> Result<String, TokenizerError> {
+        let error_loc = chars.location();
+        chars.next(); // consume the opening quote
+        let quote_end = Word::matching_end_quote(quote_start);
+        let (s, last_char) = self.parse_quoted_ident(chars, quote_end);
+
+        if last_char == Some(quote_end) {
+            Ok(s)
+        } else {
+            self.tokenizer_error(
+                error_loc,
+                format!("Expected close delimiter '{quote_end}' before EOF."),
+            )
+        }
     }
 
     /// Read a single quoted string, starting with the opening quote.
@@ -1793,28 +2055,33 @@ impl<'a> Tokenizer<'a> {
     ) -> Result<Option<Token>, TokenizerError> {
         let mut s = String::new();
         let mut nested = 1;
-        let mut last_ch = ' ';
+        let supports_nested_comments = self.dialect.supports_nested_comments();
 
         loop {
             match chars.next() {
-                Some(ch) => {
-                    if last_ch == '/' && ch == '*' {
-                        nested += 1;
-                    } else if last_ch == '*' && ch == '/' {
-                        nested -= 1;
-                        if nested == 0 {
-                            s.pop();
-                            break Ok(Some(Token::Whitespace(Whitespace::MultiLineComment(s))));
-                        }
+                Some('/') if matches!(chars.peek(), Some('*')) && supports_nested_comments => {
+                    chars.next(); // consume the '*'
+                    s.push('/');
+                    s.push('*');
+                    nested += 1;
+                }
+                Some('*') if matches!(chars.peek(), Some('/')) => {
+                    chars.next(); // consume the '/'
+                    nested -= 1;
+                    if nested == 0 {
+                        break Ok(Some(Token::Whitespace(Whitespace::MultiLineComment(s))));
                     }
+                    s.push('*');
+                    s.push('/');
+                }
+                Some(ch) => {
                     s.push(ch);
-                    last_ch = ch;
                 }
                 None => {
                     break self.tokenizer_error(
                         chars.location(),
                         "Unexpected EOF while in a multi-line comment",
-                    )
+                    );
                 }
             }
         }
@@ -1861,6 +2128,24 @@ fn peeking_take_while(chars: &mut State, mut predicate: impl FnMut(char) -> bool
     let mut s = String::new();
     while let Some(&ch) = chars.peek() {
         if predicate(ch) {
+            chars.next(); // consume
+            s.push(ch);
+        } else {
+            break;
+        }
+    }
+    s
+}
+
+/// Same as peeking_take_while, but also passes the next character to the predicate.
+fn peeking_next_take_while(
+    chars: &mut State,
+    mut predicate: impl FnMut(char, Option<char>) -> bool,
+) -> String {
+    let mut s = String::new();
+    while let Some(&ch) = chars.peek() {
+        let next_char = chars.peekable.clone().nth(1);
+        if predicate(ch, next_char) {
             chars.next(); // consume
             s.push(ch);
         } else {
@@ -2080,8 +2365,9 @@ fn take_char_from_hex_digits(
 mod tests {
     use super::*;
     use crate::dialect::{
-        BigQueryDialect, ClickHouseDialect, HiveDialect, MsSqlDialect, MySqlDialect,
+        BigQueryDialect, ClickHouseDialect, HiveDialect, MsSqlDialect, MySqlDialect, SQLiteDialect,
     };
+    use crate::test_utils::all_dialects_where;
     use core::fmt::Debug;
 
     #[test]
@@ -2148,6 +2434,41 @@ mod tests {
         ];
 
         compare(expected, tokens);
+    }
+
+    #[test]
+    fn tokenize_numeric_literal_underscore() {
+        let dialect = GenericDialect {};
+        let sql = String::from("SELECT 10_000");
+        let mut tokenizer = Tokenizer::new(&dialect, &sql);
+        let tokens = tokenizer.tokenize().unwrap();
+        let expected = vec![
+            Token::make_keyword("SELECT"),
+            Token::Whitespace(Whitespace::Space),
+            Token::Number("10".to_string(), false),
+            Token::make_word("_000", None),
+        ];
+        compare(expected, tokens);
+
+        all_dialects_where(|dialect| dialect.supports_numeric_literal_underscores()).tokenizes_to(
+            "SELECT 10_000, _10_000, 10_00_, 10___0",
+            vec![
+                Token::make_keyword("SELECT"),
+                Token::Whitespace(Whitespace::Space),
+                Token::Number("10_000".to_string(), false),
+                Token::Comma,
+                Token::Whitespace(Whitespace::Space),
+                Token::make_word("_10_000", None), // leading underscore tokenizes as a word (parsed as column identifier)
+                Token::Comma,
+                Token::Whitespace(Whitespace::Space),
+                Token::Number("10_00".to_string(), false),
+                Token::make_word("_", None), // trailing underscores tokenizes as a word (syntax error in some dialects)
+                Token::Comma,
+                Token::Whitespace(Whitespace::Space),
+                Token::Number("10".to_string(), false),
+                Token::make_word("___0", None), // multiple underscores tokenizes as a word (syntax error in some dialects)
+            ],
+        );
     }
 
     #[test]
@@ -2484,20 +2805,67 @@ mod tests {
 
     #[test]
     fn tokenize_dollar_quoted_string_tagged() {
-        let sql = String::from(
-            "SELECT $tag$dollar '$' quoted strings have $tags like this$ or like this $$$tag$",
-        );
-        let dialect = GenericDialect {};
-        let tokens = Tokenizer::new(&dialect, &sql).tokenize().unwrap();
-        let expected = vec![
-            Token::make_keyword("SELECT"),
-            Token::Whitespace(Whitespace::Space),
-            Token::DollarQuotedString(DollarQuotedString {
-                value: "dollar '$' quoted strings have $tags like this$ or like this $$".into(),
-                tag: Some("tag".into()),
-            }),
+        let test_cases = vec![
+            (
+                String::from("SELECT $tag$dollar '$' quoted strings have $tags like this$ or like this $$$tag$"),
+                vec![
+                    Token::make_keyword("SELECT"),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::DollarQuotedString(DollarQuotedString {
+                        value: "dollar '$' quoted strings have $tags like this$ or like this $$".into(),
+                        tag: Some("tag".into()),
+                    })
+                ]
+            ),
+            (
+                String::from("SELECT $abc$x$ab$abc$"),
+                vec![
+                    Token::make_keyword("SELECT"),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::DollarQuotedString(DollarQuotedString {
+                        value: "x$ab".into(),
+                        tag: Some("abc".into()),
+                    })
+                ]
+            ),
+            (
+                String::from("SELECT $abc$$abc$"),
+                vec![
+                    Token::make_keyword("SELECT"),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::DollarQuotedString(DollarQuotedString {
+                        value: "".into(),
+                        tag: Some("abc".into()),
+                    })
+                ]
+            ),
+            (
+                String::from("0$abc$$abc$1"),
+                vec![
+                    Token::Number("0".into(), false),
+                    Token::DollarQuotedString(DollarQuotedString {
+                        value: "".into(),
+                        tag: Some("abc".into()),
+                    }),
+                    Token::Number("1".into(), false),
+                ]
+            ),
+            (
+                String::from("$function$abc$q$data$q$$function$"),
+                vec![
+                    Token::DollarQuotedString(DollarQuotedString {
+                        value: "abc$q$data$q$".into(),
+                        tag: Some("function".into()),
+                    }),
+                ]
+            ),
         ];
-        compare(expected, tokens);
+
+        let dialect = GenericDialect {};
+        for (sql, expected) in test_cases {
+            let tokens = Tokenizer::new(&dialect, &sql).tokenize().unwrap();
+            compare(expected, tokens);
+        }
     }
 
     #[test]
@@ -2514,6 +2882,78 @@ mod tests {
                 }
             })
         );
+    }
+
+    #[test]
+    fn tokenize_dollar_quoted_string_tagged_unterminated_mirror() {
+        let sql = String::from("SELECT $abc$abc$");
+        let dialect = GenericDialect {};
+        assert_eq!(
+            Tokenizer::new(&dialect, &sql).tokenize(),
+            Err(TokenizerError {
+                message: "Unterminated dollar-quoted, expected $".into(),
+                location: Location {
+                    line: 1,
+                    column: 17
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn tokenize_dollar_placeholder() {
+        let sql = String::from("SELECT $$, $$ABC$$, $ABC$, $ABC");
+        let dialect = SQLiteDialect {};
+        let tokens = Tokenizer::new(&dialect, &sql).tokenize().unwrap();
+        assert_eq!(
+            tokens,
+            vec![
+                Token::make_keyword("SELECT"),
+                Token::Whitespace(Whitespace::Space),
+                Token::Placeholder("$$".into()),
+                Token::Comma,
+                Token::Whitespace(Whitespace::Space),
+                Token::Placeholder("$$ABC$$".into()),
+                Token::Comma,
+                Token::Whitespace(Whitespace::Space),
+                Token::Placeholder("$ABC$".into()),
+                Token::Comma,
+                Token::Whitespace(Whitespace::Space),
+                Token::Placeholder("$ABC".into()),
+            ]
+        );
+    }
+
+    #[test]
+    fn tokenize_nested_dollar_quoted_strings() {
+        let sql = String::from("SELECT $tag$dollar $nested$ string$tag$");
+        let dialect = GenericDialect {};
+        let tokens = Tokenizer::new(&dialect, &sql).tokenize().unwrap();
+        let expected = vec![
+            Token::make_keyword("SELECT"),
+            Token::Whitespace(Whitespace::Space),
+            Token::DollarQuotedString(DollarQuotedString {
+                value: "dollar $nested$ string".into(),
+                tag: Some("tag".into()),
+            }),
+        ];
+        compare(expected, tokens);
+    }
+
+    #[test]
+    fn tokenize_dollar_quoted_string_untagged_empty() {
+        let sql = String::from("SELECT $$$$");
+        let dialect = GenericDialect {};
+        let tokens = Tokenizer::new(&dialect, &sql).tokenize().unwrap();
+        let expected = vec![
+            Token::make_keyword("SELECT"),
+            Token::Whitespace(Whitespace::Space),
+            Token::DollarQuotedString(DollarQuotedString {
+                value: "".into(),
+                tag: None,
+            }),
+        ];
+        compare(expected, tokens);
     }
 
     #[test]
@@ -2586,17 +3026,62 @@ mod tests {
 
     #[test]
     fn tokenize_comment() {
-        let sql = String::from("0--this is a comment\n1");
+        let test_cases = vec![
+            (
+                String::from("0--this is a comment\n1"),
+                vec![
+                    Token::Number("0".to_string(), false),
+                    Token::Whitespace(Whitespace::SingleLineComment {
+                        prefix: "--".to_string(),
+                        comment: "this is a comment\n".to_string(),
+                    }),
+                    Token::Number("1".to_string(), false),
+                ],
+            ),
+            (
+                String::from("0--this is a comment\r1"),
+                vec![
+                    Token::Number("0".to_string(), false),
+                    Token::Whitespace(Whitespace::SingleLineComment {
+                        prefix: "--".to_string(),
+                        comment: "this is a comment\r1".to_string(),
+                    }),
+                ],
+            ),
+            (
+                String::from("0--this is a comment\r\n1"),
+                vec![
+                    Token::Number("0".to_string(), false),
+                    Token::Whitespace(Whitespace::SingleLineComment {
+                        prefix: "--".to_string(),
+                        comment: "this is a comment\r\n".to_string(),
+                    }),
+                    Token::Number("1".to_string(), false),
+                ],
+            ),
+        ];
 
         let dialect = GenericDialect {};
+
+        for (sql, expected) in test_cases {
+            let tokens = Tokenizer::new(&dialect, &sql).tokenize().unwrap();
+            compare(expected, tokens);
+        }
+    }
+
+    #[test]
+    fn tokenize_comment_postgres() {
+        let sql = String::from("1--\r0");
+
+        let dialect = PostgreSqlDialect {};
         let tokens = Tokenizer::new(&dialect, &sql).tokenize().unwrap();
         let expected = vec![
-            Token::Number("0".to_string(), false),
+            Token::Number("1".to_string(), false),
             Token::Whitespace(Whitespace::SingleLineComment {
                 prefix: "--".to_string(),
-                comment: "this is a comment\n".to_string(),
+                comment: "\r".to_string(),
             }),
-            Token::Number("1".to_string(), false),
+            Token::Number("0".to_string(), false),
         ];
         compare(expected, tokens);
     }
@@ -2632,18 +3117,90 @@ mod tests {
 
     #[test]
     fn tokenize_nested_multiline_comment() {
-        let sql = String::from("0/*multi-line\n* \n/* comment \n /*comment*/*/ */ /comment*/1");
+        let dialect = GenericDialect {};
+        let test_cases = vec![
+            (
+                "0/*multi-line\n* \n/* comment \n /*comment*/*/ */ /comment*/1",
+                vec![
+                    Token::Number("0".to_string(), false),
+                    Token::Whitespace(Whitespace::MultiLineComment(
+                        "multi-line\n* \n/* comment \n /*comment*/*/ ".into(),
+                    )),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::Div,
+                    Token::Word(Word {
+                        value: "comment".to_string(),
+                        quote_style: None,
+                        keyword: Keyword::COMMENT,
+                    }),
+                    Token::Mul,
+                    Token::Div,
+                    Token::Number("1".to_string(), false),
+                ],
+            ),
+            (
+                "0/*multi-line\n* \n/* comment \n /*comment/**/ */ /comment*/*/1",
+                vec![
+                    Token::Number("0".to_string(), false),
+                    Token::Whitespace(Whitespace::MultiLineComment(
+                        "multi-line\n* \n/* comment \n /*comment/**/ */ /comment*/".into(),
+                    )),
+                    Token::Number("1".to_string(), false),
+                ],
+            ),
+            (
+                "SELECT 1/* a /* b */ c */0",
+                vec![
+                    Token::make_keyword("SELECT"),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::Number("1".to_string(), false),
+                    Token::Whitespace(Whitespace::MultiLineComment(" a /* b */ c ".to_string())),
+                    Token::Number("0".to_string(), false),
+                ],
+            ),
+        ];
+
+        for (sql, expected) in test_cases {
+            let tokens = Tokenizer::new(&dialect, sql).tokenize().unwrap();
+            compare(expected, tokens);
+        }
+    }
+
+    #[test]
+    fn tokenize_nested_multiline_comment_empty() {
+        let sql = "select 1/*/**/*/0";
 
         let dialect = GenericDialect {};
-        let tokens = Tokenizer::new(&dialect, &sql).tokenize().unwrap();
+        let tokens = Tokenizer::new(&dialect, sql).tokenize().unwrap();
         let expected = vec![
-            Token::Number("0".to_string(), false),
-            Token::Whitespace(Whitespace::MultiLineComment(
-                "multi-line\n* \n/* comment \n /*comment*/*/ */ /comment".to_string(),
-            )),
+            Token::make_keyword("select"),
+            Token::Whitespace(Whitespace::Space),
             Token::Number("1".to_string(), false),
+            Token::Whitespace(Whitespace::MultiLineComment("/**/".to_string())),
+            Token::Number("0".to_string(), false),
         ];
+
         compare(expected, tokens);
+    }
+
+    #[test]
+    fn tokenize_nested_comments_if_not_supported() {
+        let dialect = SQLiteDialect {};
+        let sql = "SELECT 1/*/* nested comment */*/0";
+        let tokens = Tokenizer::new(&dialect, sql).tokenize();
+        let expected = vec![
+            Token::make_keyword("SELECT"),
+            Token::Whitespace(Whitespace::Space),
+            Token::Number("1".to_string(), false),
+            Token::Whitespace(Whitespace::MultiLineComment(
+                "/* nested comment ".to_string(),
+            )),
+            Token::Mul,
+            Token::Div,
+            Token::Number("0".to_string(), false),
+        ];
+
+        compare(expected, tokens.unwrap());
     }
 
     #[test]
@@ -3181,5 +3738,208 @@ mod tests {
         let tokens = Tokenizer::new(&dialect, sql).tokenize().unwrap();
         let expected = vec![Token::SingleQuotedString("''".to_string())];
         compare(expected, tokens);
+    }
+
+    #[test]
+    fn test_mysql_users_grantees() {
+        let dialect = MySqlDialect {};
+
+        let sql = "CREATE USER `root`@`%`";
+        let tokens = Tokenizer::new(&dialect, sql).tokenize().unwrap();
+        let expected = vec![
+            Token::make_keyword("CREATE"),
+            Token::Whitespace(Whitespace::Space),
+            Token::make_keyword("USER"),
+            Token::Whitespace(Whitespace::Space),
+            Token::make_word("root", Some('`')),
+            Token::AtSign,
+            Token::make_word("%", Some('`')),
+        ];
+        compare(expected, tokens);
+    }
+
+    #[test]
+    fn test_postgres_abs_without_space_and_string_literal() {
+        let dialect = MySqlDialect {};
+
+        let sql = "SELECT @'1'";
+        let tokens = Tokenizer::new(&dialect, sql).tokenize().unwrap();
+        let expected = vec![
+            Token::make_keyword("SELECT"),
+            Token::Whitespace(Whitespace::Space),
+            Token::AtSign,
+            Token::SingleQuotedString("1".to_string()),
+        ];
+        compare(expected, tokens);
+    }
+
+    #[test]
+    fn test_postgres_abs_without_space_and_quoted_column() {
+        let dialect = MySqlDialect {};
+
+        let sql = r#"SELECT @"bar" FROM foo"#;
+        let tokens = Tokenizer::new(&dialect, sql).tokenize().unwrap();
+        let expected = vec![
+            Token::make_keyword("SELECT"),
+            Token::Whitespace(Whitespace::Space),
+            Token::AtSign,
+            Token::DoubleQuotedString("bar".to_string()),
+            Token::Whitespace(Whitespace::Space),
+            Token::make_keyword("FROM"),
+            Token::Whitespace(Whitespace::Space),
+            Token::make_word("foo", None),
+        ];
+        compare(expected, tokens);
+    }
+
+    #[test]
+    fn test_national_strings_backslash_escape_not_supported() {
+        all_dialects_where(|dialect| !dialect.supports_string_literal_backslash_escape())
+            .tokenizes_to(
+                "select n'''''\\'",
+                vec![
+                    Token::make_keyword("select"),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::NationalStringLiteral("''\\".to_string()),
+                ],
+            );
+    }
+
+    #[test]
+    fn test_national_strings_backslash_escape_supported() {
+        all_dialects_where(|dialect| dialect.supports_string_literal_backslash_escape())
+            .tokenizes_to(
+                "select n'''''\\''",
+                vec![
+                    Token::make_keyword("select"),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::NationalStringLiteral("'''".to_string()),
+                ],
+            );
+    }
+
+    #[test]
+    fn test_string_escape_constant_not_supported() {
+        all_dialects_where(|dialect| !dialect.supports_string_escape_constant()).tokenizes_to(
+            "select e'...'",
+            vec![
+                Token::make_keyword("select"),
+                Token::Whitespace(Whitespace::Space),
+                Token::make_word("e", None),
+                Token::SingleQuotedString("...".to_string()),
+            ],
+        );
+
+        all_dialects_where(|dialect| !dialect.supports_string_escape_constant()).tokenizes_to(
+            "select E'...'",
+            vec![
+                Token::make_keyword("select"),
+                Token::Whitespace(Whitespace::Space),
+                Token::make_word("E", None),
+                Token::SingleQuotedString("...".to_string()),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_string_escape_constant_supported() {
+        all_dialects_where(|dialect| dialect.supports_string_escape_constant()).tokenizes_to(
+            "select e'\\''",
+            vec![
+                Token::make_keyword("select"),
+                Token::Whitespace(Whitespace::Space),
+                Token::EscapedStringLiteral("'".to_string()),
+            ],
+        );
+
+        all_dialects_where(|dialect| dialect.supports_string_escape_constant()).tokenizes_to(
+            "select E'\\''",
+            vec![
+                Token::make_keyword("select"),
+                Token::Whitespace(Whitespace::Space),
+                Token::EscapedStringLiteral("'".to_string()),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_whitespace_required_after_single_line_comment() {
+        all_dialects_where(|dialect| dialect.requires_single_line_comment_whitespace())
+            .tokenizes_to(
+                "SELECT --'abc'",
+                vec![
+                    Token::make_keyword("SELECT"),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::Minus,
+                    Token::Minus,
+                    Token::SingleQuotedString("abc".to_string()),
+                ],
+            );
+
+        all_dialects_where(|dialect| dialect.requires_single_line_comment_whitespace())
+            .tokenizes_to(
+                "SELECT -- 'abc'",
+                vec![
+                    Token::make_keyword("SELECT"),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::Whitespace(Whitespace::SingleLineComment {
+                        prefix: "--".to_string(),
+                        comment: " 'abc'".to_string(),
+                    }),
+                ],
+            );
+
+        all_dialects_where(|dialect| dialect.requires_single_line_comment_whitespace())
+            .tokenizes_to(
+                "SELECT --",
+                vec![
+                    Token::make_keyword("SELECT"),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::Minus,
+                    Token::Minus,
+                ],
+            );
+    }
+
+    #[test]
+    fn test_whitespace_not_required_after_single_line_comment() {
+        all_dialects_where(|dialect| !dialect.requires_single_line_comment_whitespace())
+            .tokenizes_to(
+                "SELECT --'abc'",
+                vec![
+                    Token::make_keyword("SELECT"),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::Whitespace(Whitespace::SingleLineComment {
+                        prefix: "--".to_string(),
+                        comment: "'abc'".to_string(),
+                    }),
+                ],
+            );
+
+        all_dialects_where(|dialect| !dialect.requires_single_line_comment_whitespace())
+            .tokenizes_to(
+                "SELECT -- 'abc'",
+                vec![
+                    Token::make_keyword("SELECT"),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::Whitespace(Whitespace::SingleLineComment {
+                        prefix: "--".to_string(),
+                        comment: " 'abc'".to_string(),
+                    }),
+                ],
+            );
+
+        all_dialects_where(|dialect| !dialect.requires_single_line_comment_whitespace())
+            .tokenizes_to(
+                "SELECT --",
+                vec![
+                    Token::make_keyword("SELECT"),
+                    Token::Whitespace(Whitespace::Space),
+                    Token::Whitespace(Whitespace::SingleLineComment {
+                        prefix: "--".to_string(),
+                        comment: "".to_string(),
+                    }),
+                ],
+            );
     }
 }

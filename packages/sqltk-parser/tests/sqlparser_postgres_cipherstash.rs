@@ -36,7 +36,7 @@ fn pg() -> TestedDialects {
 
 // TODO: Uncomment this when resolved. Not *directly* relevant to the LOCK TABLE
 //       work, but still valid SQL we should support.
-//       See sqlparser_postgres.rs:2969 for the definition of pg_and_generic().
+//       See sqltk_parser_postgres.rs:2969 for the definition of pg_and_generic().
 //#[test]
 //fn parse_select_without_projection() {
 //    pg_and_generic().verified_stmt("SELECT FROM users");

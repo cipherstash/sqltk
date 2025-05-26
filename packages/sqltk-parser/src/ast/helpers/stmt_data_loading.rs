@@ -24,12 +24,12 @@ use alloc::string::String;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use core::fmt;
-use core::fmt::Formatter;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::ast::Ident;
+use crate::ast::helpers::key_value_options::KeyValueOptions;
+use crate::ast::{Ident, ObjectName};
 #[cfg(feature = "visitor")]
 use sqltk_parser_derive::{Visit, VisitMut};
 
@@ -38,35 +38,10 @@ use sqltk_parser_derive::{Visit, VisitMut};
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub struct StageParamsObject {
     pub url: Option<String>,
-    pub encryption: DataLoadingOptions,
+    pub encryption: KeyValueOptions,
     pub endpoint: Option<String>,
     pub storage_integration: Option<String>,
-    pub credentials: DataLoadingOptions,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
-pub struct DataLoadingOptions {
-    pub options: Vec<DataLoadingOption>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
-pub enum DataLoadingOptionType {
-    STRING,
-    BOOLEAN,
-    ENUM,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
-pub struct DataLoadingOption {
-    pub option_name: String,
-    pub option_type: DataLoadingOptionType,
-    pub value: String,
+    pub credentials: KeyValueOptions,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -105,42 +80,6 @@ impl fmt::Display for StageParamsObject {
     }
 }
 
-impl fmt::Display for DataLoadingOptions {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if !self.options.is_empty() {
-            let mut first = false;
-            for option in &self.options {
-                if !first {
-                    first = true;
-                } else {
-                    f.write_str(" ")?;
-                }
-                write!(f, "{}", option)?;
-            }
-        }
-        Ok(())
-    }
-}
-
-impl fmt::Display for DataLoadingOption {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.option_type {
-            DataLoadingOptionType::STRING => {
-                write!(f, "{}='{}'", self.option_name, self.value)?;
-            }
-            DataLoadingOptionType::ENUM => {
-                // single quote is omitted
-                write!(f, "{}={}", self.option_name, self.value)?;
-            }
-            DataLoadingOptionType::BOOLEAN => {
-                // single quote is omitted
-                write!(f, "{}={}", self.option_name, self.value)?;
-            }
-        }
-        Ok(())
-    }
-}
-
 impl fmt::Display for StageLoadSelectItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.alias.is_some() {
@@ -152,6 +91,25 @@ impl fmt::Display for StageLoadSelectItem {
         }
         if self.item_as.is_some() {
             write!(f, " AS {}", self.item_as.as_ref().unwrap())?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub struct FileStagingCommand {
+    #[cfg_attr(feature = "visitor", visit(with = "visit_relation"))]
+    pub stage: ObjectName,
+    pub pattern: Option<String>,
+}
+
+impl fmt::Display for FileStagingCommand {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.stage)?;
+        if let Some(pattern) = self.pattern.as_ref() {
+            write!(f, " PATTERN='{pattern}'")?;
         }
         Ok(())
     }
