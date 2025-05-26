@@ -8515,30 +8515,6 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::LockClause {
     }
 }
 #[automatically_derived]
-impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::LockTable {
-    fn apply_transform_with_path<T>(
-        &'ast self,
-        transformer: &mut T,
-        node_path: &mut crate::NodePath<'ast>,
-    ) -> Result<Self, T::Error>
-    where
-        T: crate::Transform<'ast>,
-    {
-        node_path.push(self);
-        let transformed = {
-            let Self { table, alias, lock_type } = self;
-            Self {
-                table: table.apply_transform_with_path(transformer, node_path)?,
-                alias: alias.apply_transform_with_path(transformer, node_path)?,
-                lock_type: lock_type.apply_transform_with_path(transformer, node_path)?,
-            }
-        };
-        let transformed = transformer.transform(node_path, transformed)?;
-        node_path.pop();
-        Ok(transformed)
-    }
-}
-#[automatically_derived]
 impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::LockTableType {
     fn apply_transform_with_path<T>(
         &'ast self,
@@ -8562,6 +8538,110 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::LockTableType {
                             .apply_transform_with_path(transformer, node_path)?,
                     }
                 }
+                sqltk_parser::ast::LockTableType::AccessShare => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::LockTableType::AccessShare,
+                        )?
+                }
+                sqltk_parser::ast::LockTableType::RowShare => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::LockTableType::RowShare,
+                        )?
+                }
+                sqltk_parser::ast::LockTableType::RowExclusive => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::LockTableType::RowExclusive,
+                        )?
+                }
+                sqltk_parser::ast::LockTableType::ShareUpdateExclusive => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::LockTableType::ShareUpdateExclusive,
+                        )?
+                }
+                sqltk_parser::ast::LockTableType::Share => {
+                    transformer
+                        .transform(node_path, sqltk_parser::ast::LockTableType::Share)?
+                }
+                sqltk_parser::ast::LockTableType::ShareRowExclusive => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::LockTableType::ShareRowExclusive,
+                        )?
+                }
+                sqltk_parser::ast::LockTableType::Exclusive => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::LockTableType::Exclusive,
+                        )?
+                }
+                sqltk_parser::ast::LockTableType::AccessExclusive => {
+                    transformer
+                        .transform(
+                            node_path,
+                            sqltk_parser::ast::LockTableType::AccessExclusive,
+                        )?
+                }
+                _ => unreachable!(),
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::LockTables {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            match self {
+                sqltk_parser::ast::LockTables::MySql {
+                    pluralized_table_keyword,
+                    tables,
+                } => {
+                    sqltk_parser::ast::LockTables::MySql {
+                        pluralized_table_keyword: pluralized_table_keyword
+                            .apply_transform_with_path(transformer, node_path)?,
+                        tables: tables.apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                sqltk_parser::ast::LockTables::Postgres {
+                    tables,
+                    lock_mode,
+                    has_table_keyword,
+                    only,
+                    no_wait,
+                } => {
+                    sqltk_parser::ast::LockTables::Postgres {
+                        tables: tables
+                            .apply_transform_with_path(transformer, node_path)?,
+                        lock_mode: lock_mode
+                            .apply_transform_with_path(transformer, node_path)?,
+                        has_table_keyword: has_table_keyword
+                            .apply_transform_with_path(transformer, node_path)?,
+                        only: only.apply_transform_with_path(transformer, node_path)?,
+                        no_wait: no_wait
+                            .apply_transform_with_path(transformer, node_path)?,
+                    }
+                }
+                _ => unreachable!(),
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -9055,6 +9135,30 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::MySQLColumnPosition
                         field0.apply_transform_with_path(transformer, node_path)?,
                     )
                 }
+            }
+        };
+        let transformed = transformer.transform(node_path, transformed)?;
+        node_path.pop();
+        Ok(transformed)
+    }
+}
+#[automatically_derived]
+impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::MySqlTableLock {
+    fn apply_transform_with_path<T>(
+        &'ast self,
+        transformer: &mut T,
+        node_path: &mut crate::NodePath<'ast>,
+    ) -> Result<Self, T::Error>
+    where
+        T: crate::Transform<'ast>,
+    {
+        node_path.push(self);
+        let transformed = {
+            let Self { table, alias, lock_type } = self;
+            Self {
+                table: table.apply_transform_with_path(transformer, node_path)?,
+                alias: alias.apply_transform_with_path(transformer, node_path)?,
+                lock_type: lock_type.apply_transform_with_path(transformer, node_path)?,
             }
         };
         let transformed = transformer.transform(node_path, transformed)?;
@@ -12978,17 +13082,15 @@ impl<'ast> crate::Transformable<'ast> for sqltk_parser::ast::Statement {
                         is_eq: is_eq.apply_transform_with_path(transformer, node_path)?,
                     }
                 }
-                sqltk_parser::ast::Statement::LockTables { tables } => {
-                    sqltk_parser::ast::Statement::LockTables {
-                        tables: tables.apply_transform_with_path(transformer, node_path)?,
-                    }
+                sqltk_parser::ast::Statement::LockTables(field0) => {
+                    sqltk_parser::ast::Statement::LockTables(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
                 }
-                sqltk_parser::ast::Statement::UnlockTables => {
-                    transformer
-                        .transform(
-                            node_path,
-                            sqltk_parser::ast::Statement::UnlockTables,
-                        )?
+                sqltk_parser::ast::Statement::UnlockTables(field0) => {
+                    sqltk_parser::ast::Statement::UnlockTables(
+                        field0.apply_transform_with_path(transformer, node_path)?,
+                    )
                 }
                 sqltk_parser::ast::Statement::Unload { query, to, with } => {
                     sqltk_parser::ast::Statement::Unload {
