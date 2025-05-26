@@ -92,6 +92,7 @@ if ! git subtree pull --prefix "$SQLTK_PARSER_RELATIVE_PATH" "$UPSTREAM_REPO_URL
     infops "upstream are automatically being cleared; this will need manual investigation."
   else
     error "git subtree pull failed for unknown reason! exiting."
+    exit 4
   fi
 fi
 
@@ -143,10 +144,12 @@ done
 # 4. delete sqlparser's .github directory (for build hygiene reasons)
 #
 SQLPARSER_GITHUB_DIR="${SQLTK_PARSER_PATH}/.github"
-info "Removing the .github folder from the sqlparser / sqltk-parser folder, for hygiene. This is recommended."
-prompt "Remove $SQLPARSER_GITHUB_DIR ? [yN]" "n" && (
-  git rm -rf "${SQLPARSER_GITHUB_DIR}"
-)
+if [ -d "$SQLPARSER_GITHUB_DIR}" ]; then
+  info "Removing the .github folder from the sqlparser / sqltk-parser folder, for hygiene. This is recommended."
+  prompt "Remove $SQLPARSER_GITHUB_DIR ? [yN]" "n" && (
+    git rm -rf "${SQLPARSER_GITHUB_DIR}"
+  )
+fi
 
 # 5. for every *.rs file in sqltk-parser (both conflicting and non-conflicting):
 #   a. replace `sqlparser` with `sqltk_parser`
@@ -170,7 +173,10 @@ done < <(find "$SQLTK_PARSER_PATH" -name "*.rs")
 # 6. Pre-flight testing
 #   a. Regenerate the generated files
 info "Regenerating and 'git add'-ing the 'sqltk-parser'-derived impls..."
-cargo run -p sqltk-codegen
+while ! cargo run -p sqltk-codegen; do
+  error "Please resolve the above error and hit enter to try again."
+  read -r PROMPT
+done
 (set -x; git add packages/sqltk/src/generated/*_impls.rs)
 
 info "'git add'-ing Cargo.lock"
@@ -178,7 +184,10 @@ info "'git add'-ing Cargo.lock"
 
 #   b. `cargo test`, to make sure nothing we have done has been clobbered.
 info "Running cargo test..."
-cargo test
+while ! cargo test; do
+  error "Please resolve the above error and hit enter to try again."
+  read -r PROMPT
+done
 
 # 7. PROFIT! - um - push a new PR to `sqltk` after testing a local build with Proxy.
 info "Everything seems to be in order. After reviewing the 'git diff', please run:"
