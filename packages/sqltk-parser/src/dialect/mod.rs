@@ -75,6 +75,15 @@ macro_rules! dialect_of {
     };
 }
 
+// Similar to above, but for applying directly against an instance of dialect
+// instead of a struct member named dialect. This avoids lifetime issues when
+// mixing match guards and token references.
+macro_rules! dialect_is {
+    ($dialect:ident is $($dialect_type:ty)|+) => {
+        ($($dialect.is::<$dialect_type>())||+)
+    }
+}
+
 /// Encapsulates the differences between SQL implementations.
 ///
 /// # SQL Dialects
@@ -128,14 +137,39 @@ pub trait Dialect: Debug + Any {
         ch == '"' || ch == '`'
     }
 
-    /// Return the character used to quote identifiers.
-    fn identifier_quote_style(&self, _identifier: &str) -> Option<char> {
+    /// Determine if a character starts a potential nested quoted identifier.
+    /// Example: RedShift supports the following quote styles to all mean the same thing:
+    /// ```sql
+    /// SELECT 1 AS foo;
+    /// SELECT 1 AS "foo";
+    /// SELECT 1 AS [foo];
+    /// SELECT 1 AS ["foo"];
+    /// ```
+    fn is_nested_delimited_identifier_start(&self, _ch: char) -> bool {
+        false
+    }
+
+    /// Only applicable whenever [`Self::is_nested_delimited_identifier_start`] returns true
+    /// If the next sequence of tokens potentially represent a nested identifier, then this method
+    /// returns a tuple containing the outer quote style, and if present, the inner (nested) quote style.
+    ///
+    /// Example (Redshift):
+    /// ```text
+    /// `["foo"]` => Some(`[`, Some(`"`))
+    /// `[foo]` => Some(`[`, None)
+    /// `[0]` => None
+    /// `"foo"` => None
+    /// ```
+    fn peek_nested_delimited_identifier_quotes(
+        &self,
+        mut _chars: Peekable<Chars<'_>>,
+    ) -> Option<(char, Option<char>)> {
         None
     }
 
-    /// Determine if quoted characters are proper for identifier
-    fn is_proper_identifier_inside_quotes(&self, mut _chars: Peekable<Chars<'_>>) -> bool {
-        true
+    /// Return the character used to quote identifiers.
+    fn identifier_quote_style(&self, _identifier: &str) -> Option<char> {
+        None
     }
 
     /// Determine if a character is a valid start character for an unquoted identifier
@@ -211,8 +245,24 @@ pub trait Dialect: Debug + Any {
         false
     }
 
+    /// Returns true if the dialects supports `GROUP BY` modifiers prefixed by a `WITH` keyword.
+    /// Example: `GROUP BY value WITH ROLLUP`.
+    fn supports_group_by_with_modifier(&self) -> bool {
+        false
+    }
+
+    /// Returns true if the dialect supports the `(+)` syntax for OUTER JOIN.
+    fn supports_outer_join_operator(&self) -> bool {
+        false
+    }
+
     /// Returns true if the dialect supports CONNECT BY.
     fn supports_connect_by(&self) -> bool {
+        false
+    }
+
+    /// Returns true if the dialect supports `EXECUTE IMMEDIATE` statements.
+    fn supports_execute_immediate(&self) -> bool {
         false
     }
 
@@ -226,8 +276,13 @@ pub trait Dialect: Debug + Any {
         false
     }
 
-    /// Returns true if the dialect supports `BEGIN {DEFERRED | IMMEDIATE | EXCLUSIVE} [TRANSACTION]` statements
+    /// Returns true if the dialect supports `BEGIN {DEFERRED | IMMEDIATE | EXCLUSIVE | TRY | CATCH} [TRANSACTION]` statements
     fn supports_start_transaction_modifier(&self) -> bool {
+        false
+    }
+
+    /// Returns true if the dialect supports `END {TRY | CATCH}` statements
+    fn supports_end_transaction_modifier(&self) -> bool {
         false
     }
 
@@ -265,6 +320,11 @@ pub trait Dialect: Debug + Any {
         false
     }
 
+    /// Returns true if the dialect supports numbers containing underscores, e.g. `10_000_000`
+    fn supports_numeric_literal_underscores(&self) -> bool {
+        false
+    }
+
     /// Returns true if the dialects supports specifying null treatment
     /// as part of a window function's parameter list as opposed
     /// to after the parameter list.
@@ -299,15 +359,6 @@ pub trait Dialect: Debug + Any {
     /// SELECT transform(array(1, 2, 3), x -> x + 1); -- returns [2,3,4]
     /// ```
     fn supports_lambda_functions(&self) -> bool {
-        false
-    }
-
-    /// Returns true if the dialect supports method calls, for example:
-    ///
-    /// ```sql
-    /// SELECT (SELECT ',' + name FROM sys.objects  FOR XML PATH(''), TYPE).value('.','NVARCHAR(MAX)')
-    /// ```
-    fn supports_methods(&self) -> bool {
         false
     }
 
@@ -365,6 +416,19 @@ pub trait Dialect: Debug + Any {
         self.supports_trailing_commas()
     }
 
+    /// Returns true if the dialect supports trailing commas in the `FROM` clause of a `SELECT` statement.
+    /// Example: `SELECT 1 FROM T, U, LIMIT 1`
+    fn supports_from_trailing_commas(&self) -> bool {
+        false
+    }
+
+    /// Returns true if the dialect supports trailing commas in the
+    /// column definitions list of a `CREATE` statement.
+    /// Example: `CREATE TABLE T (x INT, y TEXT,)`
+    fn supports_column_definition_trailing_commas(&self) -> bool {
+        false
+    }
+
     /// Returns true if the dialect supports double dot notation for object names
     ///
     /// Example
@@ -382,6 +446,48 @@ pub trait Dialect: Debug + Any {
     /// SELECT STRUCT(1 as one, 'foo' as foo, false)
     /// ```
     fn supports_struct_literal(&self) -> bool {
+        false
+    }
+
+    /// Return true if the dialect supports empty projections in SELECT statements
+    ///
+    /// Example
+    /// ```sql
+    /// SELECT from table_name
+    /// ```
+    fn supports_empty_projections(&self) -> bool {
+        false
+    }
+
+    /// Return true if the dialect supports wildcard expansion on
+    /// arbitrary expressions in projections.
+    ///
+    /// Example:
+    /// ```sql
+    /// SELECT STRUCT<STRING>('foo').* FROM T
+    /// ```
+    fn supports_select_expr_star(&self) -> bool {
+        false
+    }
+
+    /// Return true if the dialect supports "FROM-first" selects.
+    ///
+    /// Example:
+    /// ```sql
+    /// FROM table
+    /// SELECT *
+    /// ```
+    fn supports_from_first_select(&self) -> bool {
+        false
+    }
+
+    /// Does the dialect support MySQL-style `'user'@'host'` grantee syntax?
+    fn supports_user_host_grantee(&self) -> bool {
+        false
+    }
+
+    /// Does the dialect support the `MATCH() AGAINST()` syntax?
+    fn supports_match_against(&self) -> bool {
         false
     }
 
@@ -468,6 +574,7 @@ pub trait Dialect: Debug + Any {
             Token::Word(w) if w.keyword == Keyword::IS => Ok(p!(Is)),
             Token::Word(w) if w.keyword == Keyword::IN => Ok(p!(Between)),
             Token::Word(w) if w.keyword == Keyword::BETWEEN => Ok(p!(Between)),
+            Token::Word(w) if w.keyword == Keyword::OVERLAPS => Ok(p!(Between)),
             Token::Word(w) if w.keyword == Keyword::LIKE => Ok(p!(Like)),
             Token::Word(w) if w.keyword == Keyword::ILIKE => Ok(p!(Like)),
             Token::Word(w) if w.keyword == Keyword::RLIKE => Ok(p!(Like)),
@@ -475,6 +582,7 @@ pub trait Dialect: Debug + Any {
             Token::Word(w) if w.keyword == Keyword::SIMILAR => Ok(p!(Like)),
             Token::Word(w) if w.keyword == Keyword::OPERATOR => Ok(p!(Between)),
             Token::Word(w) if w.keyword == Keyword::DIV => Ok(p!(MulDivModOp)),
+            Token::Period => Ok(p!(Period)),
             Token::Eq
             | Token::Lt
             | Token::LtEq
@@ -491,18 +599,34 @@ pub trait Dialect: Debug + Any {
             | Token::ExclamationMarkDoubleTilde
             | Token::ExclamationMarkDoubleTildeAsterisk
             | Token::Spaceship => Ok(p!(Eq)),
-            Token::Pipe => Ok(p!(Pipe)),
+            Token::Pipe
+            | Token::QuestionMarkDash
+            | Token::DoubleSharp
+            | Token::Overlap
+            | Token::AmpersandLeftAngleBracket
+            | Token::AmpersandRightAngleBracket
+            | Token::QuestionMarkDashVerticalBar
+            | Token::AmpersandLeftAngleBracketVerticalBar
+            | Token::VerticalBarAmpersandRightAngleBracket
+            | Token::TwoWayArrow
+            | Token::LeftAngleBracketCaret
+            | Token::RightAngleBracketCaret
+            | Token::QuestionMarkSharp
+            | Token::QuestionMarkDoubleVerticalBar
+            | Token::QuestionPipe
+            | Token::TildeEqual
+            | Token::AtSign
+            | Token::ShiftLeftVerticalBar
+            | Token::VerticalBarShiftRight => Ok(p!(Pipe)),
             Token::Caret | Token::Sharp | Token::ShiftRight | Token::ShiftLeft => Ok(p!(Caret)),
             Token::Ampersand => Ok(p!(Ampersand)),
             Token::Plus | Token::Minus => Ok(p!(PlusMinus)),
             Token::Mul | Token::Div | Token::DuckIntDiv | Token::Mod | Token::StringConcat => {
                 Ok(p!(MulDivModOp))
             }
-            Token::DoubleColon
-            | Token::ExclamationMark
-            | Token::LBracket
-            | Token::Overlap
-            | Token::CaretAt => Ok(p!(DoubleColon)),
+            Token::DoubleColon | Token::ExclamationMark | Token::LBracket | Token::CaretAt => {
+                Ok(p!(DoubleColon))
+            }
             Token::Arrow
             | Token::LongArrow
             | Token::HashArrow
@@ -514,7 +638,6 @@ pub trait Dialect: Debug + Any {
             | Token::AtAt
             | Token::Question
             | Token::QuestionAnd
-            | Token::QuestionPipe
             | Token::CustomBinaryOperator(_) => Ok(p!(PgOther)),
             _ => Ok(self.prec_unknown()),
         }
@@ -548,6 +671,7 @@ pub trait Dialect: Debug + Any {
     /// Uses (APPROXIMATELY) <https://www.postgresql.org/docs/7.0/operators.htm#AEN2026> as a reference
     fn prec_value(&self, prec: Precedence) -> u8 {
         match prec {
+            Precedence::Period => 100,
             Precedence::DoubleColon => 50,
             Precedence::AtTz => 41,
             Precedence::MulDivModOp => 40,
@@ -592,6 +716,12 @@ pub trait Dialect: Debug + Any {
         false
     }
 
+    /// Returns true if this dialect allows dollar placeholders
+    /// e.g. `SELECT $var` (SQLite)
+    fn supports_dollar_placeholder(&self) -> bool {
+        false
+    }
+
     /// Does the dialect support with clause in create index statement?
     /// e.g. `CREATE INDEX idx ON t WITH (key = value, key2)`
     fn supports_create_index_with_clause(&self) -> bool {
@@ -629,6 +759,12 @@ pub trait Dialect: Debug + Any {
 
     /// Returns true if the dialect supports `a!` expressions
     fn supports_factorial_operator(&self) -> bool {
+        false
+    }
+
+    /// Returns true if the dialect supports nested comments
+    /// e.g. `/* /* nested */ */`
+    fn supports_nested_comments(&self) -> bool {
         false
     }
 
@@ -707,6 +843,116 @@ pub trait Dialect: Debug + Any {
     fn is_reserved_for_identifier(&self, kw: Keyword) -> bool {
         keywords::RESERVED_FOR_IDENTIFIER.contains(&kw)
     }
+
+    /// Returns reserved keywords when looking to parse a `TableFactor`.
+    /// See [Self::supports_from_trailing_commas]
+    fn get_reserved_keywords_for_table_factor(&self) -> &[Keyword] {
+        keywords::RESERVED_FOR_TABLE_FACTOR
+    }
+
+    /// Returns true if this dialect supports the `TABLESAMPLE` option
+    /// before the table alias option. For example:
+    ///
+    /// Table sample before alias: `SELECT * FROM tbl AS t TABLESAMPLE (10)`
+    /// Table sample after alias: `SELECT * FROM tbl TABLESAMPLE (10) AS t`
+    ///
+    /// <https://jakewheat.github.io/sql-overview/sql-2016-foundation-grammar.html#_7_6_table_reference>
+    fn supports_table_sample_before_alias(&self) -> bool {
+        false
+    }
+
+    /// Returns true if this dialect supports the `INSERT INTO ... SET col1 = 1, ...` syntax.
+    ///
+    /// MySQL: <https://dev.mysql.com/doc/refman/8.4/en/insert.html>
+    fn supports_insert_set(&self) -> bool {
+        false
+    }
+
+    /// Does the dialect support table function in insertion?
+    fn supports_insert_table_function(&self) -> bool {
+        false
+    }
+
+    /// Does the dialect support insert formats, e.g. `INSERT INTO ... FORMAT <format>`
+    fn supports_insert_format(&self) -> bool {
+        false
+    }
+
+    /// Returns true if this dialect supports `SET` statements without an explicit
+    /// assignment operator such as `=`. For example: `SET SHOWPLAN_XML ON`.
+    fn supports_set_stmt_without_operator(&self) -> bool {
+        false
+    }
+
+    /// Returns true if the specified keyword should be parsed as a column identifier.
+    /// See [keywords::RESERVED_FOR_COLUMN_ALIAS]
+    fn is_column_alias(&self, kw: &Keyword, _parser: &mut Parser) -> bool {
+        !keywords::RESERVED_FOR_COLUMN_ALIAS.contains(kw)
+    }
+
+    /// Returns true if the specified keyword should be parsed as a select item alias.
+    /// When explicit is true, the keyword is preceded by an `AS` word. Parser is provided
+    /// to enable looking ahead if needed.
+    fn is_select_item_alias(&self, explicit: bool, kw: &Keyword, parser: &mut Parser) -> bool {
+        explicit || self.is_column_alias(kw, parser)
+    }
+
+    /// Returns true if the specified keyword should be parsed as a table factor alias.
+    /// When explicit is true, the keyword is preceded by an `AS` word. Parser is provided
+    /// to enable looking ahead if needed.
+    fn is_table_factor_alias(&self, explicit: bool, kw: &Keyword, _parser: &mut Parser) -> bool {
+        explicit || !keywords::RESERVED_FOR_TABLE_ALIAS.contains(kw)
+    }
+
+    /// Returns true if this dialect supports querying historical table data
+    /// by specifying which version of the data to query.
+    fn supports_timestamp_versioning(&self) -> bool {
+        false
+    }
+
+    /// Returns true if this dialect supports the E'...' syntax for string literals
+    ///
+    /// Postgres: <https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS-ESCAPE>
+    fn supports_string_escape_constant(&self) -> bool {
+        false
+    }
+
+    /// Returns true if the dialect supports the table hints in the `FROM` clause.
+    fn supports_table_hints(&self) -> bool {
+        false
+    }
+
+    /// Returns true if this dialect requires a whitespace character after `--` to start a single line comment.
+    ///
+    /// MySQL: <https://dev.mysql.com/doc/refman/8.4/en/ansi-diff-comments.html>
+    /// e.g. UPDATE account SET balance=balance--1
+    //       WHERE account_id=5752             ^^^ will be interpreted as two minus signs instead of a comment
+    fn requires_single_line_comment_whitespace(&self) -> bool {
+        false
+    }
+
+    /// Returns true if the dialect supports array type definition with brackets with
+    /// an optional size. For example:
+    /// ```CREATE TABLE my_table (arr1 INT[], arr2 INT[3])```
+    /// ```SELECT x::INT[]```
+    fn supports_array_typedef_with_brackets(&self) -> bool {
+        false
+    }
+    /// Returns true if the dialect supports geometric types.
+    ///
+    /// Postgres: <https://www.postgresql.org/docs/9.5/functions-geometry.html>
+    /// e.g. @@ circle '((0,0),10)'
+    fn supports_geometric_types(&self) -> bool {
+        false
+    }
+
+    /// Returns true if the dialect supports `ORDER BY ALL`.
+    /// `ALL` which means all columns of the SELECT clause.
+    ///
+    /// For example: ```SELECT * FROM addresses ORDER BY ALL;```.
+    fn supports_order_by_all(&self) -> bool {
+        false
+    }
 }
 
 /// This represents the operators for which precedence must be defined
@@ -714,6 +960,7 @@ pub trait Dialect: Debug + Any {
 /// higher number -> higher precedence
 #[derive(Debug, Clone, Copy)]
 pub enum Precedence {
+    Period,
     DoubleColon,
     AtTz,
     MulDivModOp,
@@ -858,19 +1105,23 @@ mod tests {
                 self.0.is_delimited_identifier_start(ch)
             }
 
+            fn is_nested_delimited_identifier_start(&self, ch: char) -> bool {
+                self.0.is_nested_delimited_identifier_start(ch)
+            }
+
+            fn peek_nested_delimited_identifier_quotes(
+                &self,
+                chars: std::iter::Peekable<std::str::Chars<'_>>,
+            ) -> Option<(char, Option<char>)> {
+                self.0.peek_nested_delimited_identifier_quotes(chars)
+            }
+
             fn identifier_quote_style(&self, identifier: &str) -> Option<char> {
                 self.0.identifier_quote_style(identifier)
             }
 
             fn supports_string_literal_backslash_escape(&self) -> bool {
                 self.0.supports_string_literal_backslash_escape()
-            }
-
-            fn is_proper_identifier_inside_quotes(
-                &self,
-                chars: std::iter::Peekable<std::str::Chars<'_>>,
-            ) -> bool {
-                self.0.is_proper_identifier_inside_quotes(chars)
             }
 
             fn supports_filter_during_aggregation(&self) -> bool {

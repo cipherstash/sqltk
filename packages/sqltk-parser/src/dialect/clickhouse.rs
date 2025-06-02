@@ -50,4 +50,48 @@ impl Dialect for ClickHouseDialect {
     fn supports_limit_comma(&self) -> bool {
         true
     }
+
+    fn supports_insert_table_function(&self) -> bool {
+        true
+    }
+
+    fn supports_insert_format(&self) -> bool {
+        true
+    }
+
+    fn supports_numeric_literal_underscores(&self) -> bool {
+        true
+    }
+
+    // ClickHouse uses this for some FORMAT expressions in `INSERT` context, e.g. when inserting
+    // with FORMAT JSONEachRow a raw JSON key-value expression is valid and expected.
+    //
+    // [ClickHouse formats](https://clickhouse.com/docs/en/interfaces/formats)
+    fn supports_dictionary_syntax(&self) -> bool {
+        true
+    }
+
+    /// See <https://clickhouse.com/docs/en/sql-reference/functions#higher-order-functions---operator-and-lambdaparams-expr-function>
+    fn supports_lambda_functions(&self) -> bool {
+        true
+    }
+
+    fn supports_from_first_select(&self) -> bool {
+        true
+    }
+
+    /// See <https://clickhouse.com/docs/en/sql-reference/statements/select/order-by>
+    fn supports_order_by_all(&self) -> bool {
+        true
+    }
+
+    // See <https://clickhouse.com/docs/en/sql-reference/aggregate-functions/grouping_function#grouping-sets>
+    fn supports_group_by_expr(&self) -> bool {
+        true
+    }
+
+    /// See <https://clickhouse.com/docs/en/sql-reference/statements/select/group-by#rollup-modifier>
+    fn supports_group_by_with_modifier(&self) -> bool {
+        true
+    }
 }

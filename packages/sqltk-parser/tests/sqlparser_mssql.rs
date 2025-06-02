@@ -26,7 +26,7 @@ use helpers::attached_token::AttachedToken;
 use sqltk_parser::tokenizer::Span;
 use test_utils::*;
 
-use sqltk_parser::ast::DataType::{Int, Text};
+use sqltk_parser::ast::DataType::{Int, Text, Varbinary};
 use sqltk_parser::ast::DeclareAssignment::MsSqlAssignment;
 use sqltk_parser::ast::Value::SingleQuotedString;
 use sqltk_parser::ast::*;
@@ -63,16 +63,18 @@ fn parse_table_time_travel() {
         select.from,
         vec![TableWithJoins {
             relation: TableFactor::Table {
-                name: ObjectName(vec![Ident::new("t1")]),
+                name: ObjectName::from(vec![Ident::new("t1")]),
                 alias: None,
                 args: None,
                 with_hints: vec![],
                 version: Some(TableVersion::ForSystemTimeAsOf(Expr::Value(
-                    Value::SingleQuotedString(version)
+                    (Value::SingleQuotedString(version)).with_empty_span()
                 ))),
                 partitions: vec![],
                 with_ordinality: false,
                 json_path: None,
+                sample: None,
+                index_hints: vec![]
             },
             joins: vec![]
         },]
@@ -119,7 +121,9 @@ fn parse_create_procedure() {
                     distinct: None,
                     top: None,
                     top_before_distinct: false,
-                    projection: vec![SelectItem::UnnamedExpr(Expr::Value(number("1")))],
+                    projection: vec![SelectItem::UnnamedExpr(Expr::Value(
+                        (number("1")).with_empty_span()
+                    ))],
                     into: None,
                     from: vec![],
                     lateral_views: vec![],
@@ -135,6 +139,7 @@ fn parse_create_procedure() {
                     qualify: None,
                     value_table_mode: None,
                     connect_by: None,
+                    flavor: SelectFlavor::Standard,
                 })))
             }))],
             params: Some(vec![
@@ -158,7 +163,7 @@ fn parse_create_procedure() {
                     }))
                 }
             ]),
-            name: ObjectName(vec![Ident {
+            name: ObjectName::from(vec![Ident {
                 value: "test".into(),
                 quote_style: None,
                 span: Span::empty(),
@@ -210,7 +215,7 @@ fn parse_mssql_openjson() {
     assert_eq!(
         vec![TableWithJoins {
             relation: TableFactor::Table {
-                name: ObjectName(vec![Ident::new("t_test_table")]),
+                name: ObjectName::from(vec![Ident::new("t_test_table")]),
                 alias: Some(TableAlias {
                     name: Ident::new("A"),
                     columns: vec![]
@@ -221,6 +226,8 @@ fn parse_mssql_openjson() {
                 with_ordinality: false,
                 partitions: vec![],
                 json_path: None,
+                sample: None,
+                index_hints: vec![]
             },
             joins: vec![Join {
                 relation: TableFactor::OpenJsonTable {
@@ -268,7 +275,7 @@ fn parse_mssql_openjson() {
     assert_eq!(
         vec![TableWithJoins {
             relation: TableFactor::Table {
-                name: ObjectName(vec![Ident::new("t_test_table"),]),
+                name: ObjectName::from(vec![Ident::new("t_test_table"),]),
                 alias: Some(TableAlias {
                     name: Ident::new("A"),
                     columns: vec![]
@@ -279,6 +286,8 @@ fn parse_mssql_openjson() {
                 with_ordinality: false,
                 partitions: vec![],
                 json_path: None,
+                sample: None,
+                index_hints: vec![]
             },
             joins: vec![Join {
                 relation: TableFactor::OpenJsonTable {
@@ -326,8 +335,7 @@ fn parse_mssql_openjson() {
     assert_eq!(
         vec![TableWithJoins {
             relation: TableFactor::Table {
-                name: ObjectName(vec![Ident::new("t_test_table")]),
-
+                name: ObjectName::from(vec![Ident::new("t_test_table")]),
                 alias: Some(TableAlias {
                     name: Ident::new("A"),
                     columns: vec![]
@@ -338,6 +346,8 @@ fn parse_mssql_openjson() {
                 with_ordinality: false,
                 partitions: vec![],
                 json_path: None,
+                sample: None,
+                index_hints: vec![]
             },
             joins: vec![Join {
                 relation: TableFactor::OpenJsonTable {
@@ -385,7 +395,7 @@ fn parse_mssql_openjson() {
     assert_eq!(
         vec![TableWithJoins {
             relation: TableFactor::Table {
-                name: ObjectName(vec![Ident::new("t_test_table")]),
+                name: ObjectName::from(vec![Ident::new("t_test_table")]),
                 alias: Some(TableAlias {
                     name: Ident::new("A"),
                     columns: vec![]
@@ -396,6 +406,8 @@ fn parse_mssql_openjson() {
                 with_ordinality: false,
                 partitions: vec![],
                 json_path: None,
+                sample: None,
+                index_hints: vec![],
             },
             joins: vec![Join {
                 relation: TableFactor::OpenJsonTable {
@@ -423,7 +435,7 @@ fn parse_mssql_openjson() {
     assert_eq!(
         vec![TableWithJoins {
             relation: TableFactor::Table {
-                name: ObjectName(vec![Ident::new("t_test_table")]),
+                name: ObjectName::from(vec![Ident::new("t_test_table")]),
                 alias: Some(TableAlias {
                     name: Ident::new("A"),
                     columns: vec![]
@@ -434,6 +446,8 @@ fn parse_mssql_openjson() {
                 with_ordinality: false,
                 partitions: vec![],
                 json_path: None,
+                sample: None,
+                index_hints: vec![],
             },
             joins: vec![Join {
                 relation: TableFactor::OpenJsonTable {
@@ -461,7 +475,9 @@ fn parse_mssql_top_paren() {
     let select = ms_and_generic().verified_only_select(sql);
     let top = select.top.unwrap();
     assert_eq!(
-        Some(TopQuantity::Expr(Expr::Value(number("5")))),
+        Some(TopQuantity::Expr(Expr::Value(
+            (number("5")).with_empty_span()
+        ))),
         top.quantity
     );
     assert!(!top.percent);
@@ -473,7 +489,9 @@ fn parse_mssql_top_percent() {
     let select = ms_and_generic().verified_only_select(sql);
     let top = select.top.unwrap();
     assert_eq!(
-        Some(TopQuantity::Expr(Expr::Value(number("5")))),
+        Some(TopQuantity::Expr(Expr::Value(
+            (number("5")).with_empty_span()
+        ))),
         top.quantity
     );
     assert!(top.percent);
@@ -485,7 +503,9 @@ fn parse_mssql_top_with_ties() {
     let select = ms_and_generic().verified_only_select(sql);
     let top = select.top.unwrap();
     assert_eq!(
-        Some(TopQuantity::Expr(Expr::Value(number("5")))),
+        Some(TopQuantity::Expr(Expr::Value(
+            (number("5")).with_empty_span()
+        ))),
         top.quantity
     );
     assert!(top.with_ties);
@@ -497,7 +517,9 @@ fn parse_mssql_top_percent_with_ties() {
     let select = ms_and_generic().verified_only_select(sql);
     let top = select.top.unwrap();
     assert_eq!(
-        Some(TopQuantity::Expr(Expr::Value(number("10")))),
+        Some(TopQuantity::Expr(Expr::Value(
+            (number("10")).with_empty_span()
+        ))),
         top.quantity
     );
     assert!(top.percent);
@@ -526,7 +548,7 @@ fn parse_mssql_create_role() {
             assert_eq_vec(&["mssql"], &names);
             assert_eq!(
                 authorization_owner,
-                Some(ObjectName(vec![Ident {
+                Some(ObjectName::from(vec![Ident {
                     value: "helena".into(),
                     quote_style: None,
                     span: Span::empty(),
@@ -611,11 +633,12 @@ fn parse_delimited_identifiers() {
             args,
             with_hints,
             version,
-            with_ordinality: _,
-            partitions: _,
-            json_path: _,
+            ..
         } => {
-            assert_eq!(vec![Ident::with_quote('"', "a table")], name.0);
+            assert_eq!(
+                ObjectName::from(vec![Ident::with_quote('"', "a table")]),
+                name
+            );
             assert_eq!(Ident::with_quote('"', "alias"), alias.unwrap().name);
             assert!(args.is_none());
             assert!(with_hints.is_empty());
@@ -634,7 +657,7 @@ fn parse_delimited_identifiers() {
     );
     assert_eq!(
         &Expr::Function(Function {
-            name: ObjectName(vec![Ident::with_quote('"', "myfun")]),
+            name: ObjectName::from(vec![Ident::with_quote('"', "myfun")]),
             uses_odbc_syntax: false,
             parameters: FunctionArguments::None,
             args: FunctionArguments::List(FunctionArgumentList {
@@ -667,11 +690,11 @@ fn parse_table_name_in_square_brackets() {
     let select = ms().verified_only_select(r#"SELECT [a column] FROM [a schema].[a table]"#);
     if let TableFactor::Table { name, .. } = only(select.from).relation {
         assert_eq!(
-            vec![
+            ObjectName::from(vec![
                 Ident::with_quote('[', "a schema"),
                 Ident::with_quote('[', "a table")
-            ],
-            name.0
+            ]),
+            name
         );
     } else {
         panic!("Expecting TableFactor::Table");
@@ -733,7 +756,10 @@ fn parse_mssql_json_object() {
             assert!(matches!(
                 args[0],
                 FunctionArg::ExprNamed {
-                    name: Expr::Value(Value::SingleQuotedString(_)),
+                    name: Expr::Value(ValueWithSpan {
+                        value: Value::SingleQuotedString(_),
+                        span: _
+                    }),
                     arg: FunctionArgExpr::Expr(Expr::Function(_)),
                     operator: FunctionArgOperator::Colon
                 }
@@ -749,7 +775,10 @@ fn parse_mssql_json_object() {
             assert!(matches!(
                 args[2],
                 FunctionArg::ExprNamed {
-                    name: Expr::Value(Value::SingleQuotedString(_)),
+                    name: Expr::Value(ValueWithSpan {
+                        value: Value::SingleQuotedString(_),
+                        span: _
+                    }),
                     arg: FunctionArgExpr::Expr(Expr::Subquery(_)),
                     operator: FunctionArgOperator::Colon
                 }
@@ -780,7 +809,10 @@ fn parse_mssql_json_object() {
             assert!(matches!(
                 args[0],
                 FunctionArg::ExprNamed {
-                    name: Expr::Value(Value::SingleQuotedString(_)),
+                    name: Expr::Value(ValueWithSpan {
+                        value: Value::SingleQuotedString(_),
+                        span: _
+                    }),
                     arg: FunctionArgExpr::Expr(Expr::CompoundIdentifier(_)),
                     operator: FunctionArgOperator::Colon
                 }
@@ -788,7 +820,10 @@ fn parse_mssql_json_object() {
             assert!(matches!(
                 args[1],
                 FunctionArg::ExprNamed {
-                    name: Expr::Value(Value::SingleQuotedString(_)),
+                    name: Expr::Value(ValueWithSpan {
+                        value: Value::SingleQuotedString(_),
+                        span: _
+                    }),
                     arg: FunctionArgExpr::Expr(Expr::CompoundIdentifier(_)),
                     operator: FunctionArgOperator::Colon
                 }
@@ -796,7 +831,10 @@ fn parse_mssql_json_object() {
             assert!(matches!(
                 args[2],
                 FunctionArg::ExprNamed {
-                    name: Expr::Value(Value::SingleQuotedString(_)),
+                    name: Expr::Value(ValueWithSpan {
+                        value: Value::SingleQuotedString(_),
+                        span: _
+                    }),
                     arg: FunctionArgExpr::Expr(Expr::CompoundIdentifier(_)),
                     operator: FunctionArgOperator::Colon
                 }
@@ -817,11 +855,17 @@ fn parse_mssql_json_array() {
             assert_eq!(
                 &[
                     FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
-                        Value::SingleQuotedString("a".into())
+                        (Value::SingleQuotedString("a".into())).with_empty_span()
                     ))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(number("1")))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(Value::Null))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(number("2")))),
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                        (number("1")).with_empty_span()
+                    ))),
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                        (Value::Null).with_empty_span()
+                    ))),
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                        (number("2")).with_empty_span()
+                    ))),
                 ],
                 &args[..]
             );
@@ -843,11 +887,17 @@ fn parse_mssql_json_array() {
             assert_eq!(
                 &[
                     FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
-                        Value::SingleQuotedString("a".into())
+                        (Value::SingleQuotedString("a".into())).with_empty_span()
                     ))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(number("1")))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(Value::Null))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(number("2")))),
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                        (number("1")).with_empty_span()
+                    ))),
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                        (Value::Null).with_empty_span()
+                    ))),
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                        (number("2")).with_empty_span()
+                    ))),
                 ],
                 &args[..]
             );
@@ -902,7 +952,7 @@ fn parse_mssql_json_array() {
         }) => {
             assert_eq!(
                 &FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
-                    Value::SingleQuotedString("a".into())
+                    (Value::SingleQuotedString("a".into())).with_empty_span()
                 ))),
                 &args[0]
             );
@@ -929,7 +979,7 @@ fn parse_mssql_json_array() {
         }) => {
             assert_eq!(
                 &FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
-                    Value::SingleQuotedString("a".into())
+                    (Value::SingleQuotedString("a".into())).with_empty_span()
                 ))),
                 &args[0]
             );
@@ -951,7 +1001,9 @@ fn parse_mssql_json_array() {
             ..
         }) => {
             assert_eq!(
-                &FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(number("1")))),
+                &FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                    (number("1")).with_empty_span()
+                ))),
                 &args[0]
             );
             assert!(matches!(
@@ -1029,15 +1081,15 @@ fn parse_convert() {
         unreachable!()
     };
     assert!(!is_try);
-    assert_eq!(Expr::Value(number("1")), *expr);
+    assert_eq!(Expr::value(number("1")), *expr);
     assert_eq!(Some(DataType::Int(None)), data_type);
     assert!(charset.is_none());
     assert!(target_before_value);
     assert_eq!(
         vec![
-            Expr::Value(number("2")),
-            Expr::Value(number("3")),
-            Expr::Value(Value::Null),
+            Expr::value(number("2")),
+            Expr::value(number("3")),
+            Expr::Value((Value::Null).with_empty_span()),
         ],
         styles
     );
@@ -1076,26 +1128,21 @@ fn parse_substring_in_select() {
                                 quote_style: None,
                                 span: Span::empty(),
                             })),
-                            substring_from: Some(Box::new(Expr::Value(number("0")))),
-                            substring_for: Some(Box::new(Expr::Value(number("1")))),
+                            substring_from: Some(Box::new(Expr::Value(
+                                (number("0")).with_empty_span()
+                            ))),
+                            substring_for: Some(Box::new(Expr::Value(
+                                (number("1")).with_empty_span()
+                            ))),
                             special: true,
                         })],
                         into: None,
                         from: vec![TableWithJoins {
-                            relation: TableFactor::Table {
-                                name: ObjectName(vec![Ident {
-                                    value: "test".to_string(),
-                                    quote_style: None,
-                                    span: Span::empty(),
-                                }]),
-                                alias: None,
-                                args: None,
-                                with_hints: vec![],
-                                version: None,
-                                partitions: vec![],
-                                with_ordinality: false,
-                                json_path: None,
-                            },
+                            relation: table_from_name(ObjectName::from(vec![Ident {
+                                value: "test".to_string(),
+                                quote_style: None,
+                                span: Span::empty(),
+                            }])),
                             joins: vec![]
                         }],
                         lateral_views: vec![],
@@ -1111,6 +1158,7 @@ fn parse_substring_in_select() {
                         window_before_qualify: false,
                         value_table_mode: None,
                         connect_by: None,
+                        flavor: SelectFlavor::Standard,
                     }))),
                     order_by: None,
                     limit: None,
@@ -1174,9 +1222,9 @@ fn parse_mssql_declare() {
                         span: Span::empty(),
                     }],
                     data_type: Some(Text),
-                    assignment: Some(MsSqlAssignment(Box::new(Expr::Value(SingleQuotedString(
-                        "foobar".to_string()
-                    ))))),
+                    assignment: Some(MsSqlAssignment(Box::new(Expr::Value(
+                        (SingleQuotedString("foobar".to_string())).with_empty_span()
+                    )))),
                     declare_type: None,
                     binary: None,
                     sensitive: None,
@@ -1209,8 +1257,10 @@ fn parse_mssql_declare() {
             Statement::SetVariable {
                 local: false,
                 hivevar: false,
-                variables: OneOrManyWithParens::One(ObjectName(vec![Ident::new("@bar")])),
-                value: vec![Expr::Value(Value::Number("2".parse().unwrap(), false))],
+                variables: OneOrManyWithParens::One(ObjectName::from(vec![Ident::new("@bar")])),
+                value: vec![Expr::Value(
+                    (Value::Number("2".parse().unwrap(), false)).with_empty_span()
+                )],
             },
             Statement::Query(Box::new(Query {
                 with: None,
@@ -1231,7 +1281,9 @@ fn parse_mssql_declare() {
                     projection: vec![SelectItem::UnnamedExpr(Expr::BinaryOp {
                         left: Box::new(Expr::Identifier(Ident::new("@bar"))),
                         op: BinaryOperator::Multiply,
-                        right: Box::new(Expr::Value(Value::Number("4".parse().unwrap(), false))),
+                        right: Box::new(Expr::Value(
+                            (Value::Number("4".parse().unwrap(), false)).with_empty_span()
+                        )),
                     })],
                     into: None,
                     from: vec![],
@@ -1248,11 +1300,49 @@ fn parse_mssql_declare() {
                     qualify: None,
                     value_table_mode: None,
                     connect_by: None,
+                    flavor: SelectFlavor::Standard,
                 })))
             }))
         ],
         ast
     );
+}
+
+#[test]
+fn test_parse_raiserror() {
+    let sql = r#"RAISERROR('This is a test', 16, 1)"#;
+    let s = ms().verified_stmt(sql);
+    assert_eq!(
+        s,
+        Statement::RaisError {
+            message: Box::new(Expr::Value(
+                (Value::SingleQuotedString("This is a test".to_string())).with_empty_span()
+            )),
+            severity: Box::new(Expr::Value(
+                (Value::Number("16".parse().unwrap(), false)).with_empty_span()
+            )),
+            state: Box::new(Expr::Value(
+                (Value::Number("1".parse().unwrap(), false)).with_empty_span()
+            )),
+            arguments: vec![],
+            options: vec![],
+        }
+    );
+
+    let sql = r#"RAISERROR('This is a test', 16, 1) WITH NOWAIT"#;
+    let _ = ms().verified_stmt(sql);
+
+    let sql = r#"RAISERROR('This is a test', 16, 1, 'ARG') WITH SETERROR, LOG"#;
+    let _ = ms().verified_stmt(sql);
+
+    let sql = r#"RAISERROR(N'This is message %s %d.', 10, 1, N'number', 5)"#;
+    let _ = ms().verified_stmt(sql);
+
+    let sql = r#"RAISERROR(N'<<%*.*s>>', 10, 1, 7, 3, N'abcde')"#;
+    let _ = ms().verified_stmt(sql);
+
+    let sql = r#"RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState)"#;
+    let _ = ms().verified_stmt(sql);
 }
 
 #[test]
@@ -1270,7 +1360,7 @@ fn parse_use() {
         // Test single identifier without quotes
         assert_eq!(
             ms().verified_stmt(&format!("USE {}", object_name)),
-            Statement::Use(Use::Object(ObjectName(vec![Ident::new(
+            Statement::Use(Use::Object(ObjectName::from(vec![Ident::new(
                 object_name.to_string()
             )])))
         );
@@ -1278,7 +1368,7 @@ fn parse_use() {
             // Test single identifier with different type of quotes
             assert_eq!(
                 ms().verified_stmt(&format!("USE {}{}{}", quote, object_name, quote)),
-                Statement::Use(Use::Object(ObjectName(vec![Ident::with_quote(
+                Statement::Use(Use::Object(ObjectName::from(vec![Ident::with_quote(
                     quote,
                     object_name.to_string(),
                 )])))
@@ -1308,7 +1398,7 @@ fn parse_create_table_with_valid_options() {
                 SqlOption::Partition {
                     column_name: "column_a".into(),
                     range_direction: None,
-                    for_values: vec![Expr::Value(test_utils::number("10")), Expr::Value(test_utils::number("11"))] ,
+                    for_values: vec![Expr::Value((test_utils::number("10")).with_empty_span()), Expr::Value((test_utils::number("11")).with_empty_span())] ,
                 },
             ],
         ),
@@ -1319,8 +1409,8 @@ fn parse_create_table_with_valid_options() {
                         column_name: "column_a".into(),
                         range_direction: Some(PartitionRangeDirection::Left),
                         for_values: vec![
-                            Expr::Value(test_utils::number("10")),
-                            Expr::Value(test_utils::number("11")),
+                            Expr::Value((test_utils::number("10")).with_empty_span()),
+                            Expr::Value((test_utils::number("11")).with_empty_span()),
                         ],
                     }
             ],
@@ -1380,7 +1470,7 @@ fn parse_create_table_with_valid_options() {
                     },
                     value: Expr::Function(
                         Function {
-                            name: ObjectName(
+                            name: ObjectName::from(
                                 vec![
                                     Ident {
                                         value: "HASH".to_string(),
@@ -1444,7 +1534,7 @@ fn parse_create_table_with_valid_options() {
                 if_not_exists: false,
                 transient: false,
                 volatile: false,
-                name: ObjectName(vec![Ident {
+                name: ObjectName::from(vec![Ident {
                     value: "mytable".to_string(),
                     quote_style: None,
                     span: Span::empty(),
@@ -1457,7 +1547,6 @@ fn parse_create_table_with_valid_options() {
                             span: Span::empty(),
                         },
                         data_type: Int(None,),
-                        collation: None,
                         options: vec![],
                     },
                     ColumnDef {
@@ -1467,7 +1556,7 @@ fn parse_create_table_with_valid_options() {
                             span: Span::empty(),
                         },
                         data_type: Int(None,),
-                        collation: None,
+
                         options: vec![],
                     },
                     ColumnDef {
@@ -1477,7 +1566,7 @@ fn parse_create_table_with_valid_options() {
                             span: Span::empty(),
                         },
                         data_type: Int(None,),
-                        collation: None,
+
                         options: vec![],
                     },
                 ],
@@ -1511,6 +1600,7 @@ fn parse_create_table_with_valid_options() {
                 clustered_by: None,
                 options: None,
                 strict: false,
+                iceberg: false,
                 copy_grants: false,
                 enable_schema_evolution: None,
                 change_tracking: None,
@@ -1520,6 +1610,11 @@ fn parse_create_table_with_valid_options() {
                 with_aggregation_policy: None,
                 with_row_access_policy: None,
                 with_tags: None,
+                base_location: None,
+                external_volume: None,
+                catalog: None,
+                catalog_sync: None,
+                storage_serialization_policy: None,
             })
         );
     }
@@ -1586,8 +1681,8 @@ fn parse_create_table_with_identity_column() {
                         IdentityProperty {
                             parameters: Some(IdentityPropertyFormatKind::FunctionCall(
                                 IdentityParameters {
-                                    seed: Expr::Value(number("1")),
-                                    increment: Expr::Value(number("1")),
+                                    seed: Expr::value(number("1")),
+                                    increment: Expr::value(number("1")),
                                 },
                             )),
                             order: None,
@@ -1613,7 +1708,8 @@ fn parse_create_table_with_identity_column() {
                 if_not_exists: false,
                 transient: false,
                 volatile: false,
-                name: ObjectName(vec![Ident {
+                iceberg: false,
+                name: ObjectName::from(vec![Ident {
                     value: "mytable".to_string(),
                     quote_style: None,
                     span: Span::empty(),
@@ -1625,7 +1721,7 @@ fn parse_create_table_with_identity_column() {
                         span: Span::empty(),
                     },
                     data_type: Int(None,),
-                    collation: None,
+
                     options: column_options,
                 },],
                 constraints: vec![],
@@ -1667,6 +1763,11 @@ fn parse_create_table_with_identity_column() {
                 with_aggregation_policy: None,
                 with_row_access_policy: None,
                 with_tags: None,
+                base_location: None,
+                external_volume: None,
+                catalog: None,
+                catalog_sync: None,
+                storage_serialization_policy: None,
             }),
         );
     }
@@ -1682,6 +1783,120 @@ fn parse_true_false_as_identifiers() {
         ms().verified_expr("false"),
         Expr::Identifier(Ident::new("false"))
     );
+}
+
+#[test]
+fn parse_mssql_set_session_value() {
+    ms().verified_stmt(
+        "SET OFFSETS SELECT, FROM, ORDER, TABLE, PROCEDURE, STATEMENT, PARAM, EXECUTE ON",
+    );
+    ms().verified_stmt("SET IDENTITY_INSERT dbo.Tool ON");
+    ms().verified_stmt("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
+    ms().verified_stmt("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+    ms().verified_stmt("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+    ms().verified_stmt("SET TRANSACTION ISOLATION LEVEL SNAPSHOT");
+    ms().verified_stmt("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+    ms().verified_stmt("SET STATISTICS IO ON");
+    ms().verified_stmt("SET STATISTICS XML ON");
+    ms().verified_stmt("SET STATISTICS PROFILE ON");
+    ms().verified_stmt("SET STATISTICS TIME ON");
+    ms().verified_stmt("SET DATEFIRST 7");
+    ms().verified_stmt("SET DATEFIRST @xxx");
+    ms().verified_stmt("SET DATEFIRST @@xxx");
+    ms().verified_stmt("SET DATEFORMAT dmy");
+    ms().verified_stmt("SET DATEFORMAT @datevar");
+    ms().verified_stmt("SET DATEFORMAT @@datevar");
+    ms().verified_stmt("SET DEADLOCK_PRIORITY 'LOW'");
+    ms().verified_stmt("SET DEADLOCK_PRIORITY LOW");
+    ms().verified_stmt("SET DEADLOCK_PRIORITY 8");
+    ms().verified_stmt("SET DEADLOCK_PRIORITY -8");
+    ms().verified_stmt("SET DEADLOCK_PRIORITY @xxx");
+    ms().verified_stmt("SET DEADLOCK_PRIORITY @@xxx");
+    ms().verified_stmt("SET LOCK_TIMEOUT 1800");
+    ms().verified_stmt("SET CONCAT_NULL_YIELDS_NULL ON");
+    ms().verified_stmt("SET CURSOR_CLOSE_ON_COMMIT ON");
+    ms().verified_stmt("SET FIPS_FLAGGER 'level'");
+    ms().verified_stmt("SET FIPS_FLAGGER OFF");
+    ms().verified_stmt("SET LANGUAGE Italian");
+    ms().verified_stmt("SET QUOTED_IDENTIFIER ON");
+    ms().verified_stmt("SET ARITHABORT ON");
+    ms().verified_stmt("SET ARITHIGNORE OFF");
+    ms().verified_stmt("SET FMTONLY ON");
+    ms().verified_stmt("SET NOCOUNT OFF");
+    ms().verified_stmt("SET NOEXEC ON");
+    ms().verified_stmt("SET NUMERIC_ROUNDABORT ON");
+    ms().verified_stmt("SET QUERY_GOVERNOR_COST_LIMIT 11");
+    ms().verified_stmt("SET ROWCOUNT 4");
+    ms().verified_stmt("SET ROWCOUNT @xxx");
+    ms().verified_stmt("SET ROWCOUNT @@xxx");
+    ms().verified_stmt("SET TEXTSIZE 11");
+    ms().verified_stmt("SET ANSI_DEFAULTS ON");
+    ms().verified_stmt("SET ANSI_NULL_DFLT_OFF ON");
+    ms().verified_stmt("SET ANSI_NULL_DFLT_ON ON");
+    ms().verified_stmt("SET ANSI_NULLS ON");
+    ms().verified_stmt("SET ANSI_PADDING ON");
+    ms().verified_stmt("SET ANSI_WARNINGS ON");
+    ms().verified_stmt("SET FORCEPLAN ON");
+    ms().verified_stmt("SET SHOWPLAN_ALL ON");
+    ms().verified_stmt("SET SHOWPLAN_TEXT ON");
+    ms().verified_stmt("SET SHOWPLAN_XML ON");
+    ms().verified_stmt("SET IMPLICIT_TRANSACTIONS ON");
+    ms().verified_stmt("SET REMOTE_PROC_TRANSACTIONS ON");
+    ms().verified_stmt("SET XACT_ABORT ON");
+    ms().verified_stmt("SET ANSI_NULLS, ANSI_PADDING ON");
+}
+
+#[test]
+fn parse_mssql_varbinary_max_length() {
+    let sql = "CREATE TABLE example (var_binary_col VARBINARY(MAX))";
+
+    match ms_and_generic().verified_stmt(sql) {
+        Statement::CreateTable(CreateTable { name, columns, .. }) => {
+            assert_eq!(
+                name,
+                ObjectName::from(vec![Ident {
+                    value: "example".to_string(),
+                    quote_style: None,
+                    span: Span::empty(),
+                }])
+            );
+            assert_eq!(
+                columns,
+                vec![ColumnDef {
+                    name: Ident::new("var_binary_col"),
+                    data_type: Varbinary(Some(BinaryLength::Max)),
+
+                    options: vec![]
+                },],
+            );
+        }
+        _ => unreachable!(),
+    }
+
+    let sql = "CREATE TABLE example (var_binary_col VARBINARY(50))";
+
+    match ms_and_generic().verified_stmt(sql) {
+        Statement::CreateTable(CreateTable { name, columns, .. }) => {
+            assert_eq!(
+                name,
+                ObjectName::from(vec![Ident {
+                    value: "example".to_string(),
+                    quote_style: None,
+                    span: Span::empty(),
+                }])
+            );
+            assert_eq!(
+                columns,
+                vec![ColumnDef {
+                    name: Ident::new("var_binary_col"),
+                    data_type: Varbinary(Some(BinaryLength::IntegerLength { length: 50 })),
+
+                    options: vec![]
+                },],
+            );
+        }
+        _ => unreachable!(),
+    }
 }
 
 fn ms() -> TestedDialects {

@@ -28,7 +28,7 @@ use super::super::dml::CreateTable;
 use crate::ast::{
     ClusteredBy, ColumnDef, CommentDef, Expr, FileFormat, HiveDistributionStyle, HiveFormat, Ident,
     ObjectName, OnCommit, OneOrManyWithParens, Query, RowAccessPolicy, SqlOption, Statement,
-    TableConstraint, TableEngine, Tag, WrappedCollection,
+    StorageSerializationPolicy, TableConstraint, TableEngine, Tag, WrappedCollection,
 };
 use crate::parser::ParserError;
 
@@ -42,12 +42,11 @@ use crate::parser::ParserError;
 /// ```rust
 /// use sqltk_parser::ast::helpers::stmt_create_table::CreateTableBuilder;
 /// use sqltk_parser::ast::{ColumnDef, DataType, Ident, ObjectName};
-/// let builder = CreateTableBuilder::new(ObjectName(vec![Ident::new("table_name")]))
+/// let builder = CreateTableBuilder::new(ObjectName::from(vec![Ident::new("table_name")]))
 ///    .if_not_exists(true)
 ///    .columns(vec![ColumnDef {
 ///        name: Ident::new("c1"),
 ///        data_type: DataType::Int(None),
-///        collation: None,
 ///        options: vec![],
 /// }]);
 /// // You can access internal elements with ease
@@ -71,6 +70,7 @@ pub struct CreateTableBuilder {
     pub if_not_exists: bool,
     pub transient: bool,
     pub volatile: bool,
+    pub iceberg: bool,
     pub name: ObjectName,
     pub columns: Vec<ColumnDef>,
     pub constraints: Vec<TableConstraint>,
@@ -107,6 +107,11 @@ pub struct CreateTableBuilder {
     pub with_aggregation_policy: Option<ObjectName>,
     pub with_row_access_policy: Option<RowAccessPolicy>,
     pub with_tags: Option<Vec<Tag>>,
+    pub base_location: Option<String>,
+    pub external_volume: Option<String>,
+    pub catalog: Option<String>,
+    pub catalog_sync: Option<String>,
+    pub storage_serialization_policy: Option<StorageSerializationPolicy>,
 }
 
 impl CreateTableBuilder {
@@ -119,6 +124,7 @@ impl CreateTableBuilder {
             if_not_exists: false,
             transient: false,
             volatile: false,
+            iceberg: false,
             name,
             columns: vec![],
             constraints: vec![],
@@ -155,6 +161,11 @@ impl CreateTableBuilder {
             with_aggregation_policy: None,
             with_row_access_policy: None,
             with_tags: None,
+            base_location: None,
+            external_volume: None,
+            catalog: None,
+            catalog_sync: None,
+            storage_serialization_policy: None,
         }
     }
     pub fn or_replace(mut self, or_replace: bool) -> Self {
@@ -189,6 +200,11 @@ impl CreateTableBuilder {
 
     pub fn volatile(mut self, volatile: bool) -> Self {
         self.volatile = volatile;
+        self
+    }
+
+    pub fn iceberg(mut self, iceberg: bool) -> Self {
+        self.iceberg = iceberg;
         self
     }
 
@@ -371,6 +387,34 @@ impl CreateTableBuilder {
         self
     }
 
+    pub fn base_location(mut self, base_location: Option<String>) -> Self {
+        self.base_location = base_location;
+        self
+    }
+
+    pub fn external_volume(mut self, external_volume: Option<String>) -> Self {
+        self.external_volume = external_volume;
+        self
+    }
+
+    pub fn catalog(mut self, catalog: Option<String>) -> Self {
+        self.catalog = catalog;
+        self
+    }
+
+    pub fn catalog_sync(mut self, catalog_sync: Option<String>) -> Self {
+        self.catalog_sync = catalog_sync;
+        self
+    }
+
+    pub fn storage_serialization_policy(
+        mut self,
+        storage_serialization_policy: Option<StorageSerializationPolicy>,
+    ) -> Self {
+        self.storage_serialization_policy = storage_serialization_policy;
+        self
+    }
+
     pub fn build(self) -> Statement {
         Statement::CreateTable(CreateTable {
             or_replace: self.or_replace,
@@ -380,6 +424,7 @@ impl CreateTableBuilder {
             if_not_exists: self.if_not_exists,
             transient: self.transient,
             volatile: self.volatile,
+            iceberg: self.iceberg,
             name: self.name,
             columns: self.columns,
             constraints: self.constraints,
@@ -416,6 +461,11 @@ impl CreateTableBuilder {
             with_aggregation_policy: self.with_aggregation_policy,
             with_row_access_policy: self.with_row_access_policy,
             with_tags: self.with_tags,
+            base_location: self.base_location,
+            external_volume: self.external_volume,
+            catalog: self.catalog,
+            catalog_sync: self.catalog_sync,
+            storage_serialization_policy: self.storage_serialization_policy,
         })
     }
 }
@@ -435,6 +485,7 @@ impl TryFrom<Statement> for CreateTableBuilder {
                 if_not_exists,
                 transient,
                 volatile,
+                iceberg,
                 name,
                 columns,
                 constraints,
@@ -471,6 +522,11 @@ impl TryFrom<Statement> for CreateTableBuilder {
                 with_aggregation_policy,
                 with_row_access_policy,
                 with_tags,
+                base_location,
+                external_volume,
+                catalog,
+                catalog_sync,
+                storage_serialization_policy,
             }) => Ok(Self {
                 or_replace,
                 temporary,
@@ -505,6 +561,7 @@ impl TryFrom<Statement> for CreateTableBuilder {
                 clustered_by,
                 options,
                 strict,
+                iceberg,
                 copy_grants,
                 enable_schema_evolution,
                 change_tracking,
@@ -515,6 +572,11 @@ impl TryFrom<Statement> for CreateTableBuilder {
                 with_row_access_policy,
                 with_tags,
                 volatile,
+                base_location,
+                external_volume,
+                catalog,
+                catalog_sync,
+                storage_serialization_policy,
             }),
             _ => Err(ParserError::ParserError(format!(
                 "Expected create table statement, but received: {stmt}"
@@ -539,7 +601,7 @@ mod tests {
 
     #[test]
     pub fn test_from_valid_statement() {
-        let builder = CreateTableBuilder::new(ObjectName(vec![Ident::new("table_name")]));
+        let builder = CreateTableBuilder::new(ObjectName::from(vec![Ident::new("table_name")]));
 
         let stmt = builder.clone().build();
 
@@ -548,7 +610,11 @@ mod tests {
 
     #[test]
     pub fn test_from_invalid_statement() {
-        let stmt = Statement::Commit { chain: false };
+        let stmt = Statement::Commit {
+            chain: false,
+            end: false,
+            modifier: None,
+        };
 
         assert_eq!(
             CreateTableBuilder::try_from(stmt).unwrap_err(),

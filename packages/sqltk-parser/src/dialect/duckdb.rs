@@ -65,6 +65,11 @@ impl Dialect for DuckDbDialect {
         true
     }
 
+    /// See <https://duckdb.org/docs/sql/functions/lambda.html>
+    fn supports_lambda_functions(&self) -> bool {
+        true
+    }
+
     // DuckDB is compatible with PostgreSQL syntax for this statement,
     // although not all features may be implemented.
     fn supports_explain_with_utility_options(&self) -> bool {
@@ -73,6 +78,20 @@ impl Dialect for DuckDbDialect {
 
     /// See DuckDB <https://duckdb.org/docs/sql/statements/load_and_install.html#load>
     fn supports_load_extension(&self) -> bool {
+        true
+    }
+
+    // See DuckDB <https://duckdb.org/docs/sql/data_types/array.html#defining-an-array-field>
+    fn supports_array_typedef_with_brackets(&self) -> bool {
+        true
+    }
+
+    fn supports_from_first_select(&self) -> bool {
+        true
+    }
+
+    /// See DuckDB <https://duckdb.org/docs/sql/query_syntax/orderby.html#order-by-all-examples>
+    fn supports_order_by_all(&self) -> bool {
         true
     }
 }

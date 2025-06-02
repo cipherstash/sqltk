@@ -53,7 +53,7 @@ println!("AST: {:?}", ast);
 This outputs
 
 ```rust
-AST: [Query(Query { ctes: [], body: Select(Select { distinct: false, projection: [UnnamedExpr(Identifier("a")), UnnamedExpr(Identifier("b")), UnnamedExpr(Value(Long(123))), UnnamedExpr(Function(Function { name: ObjectName(["myfunc"]), args: [Identifier("b")], filter: None, over: None, distinct: false }))], from: [TableWithJoins { relation: Table { name: ObjectName(["table_1"]), alias: None, args: [], with_hints: [] }, joins: [] }], selection: Some(BinaryOp { left: BinaryOp { left: Identifier("a"), op: Gt, right: Identifier("b") }, op: And, right: BinaryOp { left: Identifier("b"), op: Lt, right: Value(Long(100)) } }), group_by: [], having: None }), order_by: [OrderByExpr { expr: Identifier("a"), asc: Some(false) }, OrderByExpr { expr: Identifier("b"), asc: None }], limit: None, offset: None, fetch: None })]
+AST: [Query(Query { ctes: [], body: Select(Select { distinct: false, projection: [UnnamedExpr(Identifier("a")), UnnamedExpr(Identifier("b")), UnnamedExpr(Value(Long(123))), UnnamedExpr(Function(Function { name:ObjectName([Identifier(Ident { value: "myfunc", quote_style: None })]), args: [Identifier("b")], filter: None, over: None, distinct: false }))], from: [TableWithJoins { relation: Table { name: ObjectName([Identifier(Ident { value: "table_1", quote_style: None })]), alias: None, args: [], with_hints: [] }, joins: [] }], selection: Some(BinaryOp { left: BinaryOp { left: Identifier("a"), op: Gt, right: Identifier("b") }, op: And, right: BinaryOp { left: Identifier("b"), op: Lt, right: Value(Long(100)) } }), group_by: [], having: None }), order_by: [OrderByExpr { expr: Identifier("a"), asc: Some(false) }, OrderByExpr { expr: Identifier("b"), asc: None }], limit: None, offset: None, fetch: None })]
 ```
 
 
@@ -63,7 +63,7 @@ The following optional [crate  features](https://doc.rust-lang.org/cargo/referen
 
 * `serde`: Adds [Serde](https://serde.rs/) support by implementing  `Serialize` and `Deserialize` for all AST nodes.
 * `visitor`: Adds a `Visitor` capable of recursively walking the AST tree.
-
+* `recursive-protection` (enabled by default), uses [recursive](https://docs.rs/recursive/latest/recursive/) for stack overflow protection. 
 
 ## Syntax vs Semantics
 
@@ -240,10 +240,13 @@ You can run them with:
 ```
 git checkout main
 cd sqlparser_bench
-cargo bench
+cargo bench -- --save-baseline main
 git checkout <your branch>
-cargo bench
+cargo bench -- --baseline main
 ```
+
+By adding the `--save-baseline main` and `--baseline main` you can track the
+progress of your improvements as you continue working on the feature branch.
 
 ## Licensing
 

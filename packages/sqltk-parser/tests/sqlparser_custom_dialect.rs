@@ -41,7 +41,7 @@ fn custom_prefix_parser() -> Result<(), ParserError> {
 
         fn parse_prefix(&self, parser: &mut Parser) -> Option<Result<Expr, ParserError>> {
             if parser.consume_token(&Token::Number("1".to_string(), false)) {
-                Some(Ok(Expr::Value(Value::Null)))
+                Some(Ok(Expr::Value(Value::Null.with_empty_span())))
             } else {
                 None
             }
@@ -115,7 +115,11 @@ fn custom_statement_parser() -> Result<(), ParserError> {
                 for _ in 0..3 {
                     let _ = parser.next_token();
                 }
-                Some(Ok(Statement::Commit { chain: false }))
+                Some(Ok(Statement::Commit {
+                    chain: false,
+                    end: false,
+                    modifier: None,
+                }))
             } else {
                 None
             }

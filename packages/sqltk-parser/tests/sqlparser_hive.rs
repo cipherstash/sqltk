@@ -23,8 +23,8 @@
 use sqltk_parser::ast::{
     ClusteredBy, CommentDef, CreateFunction, CreateFunctionBody, CreateFunctionUsing, CreateTable,
     Expr, Function, FunctionArgumentList, FunctionArguments, Ident, ObjectName,
-    OneOrManyWithParens, OrderByExpr, SelectItem, Statement, TableFactor, UnaryOperator, Use,
-    Value,
+    OneOrManyWithParens, OrderByExpr, OrderByOptions, SelectItem, Statement, TableFactor,
+    UnaryOperator, Use, Value,
 };
 use sqltk_parser::dialect::{GenericDialect, HiveDialect, MsSqlDialect};
 use sqltk_parser::parser::ParserError;
@@ -171,14 +171,18 @@ fn create_table_with_clustered_by() {
                     sorted_by: Some(vec![
                         OrderByExpr {
                             expr: Expr::Identifier(Ident::new("a")),
-                            asc: Some(true),
-                            nulls_first: None,
+                            options: OrderByOptions {
+                                asc: Some(true),
+                                nulls_first: None,
+                            },
                             with_fill: None,
                         },
                         OrderByExpr {
                             expr: Expr::Identifier(Ident::new("b")),
-                            asc: Some(false),
-                            nulls_first: None,
+                            options: OrderByOptions {
+                                asc: Some(false),
+                                nulls_first: None,
+                            },
                             with_fill: None,
                         },
                     ]),
@@ -368,7 +372,7 @@ fn set_statement_with_minus() {
         Statement::SetVariable {
             local: false,
             hivevar: false,
-            variables: OneOrManyWithParens::One(ObjectName(vec![
+            variables: OneOrManyWithParens::One(ObjectName::from(vec![
                 Ident::new("hive"),
                 Ident::new("tez"),
                 Ident::new("java"),
@@ -405,7 +409,8 @@ fn parse_create_function() {
             assert_eq!(
                 function_body,
                 Some(CreateFunctionBody::AsBeforeOptions(Expr::Value(
-                    Value::SingleQuotedString("org.random.class.Name".to_string())
+                    (Value::SingleQuotedString("org.random.class.Name".to_string()))
+                        .with_empty_span()
                 )))
             );
             assert_eq!(
@@ -459,8 +464,13 @@ fn parse_delimited_identifiers() {
             with_ordinality: _,
             partitions: _,
             json_path: _,
+            sample: _,
+            index_hints: _,
         } => {
-            assert_eq!(vec![Ident::with_quote('"', "a table")], name.0);
+            assert_eq!(
+                ObjectName::from(vec![Ident::with_quote('"', "a table")]),
+                name
+            );
             assert_eq!(Ident::with_quote('"', "alias"), alias.unwrap().name);
             assert!(args.is_none());
             assert!(with_hints.is_empty());
@@ -479,7 +489,7 @@ fn parse_delimited_identifiers() {
     );
     assert_eq!(
         &Expr::Function(Function {
-            name: ObjectName(vec![Ident::with_quote('"', "myfun")]),
+            name: ObjectName::from(vec![Ident::with_quote('"', "myfun")]),
             uses_odbc_syntax: false,
             parameters: FunctionArguments::None,
             args: FunctionArguments::List(FunctionArgumentList {
@@ -515,7 +525,7 @@ fn parse_use() {
         // Test single identifier without quotes
         assert_eq!(
             hive().verified_stmt(&format!("USE {}", object_name)),
-            Statement::Use(Use::Object(ObjectName(vec![Ident::new(
+            Statement::Use(Use::Object(ObjectName::from(vec![Ident::new(
                 object_name.to_string()
             )])))
         );
@@ -523,7 +533,7 @@ fn parse_use() {
             // Test single identifier with different type of quotes
             assert_eq!(
                 hive().verified_stmt(&format!("USE {}{}{}", quote, object_name, quote)),
-                Statement::Use(Use::Object(ObjectName(vec![Ident::with_quote(
+                Statement::Use(Use::Object(ObjectName::from(vec![Ident::with_quote(
                     quote,
                     object_name.to_string(),
                 )])))
@@ -535,6 +545,15 @@ fn parse_use() {
         hive().verified_stmt("USE DEFAULT"),
         Statement::Use(Use::Default)
     );
+}
+
+#[test]
+fn test_tample_sample() {
+    hive().verified_stmt("SELECT * FROM source TABLESAMPLE (BUCKET 3 OUT OF 32 ON rand()) AS s");
+    hive().verified_stmt("SELECT * FROM source TABLESAMPLE (BUCKET 3 OUT OF 16 ON id)");
+    hive().verified_stmt("SELECT * FROM source TABLESAMPLE (100M) AS s");
+    hive().verified_stmt("SELECT * FROM source TABLESAMPLE (0.1 PERCENT) AS s");
+    hive().verified_stmt("SELECT * FROM source TABLESAMPLE (10 ROWS)");
 }
 
 fn hive() -> TestedDialects {

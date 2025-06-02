@@ -23,6 +23,7 @@
 mod test_utils;
 use test_utils::*;
 
+use sqltk_parser::ast::*;
 use sqltk_parser::dialect::PostgreSqlDialect;
 
 // Helpers
@@ -35,7 +36,7 @@ fn pg() -> TestedDialects {
 
 // TODO: Uncomment this when resolved. Not *directly* relevant to the LOCK TABLE
 //       work, but still valid SQL we should support.
-//       See sqlparser_postgres.rs:2969 for the definition of pg_and_generic().
+//       See sqltk_parser_postgres.rs:2969 for the definition of pg_and_generic().
 //#[test]
 //fn parse_select_without_projection() {
 //    pg_and_generic().verified_stmt("SELECT FROM users");
@@ -66,4 +67,34 @@ fn parse_lock_table() {
     pg().verified_stmt("LOCK TABLE ONLY customers, orders IN EXCLUSIVE MODE");
     pg().verified_stmt("LOCK TABLE ONLY customers, orders IN ACCESS EXCLUSIVE MODE");
     pg().verified_stmt("LOCK TABLE ONLY customers, orders IN ACCESS SHARE MODE NOWAIT");
+}
+
+#[test]
+fn parse_arbitrary_operator_with_any_and_all() {
+    // The following statement is semantically non-sensical on vanilla postgres but it should *parse* in order to
+    // support situations where PG operators have been overloaded.
+    let select = pg().verified_only_select("SELECT 123 % ANY(ARRAY[1, 2, 3])");
+    assert!(
+        matches!(
+            select.projection[0],
+            SelectItem::UnnamedExpr(Expr::AnyOp {
+                left: _,
+                compare_op: BinaryOperator::Modulo,
+                right: _,
+                is_some: false
+            })
+        )
+    );
+
+    let select = pg().verified_only_select("SELECT 123 % ALL(ARRAY[1, 2, 3])");
+    assert!(
+        matches!(
+            select.projection[0],
+            SelectItem::UnnamedExpr(Expr::AllOp {
+                left: _,
+                compare_op: BinaryOperator::Modulo,
+                right: _,
+            })
+        )
+    );
 }
