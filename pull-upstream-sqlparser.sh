@@ -9,6 +9,80 @@
 #
 # Usage: pull-upstream-sqlparser.sh <VERSION>
 
+#
+# An explainer for why this script exists:
+# - sqltk-parser is a git-subtree'd version of the aforementioned sqlparser.
+#   - sqltk-parser has enough differences in deep enough places in sqlparser that
+#     we cannot simply wrap it and re-export it, eg.
+#     - We have a LOCK TABLES edit (8acdf5acd95df) that changes the Statement and
+#       LockTableType enums, and extends the PostgreSqlDialect Dialect impl.
+#     - We have an ANY/ALL edit (b6c89b9a32a46) in the core parser.
+#   - We must rename the crate from sqlparser, to avoid conflicts.
+#   - We cannot use git submodules, as we are renaming the library, which
+#     involves changing the library name in Cargo.toml *and* the sqlparser and
+#     sqlparser-related names/symbols everywhere within the library.
+#   - We want to preserve the history of upstream and our edits, instead of
+#     squashing all the former into single massive commits.
+# - As such, we need a less laborious way to:
+#   - Use 'git subtree pull' to bring in new changes from a particular release upstream.
+#   - Ignore conflicts, always choosing upstream's version, as the alternative
+#     is a storm of trivial symbol-renaming edits. This comes at the cost of
+#     losing sqltk-parser changes that conflict with upstream, and extra work to
+#     re-apply them. It is difficult to make upgrades easy *and* provide an easy
+#     facility for working through more selective conflicts.
+#   - Automatically re-apply all the symbol renames.
+#   - Regenerate the sqltk impls, run cargo test, etc, to make sure everything is okay.
+# - ... But unfortunately, reapplying changes+fixes is very manual. (See below.)
+#
+# How this script is typically used:
+# - Create a new branch off latest main for the upgrade.
+# - Run the script; it will do its thing, and then prompt and wait for you to
+#   resolve problems in another terminal session.
+# - It will very likely prompt you with non-.rs conflicts; these will
+#   basically always be in `packages/sqltk-parser/Cargo.toml`.
+#   - Edit it, and reapply the version suffix to representing the fact that
+#     we're making a follows-upstream-with-some-changes fork (eg. "0.55.0-cipherstash.1").
+#   - You will *also* need to edit `packages/sqltk/Cargo.toml`, to point sqltk to
+#     sqltk-parser's new version.
+#   - 'git add' both of these.
+# - You may get as far as it compiling, or running tests correctly, but you
+#   likely won't. You're probably going to need to re-apply some changes manually
+#   to make the ..._cipherstash.rs regression tests happy.
+#   - After checking that the conflicts have been resolved at least (even if
+#     the resulting code is broken), run `git merge --continue` to at least save
+#     the above work.
+#   - Now comes the part that can be a little laborious.
+#     - For each of these commits:
+#       - 8acdf5acd95df9b0 (LOCK TABLES support, with edits for v0.55.0 compatibility)
+#       - b6c89b9a32a466cb (ANY/ALL for Postgres)
+#     - ... run:
+#       - git diff COMMIT^..COMMIT > COMMIT.diff # (where COMMIT is the SHA hash above.)
+#       - git apply --reject COMMIT.diff
+#         - This attempts to apply the commit. It might have some rejected parts
+#           of the diff, and will leave a small pile of .rej files; use "git status"
+#           to see the list.
+#         - Manually apply each of the rejected parts of the diffs.
+#       - When you've finished with applying the commit, git add + commit your
+#         work as normal, and move onto the next in the list.
+# - After it's compiling and the tests are passing, make a PR, get it reviewed
+#   and merged. You will need to bypass the branch protection, as the history
+#   will contain a lot of unverified commits (ie. the sqlparser history pulled in).
+# - TODO: cargo publish
+#
+# TODO: Some of the above 'as typically used' warnings and instructions need to
+#       be moved into the script itself, and/or the script altered to remove as
+#       many of these footguns as possible.
+#
+# General words of warning:
+# - Once you run this script/do the git subtree + conflict resolution, you
+#   will not be able to rebase the branch off `main` without needing to restart
+#   the entire upgrade process. git subtree is, particularly in its
+#   history-preserving no-squash mode, very rebase-unfriendly.
+# - Make sure any regression tests have a `_cipherstash.rs` suffix; this way
+#   they will stick around even during the above accept-theirs conflict
+#   resolution process, and make sure we reapply our sqltk-parser changes.
+#
+
 set -eEu
 
 ### Preconditions
@@ -141,7 +215,7 @@ while true; do
 done
 
 #
-# 4. delete sqlparser's .github directory (for build hygiene reasons)
+# 4. Delete sqlparser's .github directory (for build hygiene reasons).
 #
 SQLPARSER_GITHUB_DIR="${SQLTK_PARSER_PATH}/.github"
 if [ -d "$SQLPARSER_GITHUB_DIR}" ]; then
@@ -186,9 +260,13 @@ info "'git add'-ing Cargo.lock"
 info "Running cargo test..."
 while ! cargo test; do
   error "Please resolve the above error and hit enter to try again."
+  infops "You may need to 'git merge --continue', then add subsequent commits."
   read -r PROMPT
 done
 
-# 7. PROFIT! - um - push a new PR to `sqltk` after testing a local build with Proxy.
-info "Everything seems to be in order. After reviewing the 'git diff', please run:"
+# 7. Finish up. Prompt to push a new PR to `sqltk` after testing a local build with Proxy.
+info "Everything seems to be in order. If a git merge conflict is still in progress, after reviewing the 'git diff', please run:"
 infops "  git merge --continue"
+infops "Next (manual) steps after this:"
+infops "- Test this branch with Proxy."
+infops "- Create a PR with this branch as you usually would."

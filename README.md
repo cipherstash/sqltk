@@ -69,6 +69,12 @@ You will need to do this whenever:
 - You are updating sqltk-parser from [upstream](https://github.com/apache/datafusion-sqlparser-rs), and
 - Any AST handling in sqltk-parser has changed
 
+## `sqltk-parser`
+
+As noted below, `sqltk-parser` is a soft fork of `sqlparser` (now an Apache project as [datafusion-sqlparser-rs](https://github.com/apache/datafusion-sqlparser-rs)).
+
+If you are a developer on the sqltk project, the `pull-upstream-sqlparser.sh` script (with inline documentation) can assist in pulling in updates from this upstream library.
+
 ## About
 
 `sqltk` is maintained by CipherStash and is a core component of [Proxy](https://cipherstash.com/products/cipherstash-proxy), our encryption-in-use database proxy.
