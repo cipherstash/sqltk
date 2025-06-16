@@ -22,20 +22,22 @@ use crate::tokenizer::Span;
 
 use super::{
     dcl::SecondaryRoles, value::ValueWithSpan, AccessExpr, AlterColumnOperation,
-    AlterIndexOperation, AlterTableOperation, Array, Assignment, AssignmentTarget, CloseCursor,
-    ClusteredIndex, ColumnDef, ColumnOption, ColumnOptionDef, ConflictTarget, ConnectBy,
+    AlterIndexOperation, AlterTableOperation, Array, Assignment, AssignmentTarget, AttachedToken,
+    BeginEndStatements, CaseStatement, CloseCursor, ClusteredIndex, ColumnDef, ColumnOption,
+    ColumnOptionDef, ConditionalStatementBlock, ConditionalStatements, ConflictTarget, ConnectBy,
     ConstraintCharacteristics, CopySource, CreateIndex, CreateTable, CreateTableOptions, Cte,
     Delete, DoUpdate, ExceptSelectItem, ExcludeSelectItem, Expr, ExprWithAlias, Fetch, FromTable,
     Function, FunctionArg, FunctionArgExpr, FunctionArgumentClause, FunctionArgumentList,
-    FunctionArguments, GroupByExpr, HavingBound, IlikeSelectItem, Insert, Interpolate,
+    FunctionArguments, GroupByExpr, HavingBound, IfStatement, IlikeSelectItem, Insert, Interpolate,
     InterpolateExpr, Join, JoinConstraint, JoinOperator, JsonPath, JsonPathElem, LateralView,
-    MatchRecognizePattern, Measure, NamedWindowDefinition, ObjectName, ObjectNamePart, Offset,
-    OnConflict, OnConflictAction, OnInsert, OrderBy, OrderByExpr, OrderByKind, Partition,
-    PivotValueSource, ProjectionSelect, Query, ReferentialAction, RenameSelectItem,
-    ReplaceSelectElement, ReplaceSelectItem, Select, SelectInto, SelectItem, SetExpr, SqlOption,
-    Statement, Subscript, SymbolDefinition, TableAlias, TableAliasColumnDef, TableConstraint,
-    TableFactor, TableObject, TableOptionsClustered, TableWithJoins, UpdateTableFromKind, Use,
-    Value, Values, ViewColumnDef, WildcardAdditionalOptions, With, WithFill,
+    LimitClause, MatchRecognizePattern, Measure, NamedParenthesizedList, NamedWindowDefinition,
+    ObjectName, ObjectNamePart, Offset, OnConflict, OnConflictAction, OnInsert, OpenStatement,
+    OrderBy, OrderByExpr, OrderByKind, Partition, PivotValueSource, ProjectionSelect, Query,
+    RaiseStatement, RaiseStatementValue, ReferentialAction, RenameSelectItem, ReplaceSelectElement,
+    ReplaceSelectItem, Select, SelectInto, SelectItem, SetExpr, SqlOption, Statement, Subscript,
+    SymbolDefinition, TableAlias, TableAliasColumnDef, TableConstraint, TableFactor, TableObject,
+    TableOptionsClustered, TableWithJoins, UpdateTableFromKind, Use, Value, Values, ViewColumnDef,
+    WhileStatement, WildcardAdditionalOptions, With, WithFill,
 };
 
 /// Given an iterator of spans, return the [Span::union] of all spans.
@@ -94,14 +96,13 @@ impl Spanned for Query {
             with,
             body,
             order_by,
-            limit,
-            limit_by,
-            offset,
+            limit_clause,
             fetch,
-            locks: _,         // todo
-            for_clause: _,    // todo, mssql specific
-            settings: _,      // todo, clickhouse specific
-            format_clause: _, // todo, clickhouse specific
+            locks: _,          // todo
+            for_clause: _,     // todo, mssql specific
+            settings: _,       // todo, clickhouse specific
+            format_clause: _,  // todo, clickhouse specific
+            pipe_operators: _, // todo bigquery specific
         } = self;
 
         union_spans(
@@ -109,11 +110,28 @@ impl Spanned for Query {
                 .map(|i| i.span())
                 .chain(core::iter::once(body.span()))
                 .chain(order_by.as_ref().map(|i| i.span()))
-                .chain(limit.as_ref().map(|i| i.span()))
-                .chain(limit_by.iter().map(|i| i.span()))
-                .chain(offset.as_ref().map(|i| i.span()))
+                .chain(limit_clause.as_ref().map(|i| i.span()))
                 .chain(fetch.as_ref().map(|i| i.span())),
         )
+    }
+}
+
+impl Spanned for LimitClause {
+    fn span(&self) -> Span {
+        match self {
+            LimitClause::LimitOffset {
+                limit,
+                offset,
+                limit_by,
+            } => union_spans(
+                limit
+                    .iter()
+                    .map(|i| i.span())
+                    .chain(offset.as_ref().map(|i| i.span()))
+                    .chain(limit_by.iter().map(|i| i.span())),
+            ),
+            LimitClause::OffsetCommaLimit { offset, limit } => offset.span().union(&limit.span()),
+        }
     }
 }
 
@@ -191,6 +209,7 @@ impl Spanned for SetExpr {
             SetExpr::Insert(statement) => statement.span(),
             SetExpr::Table(_) => Span::empty(),
             SetExpr::Update(statement) => statement.span(),
+            SetExpr::Delete(statement) => statement.span(),
         }
     }
 }
@@ -229,11 +248,7 @@ impl Spanned for Values {
 /// - [Statement::Fetch]
 /// - [Statement::Flush]
 /// - [Statement::Discard]
-/// - [Statement::SetRole]
-/// - [Statement::SetVariable]
-/// - [Statement::SetTimeZone]
-/// - [Statement::SetNames]
-/// - [Statement::SetNamesDefault]
+/// - [Statement::Set]
 /// - [Statement::ShowFunctions]
 /// - [Statement::ShowVariable]
 /// - [Statement::ShowStatus]
@@ -243,7 +258,6 @@ impl Spanned for Values {
 /// - [Statement::ShowTables]
 /// - [Statement::ShowCollation]
 /// - [Statement::StartTransaction]
-/// - [Statement::SetTransaction]
 /// - [Statement::Comment]
 /// - [Statement::Commit]
 /// - [Statement::Rollback]
@@ -323,6 +337,10 @@ impl Spanned for Statement {
                 file_format: _,
                 source,
             } => source.span(),
+            Statement::Case(stmt) => stmt.span(),
+            Statement::If(stmt) => stmt.span(),
+            Statement::While(stmt) => stmt.span(),
+            Statement::Raise(stmt) => stmt.span(),
             Statement::Call(function) => function.span(),
             Statement::Copy {
                 source,
@@ -334,6 +352,7 @@ impl Spanned for Statement {
             } => source.span(),
             Statement::CopyIntoSnowflake {
                 into: _,
+                into_columns: _,
                 from_obj: _,
                 from_obj_alias: _,
                 stage_params: _,
@@ -347,6 +366,7 @@ impl Spanned for Statement {
                 from_query: _,
                 partition: _,
             } => Span::empty(),
+            Statement::Open(open) => open.span(),
             Statement::Close { cursor } => match cursor {
                 CloseCursor::All => Span::empty(),
                 CloseCursor::Specific { name } => name.span,
@@ -367,6 +387,7 @@ impl Spanned for Statement {
             ),
             Statement::Delete(delete) => delete.span(),
             Statement::CreateView {
+                or_alter: _,
                 or_replace: _,
                 materialized: _,
                 name,
@@ -436,6 +457,7 @@ impl Spanned for Statement {
             Statement::DetachDuckDBDatabase { .. } => Span::empty(),
             Statement::Drop { .. } => Span::empty(),
             Statement::DropFunction { .. } => Span::empty(),
+            Statement::DropDomain { .. } => Span::empty(),
             Statement::DropProcedure { .. } => Span::empty(),
             Statement::DropSecret { .. } => Span::empty(),
             Statement::Declare { .. } => Span::empty(),
@@ -444,11 +466,7 @@ impl Spanned for Statement {
             Statement::Fetch { .. } => Span::empty(),
             Statement::Flush { .. } => Span::empty(),
             Statement::Discard { .. } => Span::empty(),
-            Statement::SetRole { .. } => Span::empty(),
-            Statement::SetVariable { .. } => Span::empty(),
-            Statement::SetTimeZone { .. } => Span::empty(),
-            Statement::SetNames { .. } => Span::empty(),
-            Statement::SetNamesDefault {} => Span::empty(),
+            Statement::Set(_) => Span::empty(),
             Statement::ShowFunctions { .. } => Span::empty(),
             Statement::ShowVariable { .. } => Span::empty(),
             Statement::ShowStatus { .. } => Span::empty(),
@@ -459,13 +477,13 @@ impl Spanned for Statement {
             Statement::ShowCollation { .. } => Span::empty(),
             Statement::Use(u) => u.span(),
             Statement::StartTransaction { .. } => Span::empty(),
-            Statement::SetTransaction { .. } => Span::empty(),
             Statement::Comment { .. } => Span::empty(),
             Statement::Commit { .. } => Span::empty(),
             Statement::Rollback { .. } => Span::empty(),
             Statement::CreateSchema { .. } => Span::empty(),
             Statement::CreateDatabase { .. } => Span::empty(),
             Statement::CreateFunction { .. } => Span::empty(),
+            Statement::CreateDomain { .. } => Span::empty(),
             Statement::CreateTrigger { .. } => Span::empty(),
             Statement::DropTrigger { .. } => Span::empty(),
             Statement::CreateProcedure { .. } => Span::empty(),
@@ -507,8 +525,9 @@ impl Spanned for Statement {
             Statement::UNLISTEN { .. } => Span::empty(),
             Statement::RenameTable { .. } => Span::empty(),
             Statement::RaisError { .. } => Span::empty(),
+            Statement::Print { .. } => Span::empty(),
+            Statement::Return { .. } => Span::empty(),
             Statement::List(..) | Statement::Remove(..) => Span::empty(),
-            Statement::SetSessionParam { .. } => Span::empty(),
         }
     }
 }
@@ -549,27 +568,21 @@ impl Spanned for CreateTable {
             constraints,
             hive_distribution: _, // hive specific
             hive_formats: _,      // hive specific
-            table_properties,
-            with_options,
-            file_format: _, // enum
-            location: _,    // string, no span
+            file_format: _,       // enum
+            location: _,          // string, no span
             query,
             without_rowid: _, // bool
             like,
             clone,
-            engine: _,                          // todo
-            comment: _,                         // todo, no span
-            auto_increment_offset: _,           // u32, no span
-            default_charset: _,                 // string, no span
-            collation: _,                       // string, no span
-            on_commit: _,                       // enum
+            comment: _, // todo, no span
+            on_commit: _,
             on_cluster: _,                      // todo, clickhouse specific
             primary_key: _,                     // todo, clickhouse specific
             order_by: _,                        // todo, clickhouse specific
             partition_by: _,                    // todo, BigQuery specific
             cluster_by: _,                      // todo, BigQuery specific
             clustered_by: _,                    // todo, Hive specific
-            options: _,                         // todo, BigQuery specific
+            inherits: _,                        // todo, PostgreSQL specific
             strict: _,                          // bool
             copy_grants: _,                     // bool
             enable_schema_evolution: _,         // bool
@@ -584,15 +597,15 @@ impl Spanned for CreateTable {
             base_location: _,                   // todo, Snowflake specific
             catalog: _,                         // todo, Snowflake specific
             catalog_sync: _,                    // todo, Snowflake specific
-            storage_serialization_policy: _,    // todo, Snowflake specific
+            storage_serialization_policy: _,
+            table_options,
         } = self;
 
         union_spans(
             core::iter::once(name.span())
+                .chain(core::iter::once(table_options.span()))
                 .chain(columns.iter().map(|i| i.span()))
                 .chain(constraints.iter().map(|i| i.span()))
-                .chain(table_properties.iter().map(|i| i.span()))
-                .chain(with_options.iter().map(|i| i.span()))
                 .chain(query.iter().map(|i| i.span()))
                 .chain(like.iter().map(|i| i.span()))
                 .chain(clone.iter().map(|i| i.span())),
@@ -704,7 +717,7 @@ impl Spanned for CreateIndex {
         let CreateIndex {
             name,
             table_name,
-            using,
+            using: _,
             columns,
             unique: _,        // bool
             concurrently: _,  // bool
@@ -719,12 +732,97 @@ impl Spanned for CreateIndex {
             name.iter()
                 .map(|i| i.span())
                 .chain(core::iter::once(table_name.span()))
-                .chain(using.iter().map(|i| i.span))
-                .chain(columns.iter().map(|i| i.span()))
+                .chain(columns.iter().map(|i| i.column.span()))
                 .chain(include.iter().map(|i| i.span))
                 .chain(with.iter().map(|i| i.span()))
                 .chain(predicate.iter().map(|i| i.span())),
         )
+    }
+}
+
+impl Spanned for CaseStatement {
+    fn span(&self) -> Span {
+        let CaseStatement {
+            case_token: AttachedToken(start),
+            match_expr: _,
+            when_blocks: _,
+            else_block: _,
+            end_case_token: AttachedToken(end),
+        } = self;
+
+        union_spans([start.span, end.span].into_iter())
+    }
+}
+
+impl Spanned for IfStatement {
+    fn span(&self) -> Span {
+        let IfStatement {
+            if_block,
+            elseif_blocks,
+            else_block,
+            end_token,
+        } = self;
+
+        union_spans(
+            iter::once(if_block.span())
+                .chain(elseif_blocks.iter().map(|b| b.span()))
+                .chain(else_block.as_ref().map(|b| b.span()))
+                .chain(end_token.as_ref().map(|AttachedToken(t)| t.span)),
+        )
+    }
+}
+
+impl Spanned for WhileStatement {
+    fn span(&self) -> Span {
+        let WhileStatement { while_block } = self;
+
+        while_block.span()
+    }
+}
+
+impl Spanned for ConditionalStatements {
+    fn span(&self) -> Span {
+        match self {
+            ConditionalStatements::Sequence { statements } => {
+                union_spans(statements.iter().map(|s| s.span()))
+            }
+            ConditionalStatements::BeginEnd(bes) => bes.span(),
+        }
+    }
+}
+
+impl Spanned for ConditionalStatementBlock {
+    fn span(&self) -> Span {
+        let ConditionalStatementBlock {
+            start_token: AttachedToken(start_token),
+            condition,
+            then_token,
+            conditional_statements,
+        } = self;
+
+        union_spans(
+            iter::once(start_token.span)
+                .chain(condition.as_ref().map(|c| c.span()))
+                .chain(then_token.as_ref().map(|AttachedToken(t)| t.span))
+                .chain(iter::once(conditional_statements.span())),
+        )
+    }
+}
+
+impl Spanned for RaiseStatement {
+    fn span(&self) -> Span {
+        let RaiseStatement { value } = self;
+
+        union_spans(value.iter().map(|value| value.span()))
+    }
+}
+
+impl Spanned for RaiseStatementValue {
+    fn span(&self) -> Span {
+        match self {
+            RaiseStatementValue::UsingMessage(expr) => expr.span(),
+            RaiseStatementValue::Expr(expr) => expr.span(),
+        }
     }
 }
 
@@ -900,6 +998,14 @@ impl Spanned for SqlOption {
             } => union_spans(
                 core::iter::once(column_name.span).chain(for_values.iter().map(|i| i.span())),
             ),
+            SqlOption::TableSpace(_) => Span::empty(),
+            SqlOption::Comment(_) => Span::empty(),
+            SqlOption::NamedParenthesizedList(NamedParenthesizedList {
+                key: name,
+                name: value,
+                values,
+            }) => union_spans(core::iter::once(name.span).chain(values.iter().map(|i| i.span)))
+                .union_opt(&value.as_ref().map(|i| i.span)),
         }
     }
 }
@@ -937,6 +1043,8 @@ impl Spanned for CreateTableOptions {
             CreateTableOptions::None => Span::empty(),
             CreateTableOptions::With(vec) => union_spans(vec.iter().map(|i| i.span())),
             CreateTableOptions::Options(vec) => union_spans(vec.iter().map(|i| i.span())),
+            CreateTableOptions::Plain(vec) => union_spans(vec.iter().map(|i| i.span())),
+            CreateTableOptions::TableProperties(vec) => union_spans(vec.iter().map(|i| i.span())),
         }
     }
 }
@@ -999,6 +1107,7 @@ impl Spanned for AlterTableOperation {
                 .span()
                 .union_opt(&with_name.as_ref().map(|n| n.span)),
             AlterTableOperation::DropPrimaryKey => Span::empty(),
+            AlterTableOperation::DropForeignKey { name } => name.span,
             AlterTableOperation::EnableAlwaysRule { name } => name.span,
             AlterTableOperation::EnableAlwaysTrigger { name } => name.span,
             AlterTableOperation::EnableReplicaRule { name } => name.span,
@@ -1064,6 +1173,7 @@ impl Spanned for AlterTableOperation {
             AlterTableOperation::ResumeRecluster => Span::empty(),
             AlterTableOperation::Algorithm { .. } => Span::empty(),
             AlterTableOperation::AutoIncrement { value, .. } => value.span(),
+            AlterTableOperation::Lock { .. } => Span::empty(),
         }
     }
 }
@@ -1429,6 +1539,7 @@ impl Spanned for Expr {
                 substring_from,
                 substring_for,
                 special: _,
+                shorthand: _,
             } => union_spans(
                 core::iter::once(expr.span())
                     .chain(substring_from.as_ref().map(|i| i.span()))
@@ -1448,7 +1559,7 @@ impl Spanned for Expr {
                             .map(|items| union_spans(items.iter().map(|i| i.span()))),
                     ),
             ),
-            Expr::IntroducedString { value, .. } => value.span(),
+            Expr::Prefixed { value, .. } => value.span(),
             Expr::Case {
                 operand,
                 conditions,
@@ -1812,6 +1923,7 @@ impl Spanned for TableFactor {
                     .chain(alias.as_ref().map(|alias| alias.span())),
             ),
             TableFactor::JsonTable { .. } => Span::empty(),
+            TableFactor::XmlTable { .. } => Span::empty(),
             TableFactor::Pivot {
                 table,
                 aggregate_functions,
@@ -2034,6 +2146,7 @@ impl Spanned for JoinOperator {
             } => match_condition.span().union(&constraint.span()),
             JoinOperator::Anti(join_constraint) => join_constraint.span(),
             JoinOperator::Semi(join_constraint) => join_constraint.span(),
+            JoinOperator::StraightJoin(join_constraint) => join_constraint.span(),
         }
     }
 }
@@ -2180,6 +2293,28 @@ impl Spanned for TableObject {
             }
             TableObject::TableFunction(func) => func.span(),
         }
+    }
+}
+
+impl Spanned for BeginEndStatements {
+    fn span(&self) -> Span {
+        let BeginEndStatements {
+            begin_token,
+            statements,
+            end_token,
+        } = self;
+        union_spans(
+            core::iter::once(begin_token.0.span)
+                .chain(statements.iter().map(|i| i.span()))
+                .chain(core::iter::once(end_token.0.span)),
+        )
+    }
+}
+
+impl Spanned for OpenStatement {
+    fn span(&self) -> Span {
+        let OpenStatement { cursor_name } = self;
+        cursor_name.span
     }
 }
 

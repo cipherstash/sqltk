@@ -201,6 +201,33 @@ pub trait Dialect: Debug + Any {
         false
     }
 
+    /// Determine whether the dialect strips the backslash when escaping LIKE wildcards (%, _).
+    ///
+    /// [MySQL] has a special case when escaping single quoted strings which leaves these unescaped
+    /// so they can be used in LIKE patterns without double-escaping (as is necessary in other
+    /// escaping dialects, such as [Snowflake]). Generally, special characters have escaping rules
+    /// causing them to be replaced with a different byte sequences (e.g. `'\0'` becoming the zero
+    /// byte), and the default if an escaped character does not have a specific escaping rule is to
+    /// strip the backslash (e.g. there is no rule for `h`, so `'\h' = 'h'`). MySQL's special case
+    /// for ignoring LIKE wildcard escapes is to *not* strip the backslash, so that `'\%' = '\\%'`.
+    /// This applies to all string literals though, not just those used in LIKE patterns.
+    ///
+    /// ```text
+    /// mysql> select '\_', hex('\\'), hex('_'), hex('\_');
+    /// +----+-----------+----------+-----------+
+    /// | \_ | hex('\\') | hex('_') | hex('\_') |
+    /// +----+-----------+----------+-----------+
+    /// | \_ | 5C        | 5F       | 5C5F      |
+    /// +----+-----------+----------+-----------+
+    /// 1 row in set (0.00 sec)
+    /// ```
+    ///
+    /// [MySQL]: https://dev.mysql.com/doc/refman/8.4/en/string-literals.html
+    /// [Snowflake]: https://docs.snowflake.com/en/sql-reference/functions/like#usage-notes
+    fn ignores_wildcard_escapes(&self) -> bool {
+        false
+    }
+
     /// Determine if the dialect supports string literals with `U&` prefix.
     /// This is used to specify Unicode code points in string literals.
     /// For example, in PostgreSQL, the following is a valid string literal:
@@ -372,6 +399,16 @@ pub trait Dialect: Debug + Any {
         false
     }
 
+    /// Returns true if the dialect supports multiple `SET` statements
+    /// in a single statement.
+    ///
+    /// ```sql
+    /// SET variable = expression [, variable = expression];
+    /// ```
+    fn supports_comma_separated_set_assignments(&self) -> bool {
+        false
+    }
+
     /// Returns true if the dialect supports an `EXCEPT` clause following a
     /// wildcard in a select list.
     ///
@@ -481,6 +518,20 @@ pub trait Dialect: Debug + Any {
         false
     }
 
+    /// Return true if the dialect supports pipe operator.
+    ///
+    /// Example:
+    /// ```sql
+    /// SELECT *
+    /// FROM table
+    /// |> limit 1
+    /// ```
+    ///
+    /// See <https://cloud.google.com/bigquery/docs/pipe-syntax-guide#basic_syntax>
+    fn supports_pipe_operator(&self) -> bool {
+        false
+    }
+
     /// Does the dialect support MySQL-style `'user'@'host'` grantee syntax?
     fn supports_user_host_grantee(&self) -> bool {
         false
@@ -583,7 +634,8 @@ pub trait Dialect: Debug + Any {
             Token::Word(w) if w.keyword == Keyword::OPERATOR => Ok(p!(Between)),
             Token::Word(w) if w.keyword == Keyword::DIV => Ok(p!(MulDivModOp)),
             Token::Period => Ok(p!(Period)),
-            Token::Eq
+            Token::Assignment
+            | Token::Eq
             | Token::Lt
             | Token::LtEq
             | Token::Neq
@@ -850,6 +902,12 @@ pub trait Dialect: Debug + Any {
         keywords::RESERVED_FOR_TABLE_FACTOR
     }
 
+    /// Returns reserved keywords that may prefix a select item expression
+    /// e.g. `SELECT CONNECT_BY_ROOT name FROM Tbl2` (Snowflake)
+    fn get_reserved_keywords_for_select_item_operator(&self) -> &[Keyword] {
+        &[]
+    }
+
     /// Returns true if this dialect supports the `TABLESAMPLE` option
     /// before the table alias option. For example:
     ///
@@ -951,6 +1009,16 @@ pub trait Dialect: Debug + Any {
     ///
     /// For example: ```SELECT * FROM addresses ORDER BY ALL;```.
     fn supports_order_by_all(&self) -> bool {
+        false
+    }
+
+    /// Returns true if the dialect supports `SET NAMES <charset_name> [COLLATE <collation_name>]`.
+    ///
+    /// - [MySQL](https://dev.mysql.com/doc/refman/8.4/en/set-names.html)
+    /// - [PostgreSQL](https://www.postgresql.org/docs/17/sql-set.html)
+    ///
+    /// Note: Postgres doesn't support the `COLLATE` clause, but we permissively parse it anyway.
+    fn supports_set_names(&self) -> bool {
         false
     }
 }

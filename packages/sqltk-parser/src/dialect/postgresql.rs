@@ -267,6 +267,10 @@ impl Dialect for PostgreSqlDialect {
     fn supports_geometric_types(&self) -> bool {
         true
     }
+
+    fn supports_set_names(&self) -> bool {
+        true
+    }
 }
 
 pub fn parse_lock_table(parser: &mut Parser) -> Result<Statement, ParserError> {

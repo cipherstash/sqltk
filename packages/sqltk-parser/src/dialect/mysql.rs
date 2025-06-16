@@ -27,7 +27,12 @@ use crate::{
 
 use super::keywords;
 
-const RESERVED_FOR_TABLE_ALIAS_MYSQL: &[Keyword] = &[Keyword::USE, Keyword::IGNORE, Keyword::FORCE];
+const RESERVED_FOR_TABLE_ALIAS_MYSQL: &[Keyword] = &[
+    Keyword::USE,
+    Keyword::IGNORE,
+    Keyword::FORCE,
+    Keyword::STRAIGHT_JOIN,
+];
 
 /// A [`Dialect`] for [MySQL](https://www.mysql.com/)
 #[derive(Debug)]
@@ -59,6 +64,10 @@ impl Dialect for MySqlDialect {
 
     // See https://dev.mysql.com/doc/refman/8.0/en/string-literals.html#character-escape-sequences
     fn supports_string_literal_backslash_escape(&self) -> bool {
+        true
+    }
+
+    fn ignores_wildcard_escapes(&self) -> bool {
         true
     }
 
@@ -135,6 +144,14 @@ impl Dialect for MySqlDialect {
     }
 
     fn supports_match_against(&self) -> bool {
+        true
+    }
+
+    fn supports_set_names(&self) -> bool {
+        true
+    }
+
+    fn supports_comma_separated_set_assignments(&self) -> bool {
         true
     }
 }

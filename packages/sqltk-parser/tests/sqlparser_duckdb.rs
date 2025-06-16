@@ -353,6 +353,32 @@ fn test_duckdb_load_extension() {
 }
 
 #[test]
+fn test_duckdb_specific_int_types() {
+    let duckdb_dtypes = vec![
+        ("UTINYINT", DataType::UTinyInt),
+        ("USMALLINT", DataType::USmallInt),
+        ("UBIGINT", DataType::UBigInt),
+        ("UHUGEINT", DataType::UHugeInt),
+        ("HUGEINT", DataType::HugeInt),
+    ];
+    for (dtype_string, data_type) in duckdb_dtypes {
+        let sql = format!("SELECT 123::{}", dtype_string);
+        let select = duckdb().verified_only_select(&sql);
+        assert_eq!(
+            &Expr::Cast {
+                kind: CastKind::DoubleColon,
+                expr: Box::new(Expr::Value(
+                    Value::Number("123".parse().unwrap(), false).with_empty_span()
+                )),
+                data_type: data_type.clone(),
+                format: None,
+            },
+            expr_from_projection(&select.projection[0])
+        );
+    }
+}
+
+#[test]
 fn test_duckdb_struct_literal() {
     //struct literal syntax https://duckdb.org/docs/sql/data_types/struct#creating-structs
     //syntax: {'field_name': expr1[, ... ]}
@@ -709,19 +735,13 @@ fn test_duckdb_union_datatype() {
                 storage: Default::default(),
                 location: Default::default()
             }),
-            table_properties: Default::default(),
-            with_options: Default::default(),
             file_format: Default::default(),
             location: Default::default(),
             query: Default::default(),
             without_rowid: Default::default(),
             like: Default::default(),
             clone: Default::default(),
-            engine: Default::default(),
             comment: Default::default(),
-            auto_increment_offset: Default::default(),
-            default_charset: Default::default(),
-            collation: Default::default(),
             on_commit: Default::default(),
             on_cluster: Default::default(),
             primary_key: Default::default(),
@@ -729,7 +749,7 @@ fn test_duckdb_union_datatype() {
             partition_by: Default::default(),
             cluster_by: Default::default(),
             clustered_by: Default::default(),
-            options: Default::default(),
+            inherits: Default::default(),
             strict: Default::default(),
             copy_grants: Default::default(),
             enable_schema_evolution: Default::default(),
@@ -745,6 +765,7 @@ fn test_duckdb_union_datatype() {
             catalog: Default::default(),
             catalog_sync: Default::default(),
             storage_serialization_policy: Default::default(),
+            table_options: CreateTableOptions::None
         }),
         stmt
     );

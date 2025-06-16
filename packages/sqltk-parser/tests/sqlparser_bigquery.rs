@@ -484,7 +484,7 @@ fn parse_create_table_with_options() {
             columns,
             partition_by,
             cluster_by,
-            options,
+            table_options,
             ..
         }) => {
             assert_eq!(
@@ -539,7 +539,7 @@ fn parse_create_table_with_options() {
                         Ident::new("userid"),
                         Ident::new("age"),
                     ])),
-                    Some(vec![
+                    CreateTableOptions::Options(vec![
                         SqlOption::KeyValue {
                             key: Ident::new("partition_expiration_days"),
                             value: Expr::Value(
@@ -561,7 +561,7 @@ fn parse_create_table_with_options() {
                         },
                     ])
                 ),
-                (partition_by, cluster_by, options)
+                (partition_by, cluster_by, table_options)
             )
         }
         _ => unreachable!(),
@@ -1735,6 +1735,7 @@ fn parse_merge() {
             },
         ],
     };
+
     match bigquery_and_generic().verified_stmt(sql) {
         Statement::Merge {
             into,
@@ -1742,6 +1743,7 @@ fn parse_merge() {
             source,
             on,
             clauses,
+            ..
         } => {
             assert!(!into);
             assert_eq!(
@@ -2132,6 +2134,7 @@ fn test_bigquery_create_function() {
     assert_eq!(
         stmt,
         Statement::CreateFunction(CreateFunction {
+            or_alter: false,
             or_replace: true,
             temporary: true,
             if_not_exists: false,
