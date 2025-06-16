@@ -348,7 +348,7 @@ fn parse_create_table_with_defaults() {
             name,
             columns,
             constraints,
-            with_options,
+            table_options,
             if_not_exists: false,
             external: false,
             file_format: None,
@@ -485,6 +485,11 @@ fn parse_create_table_with_defaults() {
                 ]
             );
             assert!(constraints.is_empty());
+
+            let with_options = match table_options {
+                CreateTableOptions::With(options) => options,
+                _ => unreachable!(),
+            };
             assert_eq!(
                 with_options,
                 vec![
@@ -988,6 +993,7 @@ fn parse_create_schema_if_not_exists() {
         Statement::CreateSchema {
             if_not_exists: true,
             schema_name,
+            ..
         } => assert_eq!("schema_name", schema_name.to_string()),
         _ => unreachable!(),
     }
@@ -1319,14 +1325,13 @@ fn parse_copy_to() {
                     flavor: SelectFlavor::Standard,
                 }))),
                 order_by: None,
-                limit: None,
-                limit_by: vec![],
-                offset: None,
+                limit_clause: None,
                 fetch: None,
                 locks: vec![],
                 for_clause: None,
                 settings: None,
                 format_clause: None,
+                pipe_operators: vec![],
             })),
             to: true,
             target: CopyTarget::File {
@@ -1432,81 +1437,77 @@ fn parse_set() {
     let stmt = pg_and_generic().verified_stmt("SET a = b");
     assert_eq!(
         stmt,
-        Statement::SetVariable {
-            local: false,
+        Statement::Set(Set::SingleAssignment {
+            scope: None,
             hivevar: false,
-            variables: OneOrManyWithParens::One(ObjectName::from(vec![Ident::new("a")])),
-            value: vec![Expr::Identifier(Ident {
+            variable: ObjectName::from(vec![Ident::new("a")]),
+            values: vec![Expr::Identifier(Ident {
                 value: "b".into(),
                 quote_style: None,
                 span: Span::empty(),
             })],
-        }
+        })
     );
 
     let stmt = pg_and_generic().verified_stmt("SET a = 'b'");
     assert_eq!(
         stmt,
-        Statement::SetVariable {
-            local: false,
+        Statement::Set(Set::SingleAssignment {
+            scope: None,
             hivevar: false,
-            variables: OneOrManyWithParens::One(ObjectName::from(vec![Ident::new("a")])),
-            value: vec![Expr::Value(
+            variable: ObjectName::from(vec![Ident::new("a")]),
+            values: vec![Expr::Value(
                 (Value::SingleQuotedString("b".into())).with_empty_span()
             )],
-        }
+        })
     );
 
     let stmt = pg_and_generic().verified_stmt("SET a = 0");
     assert_eq!(
         stmt,
-        Statement::SetVariable {
-            local: false,
+        Statement::Set(Set::SingleAssignment {
+            scope: None,
             hivevar: false,
-            variables: OneOrManyWithParens::One(ObjectName::from(vec![Ident::new("a")])),
-            value: vec![Expr::value(number("0"))],
-        }
+            variable: ObjectName::from(vec![Ident::new("a")]),
+            values: vec![Expr::value(number("0"))],
+        })
     );
 
     let stmt = pg_and_generic().verified_stmt("SET a = DEFAULT");
     assert_eq!(
         stmt,
-        Statement::SetVariable {
-            local: false,
+        Statement::Set(Set::SingleAssignment {
+            scope: None,
             hivevar: false,
-            variables: OneOrManyWithParens::One(ObjectName::from(vec![Ident::new("a")])),
-            value: vec![Expr::Identifier(Ident::new("DEFAULT"))],
-        }
+            variable: ObjectName::from(vec![Ident::new("a")]),
+            values: vec![Expr::Identifier(Ident::new("DEFAULT"))],
+        })
     );
 
     let stmt = pg_and_generic().verified_stmt("SET LOCAL a = b");
     assert_eq!(
         stmt,
-        Statement::SetVariable {
-            local: true,
+        Statement::Set(Set::SingleAssignment {
+            scope: Some(ContextModifier::Local),
             hivevar: false,
-            variables: OneOrManyWithParens::One(ObjectName::from(vec![Ident::new("a")])),
-            value: vec![Expr::Identifier("b".into())],
-        }
+            variable: ObjectName::from(vec![Ident::new("a")]),
+            values: vec![Expr::Identifier("b".into())],
+        })
     );
 
     let stmt = pg_and_generic().verified_stmt("SET a.b.c = b");
     assert_eq!(
         stmt,
-        Statement::SetVariable {
-            local: false,
+        Statement::Set(Set::SingleAssignment {
+            scope: None,
             hivevar: false,
-            variables: OneOrManyWithParens::One(ObjectName::from(vec![
-                Ident::new("a"),
-                Ident::new("b"),
-                Ident::new("c")
-            ])),
-            value: vec![Expr::Identifier(Ident {
+            variable: ObjectName::from(vec![Ident::new("a"), Ident::new("b"), Ident::new("c")]),
+            values: vec![Expr::Identifier(Ident {
                 value: "b".into(),
                 quote_style: None,
                 span: Span::empty(),
             })],
-        }
+        })
     );
 
     let stmt = pg_and_generic().one_statement_parses_to(
@@ -1515,22 +1516,21 @@ fn parse_set() {
     );
     assert_eq!(
         stmt,
-        Statement::SetVariable {
-            local: false,
+        Statement::Set(Set::SingleAssignment {
+            scope: None,
             hivevar: false,
-            variables: OneOrManyWithParens::One(ObjectName::from(vec![
+            variable: ObjectName::from(vec![
                 Ident::new("hive"),
                 Ident::new("tez"),
                 Ident::new("auto"),
                 Ident::new("reducer"),
                 Ident::new("parallelism")
-            ])),
-            value: vec![Expr::Value((Value::Boolean(false)).with_empty_span())],
-        }
+            ]),
+            values: vec![Expr::Value((Value::Boolean(false)).with_empty_span())],
+        })
     );
 
     pg_and_generic().one_statement_parses_to("SET a TO b", "SET a = b");
-    pg_and_generic().one_statement_parses_to("SET SESSION a = b", "SET a = b");
 
     assert_eq!(
         pg_and_generic().parse_sql_statements("SET"),
@@ -1560,10 +1560,10 @@ fn parse_set_role() {
     let stmt = pg_and_generic().verified_stmt(query);
     assert_eq!(
         stmt,
-        Statement::SetRole {
-            context_modifier: ContextModifier::Session,
+        Statement::Set(Set::SetRole {
+            context_modifier: Some(ContextModifier::Session),
             role_name: None,
-        }
+        })
     );
     assert_eq!(query, stmt.to_string());
 
@@ -1571,14 +1571,14 @@ fn parse_set_role() {
     let stmt = pg_and_generic().verified_stmt(query);
     assert_eq!(
         stmt,
-        Statement::SetRole {
-            context_modifier: ContextModifier::Local,
+        Statement::Set(Set::SetRole {
+            context_modifier: Some(ContextModifier::Local),
             role_name: Some(Ident {
                 value: "rolename".to_string(),
                 quote_style: Some('\"'),
                 span: Span::empty(),
             }),
-        }
+        })
     );
     assert_eq!(query, stmt.to_string());
 
@@ -1586,14 +1586,14 @@ fn parse_set_role() {
     let stmt = pg_and_generic().verified_stmt(query);
     assert_eq!(
         stmt,
-        Statement::SetRole {
-            context_modifier: ContextModifier::None,
+        Statement::Set(Set::SetRole {
+            context_modifier: None,
             role_name: Some(Ident {
                 value: "rolename".to_string(),
                 quote_style: Some('\''),
                 span: Span::empty(),
             }),
-        }
+        })
     );
     assert_eq!(query, stmt.to_string());
 }
@@ -2510,6 +2510,271 @@ fn parse_create_anonymous_index() {
 }
 
 #[test]
+/// Test to verify the correctness of parsing the `CREATE INDEX` statement with optional operator classes.
+///
+/// # Implementative details
+///
+/// At this time, since the parser library is not intended to take care of the semantics of the SQL statements,
+/// there is no way to verify the correctness of the operator classes, nor whether they are valid for the given
+/// index type. This test is only intended to verify that the parser can correctly parse the statement. For this
+/// reason, the test includes a `totally_not_valid` operator class.
+fn parse_create_indices_with_operator_classes() {
+    let indices = [
+        IndexType::GIN,
+        IndexType::GiST,
+        IndexType::SPGiST,
+        IndexType::Custom("CustomIndexType".into()),
+    ];
+    let operator_classes: [Option<Ident>; 4] = [
+        None,
+        Some("gin_trgm_ops".into()),
+        Some("gist_trgm_ops".into()),
+        Some("totally_not_valid".into()),
+    ];
+
+    for expected_index_type in indices {
+        for expected_operator_class in &operator_classes {
+            let single_column_sql_statement = format!(
+                "CREATE INDEX the_index_name ON users USING {expected_index_type} (concat_users_name(first_name, last_name){})",
+                expected_operator_class.as_ref().map(|oc| format!(" {}", oc))
+                    .unwrap_or_default()
+            );
+            let multi_column_sql_statement = format!(
+                "CREATE INDEX the_index_name ON users USING {expected_index_type} (column_name,concat_users_name(first_name, last_name){})",
+                expected_operator_class.as_ref().map(|oc| format!(" {}", oc))
+                    .unwrap_or_default()
+            );
+
+            let expected_function_column = IndexColumn {
+                column: OrderByExpr {
+                    expr: Expr::Function(Function {
+                        name: ObjectName(vec![ObjectNamePart::Identifier(Ident {
+                            value: "concat_users_name".to_owned(),
+                            quote_style: None,
+                            span: Span::empty(),
+                        })]),
+                        uses_odbc_syntax: false,
+                        parameters: FunctionArguments::None,
+                        args: FunctionArguments::List(FunctionArgumentList {
+                            duplicate_treatment: None,
+                            args: vec![
+                                FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Identifier(
+                                    Ident {
+                                        value: "first_name".to_owned(),
+                                        quote_style: None,
+                                        span: Span::empty(),
+                                    },
+                                ))),
+                                FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Identifier(
+                                    Ident {
+                                        value: "last_name".to_owned(),
+                                        quote_style: None,
+                                        span: Span::empty(),
+                                    },
+                                ))),
+                            ],
+                            clauses: vec![],
+                        }),
+                        filter: None,
+                        null_treatment: None,
+                        over: None,
+                        within_group: vec![],
+                    }),
+                    options: OrderByOptions {
+                        asc: None,
+                        nulls_first: None,
+                    },
+                    with_fill: None,
+                },
+                operator_class: expected_operator_class.clone(),
+            };
+
+            match pg().verified_stmt(&single_column_sql_statement) {
+                Statement::CreateIndex(CreateIndex {
+                    name: Some(ObjectName(name)),
+                    table_name: ObjectName(table_name),
+                    using: Some(using),
+                    columns,
+                    unique: false,
+                    concurrently: false,
+                    if_not_exists: false,
+                    include,
+                    nulls_distinct: None,
+                    with,
+                    predicate: None,
+                }) => {
+                    assert_eq_vec(&["the_index_name"], &name);
+                    assert_eq_vec(&["users"], &table_name);
+                    assert_eq!(expected_index_type, using);
+                    assert_eq!(expected_function_column, columns[0],);
+                    assert!(include.is_empty());
+                    assert!(with.is_empty());
+                }
+                _ => unreachable!(),
+            }
+
+            match pg().verified_stmt(&multi_column_sql_statement) {
+                Statement::CreateIndex(CreateIndex {
+                    name: Some(ObjectName(name)),
+                    table_name: ObjectName(table_name),
+                    using: Some(using),
+                    columns,
+                    unique: false,
+                    concurrently: false,
+                    if_not_exists: false,
+                    include,
+                    nulls_distinct: None,
+                    with,
+                    predicate: None,
+                }) => {
+                    assert_eq_vec(&["the_index_name"], &name);
+                    assert_eq_vec(&["users"], &table_name);
+                    assert_eq!(expected_index_type, using);
+                    assert_eq!(
+                        IndexColumn {
+                            column: OrderByExpr {
+                                expr: Expr::Identifier(Ident {
+                                    value: "column_name".to_owned(),
+                                    quote_style: None,
+                                    span: Span::empty()
+                                }),
+                                options: OrderByOptions {
+                                    asc: None,
+                                    nulls_first: None,
+                                },
+                                with_fill: None,
+                            },
+                            operator_class: None
+                        },
+                        columns[0],
+                    );
+                    assert_eq!(expected_function_column, columns[1],);
+                    assert!(include.is_empty());
+                    assert!(with.is_empty());
+                }
+                _ => unreachable!(),
+            }
+        }
+    }
+}
+
+#[test]
+fn parse_create_bloom() {
+    let sql =
+        "CREATE INDEX bloomidx ON tbloom USING BLOOM (i1,i2,i3) WITH (length = 80, col1 = 2, col2 = 2, col3 = 4)";
+    match pg().verified_stmt(sql) {
+        Statement::CreateIndex(CreateIndex {
+            name: Some(ObjectName(name)),
+            table_name: ObjectName(table_name),
+            using: Some(using),
+            columns,
+            unique: false,
+            concurrently: false,
+            if_not_exists: false,
+            include,
+            nulls_distinct: None,
+            with,
+            predicate: None,
+        }) => {
+            assert_eq_vec(&["bloomidx"], &name);
+            assert_eq_vec(&["tbloom"], &table_name);
+            assert_eq!(IndexType::Bloom, using);
+            assert_eq_vec(&["i1", "i2", "i3"], &columns);
+            assert!(include.is_empty());
+            assert_eq!(
+                vec![
+                    Expr::BinaryOp {
+                        left: Box::new(Expr::Identifier(Ident::new("length"))),
+                        op: BinaryOperator::Eq,
+                        right: Box::new(Expr::Value(number("80").into())),
+                    },
+                    Expr::BinaryOp {
+                        left: Box::new(Expr::Identifier(Ident::new("col1"))),
+                        op: BinaryOperator::Eq,
+                        right: Box::new(Expr::Value(number("2").into())),
+                    },
+                    Expr::BinaryOp {
+                        left: Box::new(Expr::Identifier(Ident::new("col2"))),
+                        op: BinaryOperator::Eq,
+                        right: Box::new(Expr::Value(number("2").into())),
+                    },
+                    Expr::BinaryOp {
+                        left: Box::new(Expr::Identifier(Ident::new("col3"))),
+                        op: BinaryOperator::Eq,
+                        right: Box::new(Expr::Value(number("4").into())),
+                    },
+                ],
+                with
+            );
+        }
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn parse_create_brin() {
+    let sql = "CREATE INDEX brin_sensor_data_recorded_at ON sensor_data USING BRIN (recorded_at)";
+    match pg().verified_stmt(sql) {
+        Statement::CreateIndex(CreateIndex {
+            name: Some(ObjectName(name)),
+            table_name: ObjectName(table_name),
+            using: Some(using),
+            columns,
+            unique: false,
+            concurrently: false,
+            if_not_exists: false,
+            include,
+            nulls_distinct: None,
+            with,
+            predicate: None,
+        }) => {
+            assert_eq_vec(&["brin_sensor_data_recorded_at"], &name);
+            assert_eq_vec(&["sensor_data"], &table_name);
+            assert_eq!(IndexType::BRIN, using);
+            assert_eq_vec(&["recorded_at"], &columns);
+            assert!(include.is_empty());
+            assert!(with.is_empty());
+        }
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn parse_create_table_with_inherits() {
+    let single_inheritance_sql =
+        "CREATE TABLE child_table (child_column INT) INHERITS (public.parent_table)";
+    match pg().verified_stmt(single_inheritance_sql) {
+        Statement::CreateTable(CreateTable {
+            inherits: Some(inherits),
+            ..
+        }) => {
+            assert_eq_vec(&["public", "parent_table"], &inherits[0].0);
+        }
+        _ => unreachable!(),
+    }
+
+    let double_inheritance_sql = "CREATE TABLE child_table (child_column INT) INHERITS (public.parent_table, pg_catalog.pg_settings)";
+    match pg().verified_stmt(double_inheritance_sql) {
+        Statement::CreateTable(CreateTable {
+            inherits: Some(inherits),
+            ..
+        }) => {
+            assert_eq_vec(&["public", "parent_table"], &inherits[0].0);
+            assert_eq_vec(&["pg_catalog", "pg_settings"], &inherits[1].0);
+        }
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn parse_create_table_with_empty_inherits_fails() {
+    assert!(matches!(
+        pg().parse_sql_statements("CREATE TABLE child_table (child_column INT) INHERITS ()"),
+        Err(ParserError::ParserError(_))
+    ));
+}
+
+#[test]
 fn parse_create_index_concurrently() {
     let sql = "CREATE INDEX CONCURRENTLY IF NOT EXISTS my_index ON my_table(col1,col2)";
     match pg().verified_stmt(sql) {
@@ -2729,14 +2994,13 @@ fn parse_array_subquery_expr() {
                     }))),
                 }),
                 order_by: None,
-                limit: None,
-                limit_by: vec![],
-                offset: None,
+                limit_clause: None,
                 fetch: None,
                 locks: vec![],
                 for_clause: None,
                 settings: None,
                 format_clause: None,
+                pipe_operators: vec![],
             })),
             filter: None,
             null_treatment: None,
@@ -2752,16 +3016,16 @@ fn test_transaction_statement() {
     let statement = pg().verified_stmt("SET TRANSACTION SNAPSHOT '000003A1-1'");
     assert_eq!(
         statement,
-        Statement::SetTransaction {
+        Statement::Set(Set::SetTransaction {
             modes: vec![],
             snapshot: Some(Value::SingleQuotedString(String::from("000003A1-1"))),
             session: false
-        }
+        })
     );
     let statement = pg().verified_stmt("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY, READ WRITE, ISOLATION LEVEL SERIALIZABLE");
     assert_eq!(
         statement,
-        Statement::SetTransaction {
+        Statement::Set(Set::SetTransaction {
             modes: vec![
                 TransactionMode::AccessMode(TransactionAccessMode::ReadOnly),
                 TransactionMode::AccessMode(TransactionAccessMode::ReadWrite),
@@ -2769,7 +3033,7 @@ fn test_transaction_statement() {
             ],
             snapshot: None,
             session: true
-        }
+        })
     );
 }
 
@@ -3847,6 +4111,7 @@ fn parse_create_function() {
     assert_eq!(
         pg_and_generic().verified_stmt(sql),
         Statement::CreateFunction(CreateFunction {
+            or_alter: false,
             or_replace: false,
             temporary: false,
             name: ObjectName::from(vec![Ident::new("add")]),
@@ -3978,6 +4243,66 @@ fn parse_drop_function() {
             ],
             drop_behavior: None
         }
+    );
+}
+
+#[test]
+fn parse_drop_domain() {
+    let sql = "DROP DOMAIN IF EXISTS jpeg_domain";
+    assert_eq!(
+        pg().verified_stmt(sql),
+        Statement::DropDomain(DropDomain {
+            if_exists: true,
+            name: ObjectName::from(vec![Ident {
+                value: "jpeg_domain".to_string(),
+                quote_style: None,
+                span: Span::empty(),
+            }]),
+            drop_behavior: None
+        })
+    );
+
+    let sql = "DROP DOMAIN jpeg_domain";
+    assert_eq!(
+        pg().verified_stmt(sql),
+        Statement::DropDomain(DropDomain {
+            if_exists: false,
+            name: ObjectName::from(vec![Ident {
+                value: "jpeg_domain".to_string(),
+                quote_style: None,
+                span: Span::empty(),
+            }]),
+            drop_behavior: None
+        })
+    );
+
+    let sql = "DROP DOMAIN IF EXISTS jpeg_domain CASCADE";
+    assert_eq!(
+        pg().verified_stmt(sql),
+        Statement::DropDomain(DropDomain {
+            if_exists: true,
+            name: ObjectName::from(vec![Ident {
+                value: "jpeg_domain".to_string(),
+                quote_style: None,
+                span: Span::empty(),
+            }]),
+            drop_behavior: Some(DropBehavior::Cascade)
+        })
+    );
+
+    let sql = "DROP DOMAIN IF EXISTS jpeg_domain RESTRICT";
+
+    assert_eq!(
+        pg().verified_stmt(sql),
+        Statement::DropDomain(DropDomain {
+            if_exists: true,
+            name: ObjectName::from(vec![Ident {
+                value: "jpeg_domain".to_string(),
+                quote_style: None,
+                span: Span::empty(),
+            }]),
+            drop_behavior: Some(DropBehavior::Restrict)
+        })
     );
 }
 
@@ -4348,7 +4673,6 @@ fn parse_create_table_with_alias() {
             name,
             columns,
             constraints,
-            with_options: _with_options,
             if_not_exists: false,
             external: false,
             file_format: None,
@@ -4521,14 +4845,13 @@ fn test_simple_postgres_insert_with_alias() {
                     ]]
                 })),
                 order_by: None,
-                limit: None,
-                limit_by: vec![],
-                offset: None,
+                limit_clause: None,
                 fetch: None,
                 locks: vec![],
                 for_clause: None,
                 settings: None,
                 format_clause: None,
+                pipe_operators: vec![],
             })),
             assignments: vec![],
             partitioned: None,
@@ -4594,14 +4917,13 @@ fn test_simple_postgres_insert_with_alias() {
                     ]]
                 })),
                 order_by: None,
-                limit: None,
-                limit_by: vec![],
-                offset: None,
+                limit_clause: None,
                 fetch: None,
                 locks: vec![],
                 for_clause: None,
                 settings: None,
                 format_clause: None,
+                pipe_operators: vec![],
             })),
             assignments: vec![],
             partitioned: None,
@@ -4665,14 +4987,13 @@ fn test_simple_insert_with_quoted_alias() {
                     ]]
                 })),
                 order_by: None,
-                limit: None,
-                limit_by: vec![],
-                offset: None,
+                limit_clause: None,
                 fetch: None,
                 locks: vec![],
                 for_clause: None,
                 settings: None,
                 format_clause: None,
+                pipe_operators: vec![],
             })),
             assignments: vec![],
             partitioned: None,
@@ -4761,7 +5082,11 @@ fn parse_at_time_zone() {
 fn parse_create_table_with_options() {
     let sql = "CREATE TABLE t (c INT) WITH (foo = 'bar', a = 123)";
     match pg().verified_stmt(sql) {
-        Statement::CreateTable(CreateTable { with_options, .. }) => {
+        Statement::CreateTable(CreateTable { table_options, .. }) => {
+            let with_options = match table_options {
+                CreateTableOptions::With(options) => options,
+                _ => unreachable!(),
+            };
             assert_eq!(
                 vec![
                     SqlOption::KeyValue {
@@ -4829,9 +5154,103 @@ fn test_escaped_string_literal() {
 }
 
 #[test]
+fn parse_create_domain() {
+    let sql1 = "CREATE DOMAIN my_domain AS INTEGER CHECK (VALUE > 0)";
+    let expected = Statement::CreateDomain(CreateDomain {
+        name: ObjectName::from(vec![Ident::new("my_domain")]),
+        data_type: DataType::Integer(None),
+        collation: None,
+        default: None,
+        constraints: vec![TableConstraint::Check {
+            name: None,
+            expr: Box::new(Expr::BinaryOp {
+                left: Box::new(Expr::Identifier(Ident::new("VALUE"))),
+                op: BinaryOperator::Gt,
+                right: Box::new(Expr::Value(test_utils::number("0").into())),
+            }),
+        }],
+    });
+
+    assert_eq!(pg().verified_stmt(sql1), expected);
+
+    let sql2 = "CREATE DOMAIN my_domain AS INTEGER COLLATE \"en_US\" CHECK (VALUE > 0)";
+    let expected = Statement::CreateDomain(CreateDomain {
+        name: ObjectName::from(vec![Ident::new("my_domain")]),
+        data_type: DataType::Integer(None),
+        collation: Some(Ident::with_quote('"', "en_US")),
+        default: None,
+        constraints: vec![TableConstraint::Check {
+            name: None,
+            expr: Box::new(Expr::BinaryOp {
+                left: Box::new(Expr::Identifier(Ident::new("VALUE"))),
+                op: BinaryOperator::Gt,
+                right: Box::new(Expr::Value(test_utils::number("0").into())),
+            }),
+        }],
+    });
+
+    assert_eq!(pg().verified_stmt(sql2), expected);
+
+    let sql3 = "CREATE DOMAIN my_domain AS INTEGER DEFAULT 1 CHECK (VALUE > 0)";
+    let expected = Statement::CreateDomain(CreateDomain {
+        name: ObjectName::from(vec![Ident::new("my_domain")]),
+        data_type: DataType::Integer(None),
+        collation: None,
+        default: Some(Expr::Value(test_utils::number("1").into())),
+        constraints: vec![TableConstraint::Check {
+            name: None,
+            expr: Box::new(Expr::BinaryOp {
+                left: Box::new(Expr::Identifier(Ident::new("VALUE"))),
+                op: BinaryOperator::Gt,
+                right: Box::new(Expr::Value(test_utils::number("0").into())),
+            }),
+        }],
+    });
+
+    assert_eq!(pg().verified_stmt(sql3), expected);
+
+    let sql4 = "CREATE DOMAIN my_domain AS INTEGER COLLATE \"en_US\" DEFAULT 1 CHECK (VALUE > 0)";
+    let expected = Statement::CreateDomain(CreateDomain {
+        name: ObjectName::from(vec![Ident::new("my_domain")]),
+        data_type: DataType::Integer(None),
+        collation: Some(Ident::with_quote('"', "en_US")),
+        default: Some(Expr::Value(test_utils::number("1").into())),
+        constraints: vec![TableConstraint::Check {
+            name: None,
+            expr: Box::new(Expr::BinaryOp {
+                left: Box::new(Expr::Identifier(Ident::new("VALUE"))),
+                op: BinaryOperator::Gt,
+                right: Box::new(Expr::Value(test_utils::number("0").into())),
+            }),
+        }],
+    });
+
+    assert_eq!(pg().verified_stmt(sql4), expected);
+
+    let sql5 = "CREATE DOMAIN my_domain AS INTEGER CONSTRAINT my_constraint CHECK (VALUE > 0)";
+    let expected = Statement::CreateDomain(CreateDomain {
+        name: ObjectName::from(vec![Ident::new("my_domain")]),
+        data_type: DataType::Integer(None),
+        collation: None,
+        default: None,
+        constraints: vec![TableConstraint::Check {
+            name: Some(Ident::new("my_constraint")),
+            expr: Box::new(Expr::BinaryOp {
+                left: Box::new(Expr::Identifier(Ident::new("VALUE"))),
+                op: BinaryOperator::Gt,
+                right: Box::new(Expr::Value(test_utils::number("0").into())),
+            }),
+        }],
+    });
+
+    assert_eq!(pg().verified_stmt(sql5), expected);
+}
+
+#[test]
 fn parse_create_simple_before_insert_trigger() {
     let sql = "CREATE TRIGGER check_insert BEFORE INSERT ON accounts FOR EACH ROW EXECUTE FUNCTION check_account_insert";
     let expected = Statement::CreateTrigger {
+        or_alter: false,
         or_replace: false,
         is_constraint: false,
         name: ObjectName::from(vec![Ident::new("check_insert")]),
@@ -4843,13 +5262,14 @@ fn parse_create_simple_before_insert_trigger() {
         trigger_object: TriggerObject::Row,
         include_each: true,
         condition: None,
-        exec_body: TriggerExecBody {
+        exec_body: Some(TriggerExecBody {
             exec_type: TriggerExecBodyType::Function,
             func_desc: FunctionDesc {
                 name: ObjectName::from(vec![Ident::new("check_account_insert")]),
                 args: None,
             },
-        },
+        }),
+        statements: None,
         characteristics: None,
     };
 
@@ -4860,6 +5280,7 @@ fn parse_create_simple_before_insert_trigger() {
 fn parse_create_after_update_trigger_with_condition() {
     let sql = "CREATE TRIGGER check_update AFTER UPDATE ON accounts FOR EACH ROW WHEN (NEW.balance > 10000) EXECUTE FUNCTION check_account_update";
     let expected = Statement::CreateTrigger {
+        or_alter: false,
         or_replace: false,
         is_constraint: false,
         name: ObjectName::from(vec![Ident::new("check_update")]),
@@ -4878,13 +5299,14 @@ fn parse_create_after_update_trigger_with_condition() {
             op: BinaryOperator::Gt,
             right: Box::new(Expr::value(number("10000"))),
         }))),
-        exec_body: TriggerExecBody {
+        exec_body: Some(TriggerExecBody {
             exec_type: TriggerExecBodyType::Function,
             func_desc: FunctionDesc {
                 name: ObjectName::from(vec![Ident::new("check_account_update")]),
                 args: None,
             },
-        },
+        }),
+        statements: None,
         characteristics: None,
     };
 
@@ -4895,6 +5317,7 @@ fn parse_create_after_update_trigger_with_condition() {
 fn parse_create_instead_of_delete_trigger() {
     let sql = "CREATE TRIGGER check_delete INSTEAD OF DELETE ON accounts FOR EACH ROW EXECUTE FUNCTION check_account_deletes";
     let expected = Statement::CreateTrigger {
+        or_alter: false,
         or_replace: false,
         is_constraint: false,
         name: ObjectName::from(vec![Ident::new("check_delete")]),
@@ -4906,13 +5329,14 @@ fn parse_create_instead_of_delete_trigger() {
         trigger_object: TriggerObject::Row,
         include_each: true,
         condition: None,
-        exec_body: TriggerExecBody {
+        exec_body: Some(TriggerExecBody {
             exec_type: TriggerExecBodyType::Function,
             func_desc: FunctionDesc {
                 name: ObjectName::from(vec![Ident::new("check_account_deletes")]),
                 args: None,
             },
-        },
+        }),
+        statements: None,
         characteristics: None,
     };
 
@@ -4923,6 +5347,7 @@ fn parse_create_instead_of_delete_trigger() {
 fn parse_create_trigger_with_multiple_events_and_deferrable() {
     let sql = "CREATE CONSTRAINT TRIGGER check_multiple_events BEFORE INSERT OR UPDATE OR DELETE ON accounts DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_account_changes";
     let expected = Statement::CreateTrigger {
+        or_alter: false,
         or_replace: false,
         is_constraint: true,
         name: ObjectName::from(vec![Ident::new("check_multiple_events")]),
@@ -4938,13 +5363,14 @@ fn parse_create_trigger_with_multiple_events_and_deferrable() {
         trigger_object: TriggerObject::Row,
         include_each: true,
         condition: None,
-        exec_body: TriggerExecBody {
+        exec_body: Some(TriggerExecBody {
             exec_type: TriggerExecBodyType::Function,
             func_desc: FunctionDesc {
                 name: ObjectName::from(vec![Ident::new("check_account_changes")]),
                 args: None,
             },
-        },
+        }),
+        statements: None,
         characteristics: Some(ConstraintCharacteristics {
             deferrable: Some(true),
             initially: Some(DeferrableInitial::Deferred),
@@ -4959,6 +5385,7 @@ fn parse_create_trigger_with_multiple_events_and_deferrable() {
 fn parse_create_trigger_with_referencing() {
     let sql = "CREATE TRIGGER check_referencing BEFORE INSERT ON accounts REFERENCING NEW TABLE AS new_accounts OLD TABLE AS old_accounts FOR EACH ROW EXECUTE FUNCTION check_account_referencing";
     let expected = Statement::CreateTrigger {
+        or_alter: false,
         or_replace: false,
         is_constraint: false,
         name: ObjectName::from(vec![Ident::new("check_referencing")]),
@@ -4981,13 +5408,14 @@ fn parse_create_trigger_with_referencing() {
         trigger_object: TriggerObject::Row,
         include_each: true,
         condition: None,
-        exec_body: TriggerExecBody {
+        exec_body: Some(TriggerExecBody {
             exec_type: TriggerExecBodyType::Function,
             func_desc: FunctionDesc {
                 name: ObjectName::from(vec![Ident::new("check_account_referencing")]),
                 args: None,
             },
-        },
+        }),
+        statements: None,
         characteristics: None,
     };
 
@@ -5007,7 +5435,7 @@ fn parse_create_trigger_invalid_cases() {
         ),
         (
             "CREATE TRIGGER check_update TOMORROW UPDATE ON accounts EXECUTE FUNCTION check_account_update",
-            "Expected: one of BEFORE or AFTER or INSTEAD, found: TOMORROW"
+            "Expected: one of FOR or BEFORE or AFTER or INSTEAD, found: TOMORROW"
         ),
         (
             "CREATE TRIGGER check_update BEFORE SAVE ON accounts EXECUTE FUNCTION check_account_update",
@@ -5189,19 +5617,13 @@ fn parse_trigger_related_functions() {
                 storage: None,
                 location: None
             }),
-            table_properties: vec![],
-            with_options: vec![],
             file_format: None,
             location: None,
             query: None,
             without_rowid: false,
             like: None,
             clone: None,
-            engine: None,
             comment: None,
-            auto_increment_offset: None,
-            default_charset: None,
-            collation: None,
             on_commit: None,
             on_cluster: None,
             primary_key: None,
@@ -5209,7 +5631,7 @@ fn parse_trigger_related_functions() {
             partition_by: None,
             cluster_by: None,
             clustered_by: None,
-            options: None,
+            inherits: None,
             strict: false,
             copy_grants: false,
             enable_schema_evolution: None,
@@ -5225,6 +5647,7 @@ fn parse_trigger_related_functions() {
             catalog: None,
             catalog_sync: None,
             storage_serialization_policy: None,
+            table_options: CreateTableOptions::None
         }
     );
 
@@ -5233,6 +5656,7 @@ fn parse_trigger_related_functions() {
     assert_eq!(
         create_function,
         Statement::CreateFunction(CreateFunction {
+            or_alter: false,
             or_replace: false,
             temporary: false,
             if_not_exists: false,
@@ -5269,6 +5693,7 @@ fn parse_trigger_related_functions() {
     assert_eq!(
         create_trigger,
         Statement::CreateTrigger {
+            or_alter: false,
             or_replace: false,
             is_constraint: false,
             name: ObjectName::from(vec![Ident::new("emp_stamp")]),
@@ -5280,13 +5705,14 @@ fn parse_trigger_related_functions() {
             trigger_object: TriggerObject::Row,
             include_each: true,
             condition: None,
-            exec_body: TriggerExecBody {
+            exec_body: Some(TriggerExecBody {
                 exec_type: TriggerExecBodyType::Function,
                 func_desc: FunctionDesc {
                     name: ObjectName::from(vec![Ident::new("emp_stamp")]),
                     args: None,
                 }
-            },
+            }),
+            statements: None,
             characteristics: None
         }
     );

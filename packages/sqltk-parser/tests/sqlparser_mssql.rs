@@ -23,7 +23,8 @@
 mod test_utils;
 
 use helpers::attached_token::AttachedToken;
-use sqltk_parser::tokenizer::Span;
+use sqltk_parser::keywords::Keyword;
+use sqltk_parser::tokenizer::{Location, Span, Token, TokenWithSpan, Word};
 use test_utils::*;
 
 use sqltk_parser::ast::DataType::{Int, Text, Varbinary};
@@ -31,7 +32,7 @@ use sqltk_parser::ast::DeclareAssignment::MsSqlAssignment;
 use sqltk_parser::ast::Value::SingleQuotedString;
 use sqltk_parser::ast::*;
 use sqltk_parser::dialect::{GenericDialect, MsSqlDialect};
-use sqltk_parser::parser::ParserError;
+use sqltk_parser::parser::{Parser, ParserError};
 
 #[test]
 fn parse_mssql_identifiers() {
@@ -107,15 +108,14 @@ fn parse_create_procedure() {
             or_alter: true,
             body: vec![Statement::Query(Box::new(Query {
                 with: None,
-                limit: None,
-                limit_by: vec![],
-                offset: None,
+                limit_clause: None,
                 fetch: None,
                 locks: vec![],
                 for_clause: None,
                 order_by: None,
                 settings: None,
                 format_clause: None,
+                pipe_operators: vec![],
                 body: Box::new(SetExpr::Select(Box::new(Select {
                     select_token: AttachedToken::empty(),
                     distinct: None,
@@ -187,6 +187,102 @@ fn parse_mssql_create_procedure() {
     let _ = ms().verified_stmt("CREATE PROCEDURE [foo] AS BEGIN SELECT [foo], CASE WHEN [foo] IS NULL THEN 'empty' ELSE 'notempty' END AS [foo] END");
     // Multiple statements
     let _ = ms().verified_stmt("CREATE PROCEDURE [foo] AS BEGIN UPDATE bar SET col = 'test'; SELECT [foo] FROM BAR WHERE [FOO] > 10 END");
+}
+
+#[test]
+fn parse_create_function() {
+    let return_expression_function = "CREATE FUNCTION some_scalar_udf(@foo INT, @bar VARCHAR(256)) RETURNS INT AS BEGIN RETURN 1; END";
+    assert_eq!(
+        ms().verified_stmt(return_expression_function),
+        sqltk_parser::ast::Statement::CreateFunction(CreateFunction {
+            or_alter: false,
+            or_replace: false,
+            temporary: false,
+            if_not_exists: false,
+            name: ObjectName::from(vec![Ident::new("some_scalar_udf")]),
+            args: Some(vec![
+                OperateFunctionArg {
+                    mode: None,
+                    name: Some(Ident::new("@foo")),
+                    data_type: DataType::Int(None),
+                    default_expr: None,
+                },
+                OperateFunctionArg {
+                    mode: None,
+                    name: Some(Ident::new("@bar")),
+                    data_type: DataType::Varchar(Some(CharacterLength::IntegerLength {
+                        length: 256,
+                        unit: None
+                    })),
+                    default_expr: None,
+                },
+            ]),
+            return_type: Some(DataType::Int(None)),
+            function_body: Some(CreateFunctionBody::AsBeginEnd(BeginEndStatements {
+                begin_token: AttachedToken::empty(),
+                statements: vec![Statement::Return(ReturnStatement {
+                    value: Some(ReturnStatementValue::Expr(Expr::Value(
+                        (number("1")).with_empty_span()
+                    ))),
+                })],
+                end_token: AttachedToken::empty(),
+            })),
+            behavior: None,
+            called_on_null: None,
+            parallel: None,
+            using: None,
+            language: None,
+            determinism_specifier: None,
+            options: None,
+            remote_connection: None,
+        }),
+    );
+
+    let multi_statement_function = "\
+        CREATE FUNCTION some_scalar_udf(@foo INT, @bar VARCHAR(256)) \
+        RETURNS INT \
+        AS \
+        BEGIN \
+            SET @foo = @foo + 1; \
+            RETURN @foo; \
+        END\
+    ";
+    let _ = ms().verified_stmt(multi_statement_function);
+
+    let create_function_with_conditional = "\
+        CREATE FUNCTION some_scalar_udf() \
+        RETURNS INT \
+        AS \
+        BEGIN \
+            IF 1 = 2 \
+            BEGIN \
+                RETURN 1; \
+            END; \
+            RETURN 0; \
+        END\
+    ";
+    let _ = ms().verified_stmt(create_function_with_conditional);
+
+    let create_or_alter_function = "\
+        CREATE OR ALTER FUNCTION some_scalar_udf(@foo INT, @bar VARCHAR(256)) \
+        RETURNS INT \
+        AS \
+        BEGIN \
+            SET @foo = @foo + 1; \
+            RETURN @foo; \
+        END\
+    ";
+    let _ = ms().verified_stmt(create_or_alter_function);
+
+    let create_function_with_return_expression = "\
+        CREATE FUNCTION some_scalar_udf(@foo INT, @bar VARCHAR(256)) \
+        RETURNS INT \
+        AS \
+        BEGIN \
+            RETURN CONVERT(INT, 1) + 2; \
+        END\
+    ";
+    let _ = ms().verified_stmt(create_function_with_return_expression);
 }
 
 #[test]
@@ -1135,6 +1231,7 @@ fn parse_substring_in_select() {
                                 (number("1")).with_empty_span()
                             ))),
                             special: true,
+                            shorthand: false,
                         })],
                         into: None,
                         from: vec![TableWithJoins {
@@ -1161,14 +1258,13 @@ fn parse_substring_in_select() {
                         flavor: SelectFlavor::Standard,
                     }))),
                     order_by: None,
-                    limit: None,
-                    limit_by: vec![],
-                    offset: None,
+                    limit_clause: None,
                     fetch: None,
                     locks: vec![],
                     for_clause: None,
                     settings: None,
                     format_clause: None,
+                    pipe_operators: vec![],
                 }),
                 query
             );
@@ -1254,25 +1350,25 @@ fn parse_mssql_declare() {
                     for_query: None
                 }]
             },
-            Statement::SetVariable {
-                local: false,
+            Statement::Set(Set::SingleAssignment {
+                scope: None,
                 hivevar: false,
-                variables: OneOrManyWithParens::One(ObjectName::from(vec![Ident::new("@bar")])),
-                value: vec![Expr::Value(
+                variable: ObjectName::from(vec![Ident::new("@bar")]),
+                values: vec![Expr::Value(
                     (Value::Number("2".parse().unwrap(), false)).with_empty_span()
                 )],
-            },
+            }),
             Statement::Query(Box::new(Query {
                 with: None,
-                limit: None,
-                limit_by: vec![],
-                offset: None,
+                limit_clause: None,
                 fetch: None,
                 locks: vec![],
                 for_clause: None,
                 order_by: None,
                 settings: None,
                 format_clause: None,
+                pipe_operators: vec![],
+
                 body: Box::new(SetExpr::Select(Box::new(Select {
                     select_token: AttachedToken::empty(),
                     distinct: None,
@@ -1306,6 +1402,89 @@ fn parse_mssql_declare() {
         ],
         ast
     );
+
+    let declare_cursor_for_select =
+        "DECLARE vend_cursor CURSOR FOR SELECT * FROM Purchasing.Vendor";
+    let _ = ms().verified_stmt(declare_cursor_for_select);
+}
+
+#[test]
+fn test_mssql_cursor() {
+    let full_cursor_usage = "\
+        DECLARE Employee_Cursor CURSOR FOR \
+        SELECT LastName, FirstName \
+        FROM AdventureWorks2022.HumanResources.vEmployee \
+        WHERE LastName LIKE 'B%'; \
+        \
+        OPEN Employee_Cursor; \
+        \
+        FETCH NEXT FROM Employee_Cursor; \
+        \
+        WHILE @@FETCH_STATUS = 0 \
+        BEGIN \
+            FETCH NEXT FROM Employee_Cursor; \
+        END; \
+        \
+        CLOSE Employee_Cursor; \
+        DEALLOCATE Employee_Cursor\
+    ";
+    let _ = ms().statements_parse_to(full_cursor_usage, "");
+}
+
+#[test]
+fn test_mssql_while_statement() {
+    let while_single_statement = "WHILE 1 = 0 PRINT 'Hello World';";
+    let stmt = ms().verified_stmt(while_single_statement);
+    assert_eq!(
+        stmt,
+        Statement::While(sqltk_parser::ast::WhileStatement {
+            while_block: ConditionalStatementBlock {
+                start_token: AttachedToken(TokenWithSpan {
+                    token: Token::Word(Word {
+                        value: "WHILE".to_string(),
+                        quote_style: None,
+                        keyword: Keyword::WHILE
+                    }),
+                    span: Span::empty()
+                }),
+                condition: Some(Expr::BinaryOp {
+                    left: Box::new(Expr::Value(
+                        (Value::Number("1".parse().unwrap(), false)).with_empty_span()
+                    )),
+                    op: BinaryOperator::Eq,
+                    right: Box::new(Expr::Value(
+                        (Value::Number("0".parse().unwrap(), false)).with_empty_span()
+                    )),
+                }),
+                then_token: None,
+                conditional_statements: ConditionalStatements::Sequence {
+                    statements: vec![Statement::Print(PrintStatement {
+                        message: Box::new(Expr::Value(
+                            (Value::SingleQuotedString("Hello World".to_string()))
+                                .with_empty_span()
+                        )),
+                    })],
+                }
+            }
+        })
+    );
+
+    let while_begin_end = "\
+        WHILE @@FETCH_STATUS = 0 \
+        BEGIN \
+            FETCH NEXT FROM Employee_Cursor; \
+        END\
+    ";
+    let _ = ms().verified_stmt(while_begin_end);
+
+    let while_begin_end_multiple_statements = "\
+        WHILE @@FETCH_STATUS = 0 \
+        BEGIN \
+            FETCH NEXT FROM Employee_Cursor; \
+            PRINT 'Hello World'; \
+        END\
+    ";
+    let _ = ms().verified_stmt(while_begin_end_multiple_statements);
 }
 
 #[test]
@@ -1556,7 +1735,6 @@ fn parse_create_table_with_valid_options() {
                             span: Span::empty(),
                         },
                         data_type: Int(None,),
-
                         options: vec![],
                     },
                     ColumnDef {
@@ -1566,7 +1744,6 @@ fn parse_create_table_with_valid_options() {
                             span: Span::empty(),
                         },
                         data_type: Int(None,),
-
                         options: vec![],
                     },
                 ],
@@ -1578,19 +1755,13 @@ fn parse_create_table_with_valid_options() {
                     storage: None,
                     location: None,
                 },),
-                table_properties: vec![],
-                with_options,
                 file_format: None,
                 location: None,
                 query: None,
                 without_rowid: false,
                 like: None,
                 clone: None,
-                engine: None,
                 comment: None,
-                auto_increment_offset: None,
-                default_charset: None,
-                collation: None,
                 on_commit: None,
                 on_cluster: None,
                 primary_key: None,
@@ -1598,7 +1769,7 @@ fn parse_create_table_with_valid_options() {
                 partition_by: None,
                 cluster_by: None,
                 clustered_by: None,
-                options: None,
+                inherits: None,
                 strict: false,
                 iceberg: false,
                 copy_grants: false,
@@ -1615,9 +1786,26 @@ fn parse_create_table_with_valid_options() {
                 catalog: None,
                 catalog_sync: None,
                 storage_serialization_policy: None,
+                table_options: CreateTableOptions::With(with_options)
             })
         );
     }
+}
+
+#[test]
+fn parse_nested_slash_star_comment() {
+    let sql = r#"
+    select
+    /*
+       comment level 1
+       /*
+          comment level 2
+       */
+    */
+    1;
+    "#;
+    let canonical = "SELECT 1";
+    ms().one_statement_parses_to(sql, canonical);
 }
 
 #[test]
@@ -1732,19 +1920,13 @@ fn parse_create_table_with_identity_column() {
                     storage: None,
                     location: None,
                 },),
-                table_properties: vec![],
-                with_options: vec![],
                 file_format: None,
                 location: None,
                 query: None,
                 without_rowid: false,
                 like: None,
                 clone: None,
-                engine: None,
                 comment: None,
-                auto_increment_offset: None,
-                default_charset: None,
-                collation: None,
                 on_commit: None,
                 on_cluster: None,
                 primary_key: None,
@@ -1752,7 +1934,7 @@ fn parse_create_table_with_identity_column() {
                 partition_by: None,
                 cluster_by: None,
                 clustered_by: None,
-                options: None,
+                inherits: None,
                 strict: false,
                 copy_grants: false,
                 enable_schema_evolution: None,
@@ -1768,6 +1950,7 @@ fn parse_create_table_with_identity_column() {
                 catalog: None,
                 catalog_sync: None,
                 storage_serialization_policy: None,
+                table_options: CreateTableOptions::None
             }),
         );
     }
@@ -1847,6 +2030,104 @@ fn parse_mssql_set_session_value() {
 }
 
 #[test]
+fn parse_mssql_if_else() {
+    // Simple statements and blocks
+    ms().verified_stmt("IF 1 = 1 SELECT '1'; ELSE SELECT '2';");
+    ms().verified_stmt("IF 1 = 1 BEGIN SET @A = 1; END ELSE SET @A = 2;");
+    ms().verified_stmt(
+        "IF DATENAME(weekday, GETDATE()) IN (N'Saturday', N'Sunday') SELECT 'Weekend'; ELSE SELECT 'Weekday';"
+    );
+    ms().verified_stmt(
+        "IF (SELECT COUNT(*) FROM a.b WHERE c LIKE 'x%') > 1 SELECT 'yes'; ELSE SELECT 'No';",
+    );
+
+    // Multiple statements
+    let stmts = ms()
+        .parse_sql_statements("DECLARE @A INT; IF 1=1 BEGIN SET @A = 1 END ELSE SET @A = 2")
+        .unwrap();
+    match &stmts[..] {
+        [Statement::Declare { .. }, Statement::If(stmt)] => {
+            assert_eq!(
+                stmt.to_string(),
+                "IF 1 = 1 BEGIN SET @A = 1; END ELSE SET @A = 2;"
+            );
+        }
+        _ => panic!("Unexpected statements: {:?}", stmts),
+    }
+}
+
+#[test]
+fn test_mssql_if_else_span() {
+    let sql = "IF 1 = 1 SELECT '1' ELSE SELECT '2'";
+    let mut parser = Parser::new(&MsSqlDialect {}).try_with_sql(sql).unwrap();
+    assert_eq!(
+        parser.parse_statement().unwrap().span(),
+        Span::new(Location::new(1, 1), Location::new(1, sql.len() as u64 + 1))
+    );
+}
+
+#[test]
+fn test_mssql_if_else_multiline_span() {
+    let sql_line1 = "IF 1 = 1";
+    let sql_line2 = "SELECT '1'";
+    let sql_line3 = "ELSE SELECT '2'";
+    let sql = [sql_line1, sql_line2, sql_line3].join("\n");
+    let mut parser = Parser::new(&MsSqlDialect {}).try_with_sql(&sql).unwrap();
+    assert_eq!(
+        parser.parse_statement().unwrap().span(),
+        Span::new(
+            Location::new(1, 1),
+            Location::new(3, sql_line3.len() as u64 + 1)
+        )
+    );
+}
+
+#[test]
+fn test_mssql_if_statements_span() {
+    // Simple statements
+    let mut sql = "IF 1 = 1 SELECT '1' ELSE SELECT '2'";
+    let mut parser = Parser::new(&MsSqlDialect {}).try_with_sql(sql).unwrap();
+    match parser.parse_statement().unwrap() {
+        Statement::If(IfStatement {
+            if_block,
+            else_block: Some(else_block),
+            ..
+        }) => {
+            assert_eq!(
+                if_block.span(),
+                Span::new(Location::new(1, 1), Location::new(1, 20))
+            );
+            assert_eq!(
+                else_block.span(),
+                Span::new(Location::new(1, 21), Location::new(1, 36))
+            );
+        }
+        stmt => panic!("Unexpected statement: {:?}", stmt),
+    }
+
+    // Blocks
+    sql = "IF 1 = 1 BEGIN SET @A = 1; END ELSE BEGIN SET @A = 2 END";
+    parser = Parser::new(&MsSqlDialect {}).try_with_sql(sql).unwrap();
+    match parser.parse_statement().unwrap() {
+        Statement::If(IfStatement {
+            if_block,
+            else_block: Some(else_block),
+            ..
+        }) => {
+            assert_eq!(
+                if_block.span(),
+                Span::new(Location::new(1, 1), Location::new(1, 31))
+            );
+            assert_eq!(
+                else_block.span(),
+                Span::new(Location::new(1, 32), Location::new(1, 57))
+            );
+        }
+        stmt => panic!("Unexpected statement: {:?}", stmt),
+    }
+}
+
+#[test]
 fn parse_mssql_varbinary_max_length() {
     let sql = "CREATE TABLE example (var_binary_col VARBINARY(MAX))";
 
@@ -1899,9 +2180,158 @@ fn parse_mssql_varbinary_max_length() {
     }
 }
 
+#[test]
+fn parse_mssql_table_identifier_with_default_schema() {
+    ms().verified_stmt("SELECT * FROM mydatabase..MyTable");
+}
+
 fn ms() -> TestedDialects {
     TestedDialects::new(vec![Box::new(MsSqlDialect {})])
 }
+
 fn ms_and_generic() -> TestedDialects {
     TestedDialects::new(vec![Box::new(MsSqlDialect {}), Box::new(GenericDialect {})])
+}
+
+#[test]
+fn parse_mssql_merge_with_output() {
+    let stmt = "MERGE dso.products AS t \
+        USING dsi.products AS \
+        s ON s.ProductID = t.ProductID \
+        WHEN MATCHED AND \
+        NOT (t.ProductName = s.ProductName OR (ISNULL(t.ProductName, s.ProductName) IS NULL)) \
+        THEN UPDATE SET t.ProductName = s.ProductName \
+        WHEN NOT MATCHED BY TARGET \
+        THEN INSERT (ProductID, ProductName) \
+        VALUES (s.ProductID, s.ProductName) \
+        WHEN NOT MATCHED BY SOURCE THEN DELETE \
+        OUTPUT $action, deleted.ProductID INTO dsi.temp_products";
+    ms_and_generic().verified_stmt(stmt);
+}
+
+#[test]
+fn parse_create_trigger() {
+    let create_trigger = "\
+        CREATE OR ALTER TRIGGER reminder1 \
+        ON Sales.Customer \
+        AFTER INSERT, UPDATE \
+        AS RAISERROR('Notify Customer Relations', 16, 10);\
+    ";
+    let create_stmt = ms().verified_stmt(create_trigger);
+    assert_eq!(
+        create_stmt,
+        Statement::CreateTrigger {
+            or_alter: true,
+            or_replace: false,
+            is_constraint: false,
+            name: ObjectName::from(vec![Ident::new("reminder1")]),
+            period: TriggerPeriod::After,
+            events: vec![TriggerEvent::Insert, TriggerEvent::Update(vec![]),],
+            table_name: ObjectName::from(vec![Ident::new("Sales"), Ident::new("Customer")]),
+            referenced_table_name: None,
+            referencing: vec![],
+            trigger_object: TriggerObject::Statement,
+            include_each: false,
+            condition: None,
+            exec_body: None,
+            statements: Some(ConditionalStatements::Sequence {
+                statements: vec![Statement::RaisError {
+                    message: Box::new(Expr::Value(
+                        (Value::SingleQuotedString("Notify Customer Relations".to_string()))
+                            .with_empty_span()
+                    )),
+                    severity: Box::new(Expr::Value(
+                        (Value::Number("16".parse().unwrap(), false)).with_empty_span()
+                    )),
+                    state: Box::new(Expr::Value(
+                        (Value::Number("10".parse().unwrap(), false)).with_empty_span()
+                    )),
+                    arguments: vec![],
+                    options: vec![],
+                }],
+            }),
+            characteristics: None,
+        }
+    );
+
+    let multi_statement_as_trigger = "\
+        CREATE TRIGGER some_trigger ON some_table FOR INSERT \
+        AS \
+        DECLARE @var INT; \
+        RAISERROR('Trigger fired', 10, 1);\
+    ";
+    let _ = ms().verified_stmt(multi_statement_as_trigger);
+
+    let multi_statement_trigger = "\
+        CREATE TRIGGER some_trigger ON some_table FOR INSERT \
+        AS \
+        BEGIN \
+            DECLARE @var INT; \
+            RAISERROR('Trigger fired', 10, 1); \
+        END\
+    ";
+    let _ = ms().verified_stmt(multi_statement_trigger);
+
+    let create_trigger_with_return = "\
+        CREATE TRIGGER some_trigger ON some_table FOR INSERT \
+        AS \
+        BEGIN \
+            RETURN; \
+        END\
+    ";
+    let _ = ms().verified_stmt(create_trigger_with_return);
+
+    let create_trigger_with_return = "\
+        CREATE TRIGGER some_trigger ON some_table FOR INSERT \
+        AS \
+        BEGIN \
+            RETURN; \
+        END\
+    ";
+    let _ = ms().verified_stmt(create_trigger_with_return);
+
+    let create_trigger_with_conditional = "\
+        CREATE TRIGGER some_trigger ON some_table FOR INSERT \
+        AS \
+        BEGIN \
+            IF 1 = 2 \
+            BEGIN \
+                RAISERROR('Trigger fired', 10, 1); \
+            END; \
+            RETURN; \
+        END\
+    ";
+    let _ = ms().verified_stmt(create_trigger_with_conditional);
+}
+
+#[test]
+fn parse_drop_trigger() {
+    let sql_drop_trigger = "DROP TRIGGER emp_stamp;";
+    let drop_stmt = ms().one_statement_parses_to(sql_drop_trigger, "");
+    assert_eq!(
+        drop_stmt,
+        Statement::DropTrigger {
+            if_exists: false,
+            trigger_name: ObjectName::from(vec![Ident::new("emp_stamp")]),
+            table_name: None,
+            option: None,
+        }
+    );
+}
+
+#[test]
+fn parse_print() {
+    let print_string_literal = "PRINT 'Hello, world!'";
+    let print_stmt = ms().verified_stmt(print_string_literal);
+    assert_eq!(
+        print_stmt,
+        Statement::Print(PrintStatement {
+            message: Box::new(Expr::Value(
+                (Value::SingleQuotedString("Hello, world!".to_string())).with_empty_span()
+            )),
+        })
+    );
+
+    let _ = ms().verified_stmt("PRINT N'Hello, ⛄️!'");
+    let _ = ms().verified_stmt("PRINT @my_variable");
 }

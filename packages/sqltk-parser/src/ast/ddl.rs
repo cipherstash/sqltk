@@ -151,8 +151,18 @@ pub enum AlterTableOperation {
     },
     /// `DROP PRIMARY KEY`
     ///
-    /// Note: this is a MySQL-specific operation.
+    /// Note: this is a [MySQL]-specific operation.
+    ///
+    /// [MySQL]: https://dev.mysql.com/doc/refman/8.4/en/alter-table.html
     DropPrimaryKey,
+    /// `DROP FOREIGN KEY <fk_symbol>`
+    ///
+    /// Note: this is a [MySQL]-specific operation.
+    ///
+    /// [MySQL]: https://dev.mysql.com/doc/refman/8.4/en/alter-table.html
+    DropForeignKey {
+        name: Ident,
+    },
     /// `ENABLE ALWAYS RULE rewrite_rule_name`
     ///
     /// Note: this is a PostgreSQL-specific operation.
@@ -278,6 +288,16 @@ pub enum AlterTableOperation {
         equals: bool,
         algorithm: AlterTableAlgorithm,
     },
+
+    /// `LOCK [=] { DEFAULT | NONE | SHARED | EXCLUSIVE }`
+    ///
+    /// [MySQL]-specific table alter lock.
+    ///
+    /// [MySQL]: https://dev.mysql.com/doc/refman/8.4/en/alter-table.html
+    Lock {
+        equals: bool,
+        lock: AlterTableLock,
+    },
     /// `AUTO_INCREMENT [=] <value>`
     ///
     /// [MySQL]-specific table option for raising current auto increment value.
@@ -352,6 +372,30 @@ impl fmt::Display for AlterTableAlgorithm {
             Self::Instant => "INSTANT",
             Self::Inplace => "INPLACE",
             Self::Copy => "COPY",
+        })
+    }
+}
+
+/// [MySQL] `ALTER TABLE` lock.
+///
+/// [MySQL]: https://dev.mysql.com/doc/refman/8.4/en/alter-table.html
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub enum AlterTableLock {
+    Default,
+    None,
+    Shared,
+    Exclusive,
+}
+
+impl fmt::Display for AlterTableLock {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(match self {
+            Self::Default => "DEFAULT",
+            Self::None => "NONE",
+            Self::Shared => "SHARED",
+            Self::Exclusive => "EXCLUSIVE",
         })
     }
 }
@@ -530,6 +574,7 @@ impl fmt::Display for AlterTableOperation {
                 )
             }
             AlterTableOperation::DropPrimaryKey => write!(f, "DROP PRIMARY KEY"),
+            AlterTableOperation::DropForeignKey { name } => write!(f, "DROP FOREIGN KEY {name}"),
             AlterTableOperation::DropColumn {
                 column_name,
                 if_exists,
@@ -681,6 +726,9 @@ impl fmt::Display for AlterTableOperation {
                     value
                 )
             }
+            AlterTableOperation::Lock { equals, lock } => {
+                write!(f, "LOCK {}{}", if *equals { "= " } else { "" }, lock)
+            }
         }
     }
 }
@@ -820,7 +868,7 @@ impl fmt::Display for AlterColumnOperation {
             AlterColumnOperation::SetDefault { value } => {
                 write!(f, "SET DEFAULT {value}")
             }
-            AlterColumnOperation::DropDefault {} => {
+            AlterColumnOperation::DropDefault => {
                 write!(f, "DROP DEFAULT")
             }
             AlterColumnOperation::SetDataType { data_type, using } => {
@@ -1174,13 +1222,20 @@ impl fmt::Display for KeyOrIndexDisplay {
 /// [1]: https://dev.mysql.com/doc/refman/8.0/en/create-table.html
 /// [2]: https://dev.mysql.com/doc/refman/8.0/en/create-index.html
 /// [3]: https://www.postgresql.org/docs/14/sql-createindex.html
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub enum IndexType {
     BTree,
     Hash,
-    // TODO add Postgresql's possible indexes
+    GIN,
+    GiST,
+    SPGiST,
+    BRIN,
+    Bloom,
+    /// Users may define their own index types, which would
+    /// not be covered by the above variants.
+    Custom(Ident),
 }
 
 impl fmt::Display for IndexType {
@@ -1188,6 +1243,12 @@ impl fmt::Display for IndexType {
         match self {
             Self::BTree => write!(f, "BTREE"),
             Self::Hash => write!(f, "HASH"),
+            Self::GIN => write!(f, "GIN"),
+            Self::GiST => write!(f, "GIST"),
+            Self::SPGiST => write!(f, "SPGIST"),
+            Self::BRIN => write!(f, "BRIN"),
+            Self::Bloom => write!(f, "BLOOM"),
+            Self::Custom(name) => write!(f, "{}", name),
         }
     }
 }
@@ -1215,9 +1276,9 @@ impl fmt::Display for IndexOption {
     }
 }
 
-/// [Postgres] unique index nulls handling option: `[ NULLS [ NOT ] DISTINCT ]`
+/// [PostgreSQL] unique index nulls handling option: `[ NULLS [ NOT ] DISTINCT ]`
 ///
-/// [Postgres]: https://www.postgresql.org/docs/17/sql-altertable.html
+/// [PostgreSQL]: https://www.postgresql.org/docs/17/sql-altertable.html
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
@@ -2095,7 +2156,60 @@ impl fmt::Display for ClusteredBy {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+/// ```sql
+/// CREATE DOMAIN name [ AS ] data_type
+///         [ COLLATE collation ]
+///         [ DEFAULT expression ]
+///         [ domain_constraint [ ... ] ]
+///
+///     where domain_constraint is:
+///
+///     [ CONSTRAINT constraint_name ]
+///     { NOT NULL | NULL | CHECK (expression) }
+/// ```
+/// See [PostgreSQL](https://www.postgresql.org/docs/current/sql-createdomain.html)
+pub struct CreateDomain {
+    /// The name of the domain to be created.
+    pub name: ObjectName,
+    /// The data type of the domain.
+    pub data_type: DataType,
+    /// The collation of the domain.
+    pub collation: Option<Ident>,
+    /// The default value of the domain.
+    pub default: Option<Expr>,
+    /// The constraints of the domain.
+    pub constraints: Vec<TableConstraint>,
+}
+
+impl fmt::Display for CreateDomain {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "CREATE DOMAIN {name} AS {data_type}",
+            name = self.name,
+            data_type = self.data_type
+        )?;
+        if let Some(collation) = &self.collation {
+            write!(f, " COLLATE {collation}")?;
+        }
+        if let Some(default) = &self.default {
+            write!(f, " DEFAULT {default}")?;
+        }
+        if !self.constraints.is_empty() {
+            write!(f, " {}", display_separated(&self.constraints, " "))?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub struct CreateFunction {
+    /// True if this is a `CREATE OR ALTER FUNCTION` statement
+    ///
+    /// [MsSql](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-function-transact-sql?view=sql-server-ver16#or-alter)
+    pub or_alter: bool,
     pub or_replace: bool,
     pub temporary: bool,
     pub if_not_exists: bool,
@@ -2114,15 +2228,15 @@ pub struct CreateFunction {
     ///
     /// IMMUTABLE | STABLE | VOLATILE
     ///
-    /// [Postgres](https://www.postgresql.org/docs/current/sql-createfunction.html)
+    /// [PostgreSQL](https://www.postgresql.org/docs/current/sql-createfunction.html)
     pub behavior: Option<FunctionBehavior>,
     /// CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
     ///
-    /// [Postgres](https://www.postgresql.org/docs/current/sql-createfunction.html)
+    /// [PostgreSQL](https://www.postgresql.org/docs/current/sql-createfunction.html)
     pub called_on_null: Option<FunctionCalledOnNull>,
     /// PARALLEL { UNSAFE | RESTRICTED | SAFE }
     ///
-    /// [Postgres](https://www.postgresql.org/docs/current/sql-createfunction.html)
+    /// [PostgreSQL](https://www.postgresql.org/docs/current/sql-createfunction.html)
     pub parallel: Option<FunctionParallel>,
     /// USING ... (Hive only)
     pub using: Option<CreateFunctionUsing>,
@@ -2158,9 +2272,10 @@ impl fmt::Display for CreateFunction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "CREATE {or_replace}{temp}FUNCTION {if_not_exists}{name}",
+            "CREATE {or_alter}{or_replace}{temp}FUNCTION {if_not_exists}{name}",
             name = self.name,
             temp = if self.temporary { "TEMPORARY " } else { "" },
+            or_alter = if self.or_alter { "OR ALTER " } else { "" },
             or_replace = if self.or_replace { "OR REPLACE " } else { "" },
             if_not_exists = if self.if_not_exists {
                 "IF NOT EXISTS "
@@ -2210,6 +2325,9 @@ impl fmt::Display for CreateFunction {
         }
         if let Some(CreateFunctionBody::AsAfterOptions(function_body)) = &self.function_body {
             write!(f, " AS {function_body}")?;
+        }
+        if let Some(CreateFunctionBody::AsBeginEnd(bes)) = &self.function_body {
+            write!(f, " AS {bes}")?;
         }
         Ok(())
     }

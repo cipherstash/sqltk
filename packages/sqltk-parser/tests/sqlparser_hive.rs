@@ -22,11 +22,10 @@
 
 use sqltk_parser::ast::{
     ClusteredBy, CommentDef, CreateFunction, CreateFunctionBody, CreateFunctionUsing, CreateTable,
-    Expr, Function, FunctionArgumentList, FunctionArguments, Ident, ObjectName,
-    OneOrManyWithParens, OrderByExpr, OrderByOptions, SelectItem, Statement, TableFactor,
-    UnaryOperator, Use, Value,
+    Expr, Function, FunctionArgumentList, FunctionArguments, Ident, ObjectName, OrderByExpr,
+    OrderByOptions, SelectItem, Set, Statement, TableFactor, UnaryOperator, Use, Value,
 };
-use sqltk_parser::dialect::{GenericDialect, HiveDialect, MsSqlDialect};
+use sqltk_parser::dialect::{AnsiDialect, GenericDialect, HiveDialect};
 use sqltk_parser::parser::ParserError;
 use sqltk_parser::test_utils::*;
 
@@ -92,7 +91,7 @@ fn parse_msck() {
 }
 
 #[test]
-fn parse_set() {
+fn parse_set_hivevar() {
     let set = "SET HIVEVAR:name = a, b, c_d";
     hive().verified_stmt(set);
 }
@@ -134,9 +133,7 @@ fn create_table_with_comment() {
         Statement::CreateTable(CreateTable { comment, .. }) => {
             assert_eq!(
                 comment,
-                Some(CommentDef::AfterColumnDefsWithoutEq(
-                    "table comment".to_string()
-                ))
+                Some(CommentDef::WithoutEq("table comment".to_string()))
             )
         }
         _ => unreachable!(),
@@ -369,20 +366,20 @@ fn from_cte() {
 fn set_statement_with_minus() {
     assert_eq!(
         hive().verified_stmt("SET hive.tez.java.opts = -Xmx4g"),
-        Statement::SetVariable {
-            local: false,
+        Statement::Set(Set::SingleAssignment {
+            scope: None,
             hivevar: false,
-            variables: OneOrManyWithParens::One(ObjectName::from(vec![
+            variable: ObjectName::from(vec![
                 Ident::new("hive"),
                 Ident::new("tez"),
                 Ident::new("java"),
                 Ident::new("opts")
-            ])),
-            value: vec![Expr::UnaryOp {
+            ]),
+            values: vec![Expr::UnaryOp {
                 op: UnaryOperator::Minus,
                 expr: Box::new(Expr::Identifier(Ident::new("Xmx4g")))
             }],
-        }
+        })
     );
 
     assert_eq!(
@@ -424,7 +421,7 @@ fn parse_create_function() {
     }
 
     // Test error in dialect that doesn't support parsing CREATE FUNCTION
-    let unsupported_dialects = TestedDialects::new(vec![Box::new(MsSqlDialect {})]);
+    let unsupported_dialects = TestedDialects::new(vec![Box::new(AnsiDialect {})]);
 
     assert_eq!(
         unsupported_dialects.parse_sql_statements(sql).unwrap_err(),

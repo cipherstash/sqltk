@@ -155,4 +155,16 @@ impl Dialect for GenericDialect {
     fn supports_match_against(&self) -> bool {
         true
     }
+
+    fn supports_set_names(&self) -> bool {
+        true
+    }
+
+    fn supports_comma_separated_set_assignments(&self) -> bool {
+        true
+    }
+
+    fn supports_filter_during_aggregation(&self) -> bool {
+        true
+    }
 }

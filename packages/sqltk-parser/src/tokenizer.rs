@@ -246,6 +246,8 @@ pub enum Token {
     ShiftLeftVerticalBar,
     /// `|>> PostgreSQL/Redshift geometrical binary operator (Is strictly above?)
     VerticalBarShiftRight,
+    /// `|> BigQuery pipe operator
+    VerticalBarRightAngleBracket,
     /// `#>>`, extracts JSON sub-object at the specified path as text
     HashLongArrow,
     /// jsonb @> jsonb -> boolean: Test whether left json contains the right json
@@ -359,6 +361,7 @@ impl fmt::Display for Token {
             Token::AmpersandRightAngleBracket => f.write_str("&>"),
             Token::AmpersandLeftAngleBracketVerticalBar => f.write_str("&<|"),
             Token::VerticalBarAmpersandRightAngleBracket => f.write_str("|&>"),
+            Token::VerticalBarRightAngleBracket => f.write_str("|>"),
             Token::TwoWayArrow => f.write_str("<->"),
             Token::LeftAngleBracketCaret => f.write_str("<^"),
             Token::RightAngleBracketCaret => f.write_str(">^"),
@@ -895,7 +898,7 @@ impl<'a> Tokenizer<'a> {
         };
 
         let mut location = state.location();
-        while let Some(token) = self.next_token(&mut state)? {
+        while let Some(token) = self.next_token(&mut state, buf.last().map(|t| &t.token))? {
             let span = location.span_to(state.location());
 
             buf.push(TokenWithSpan { token, span });
@@ -932,7 +935,11 @@ impl<'a> Tokenizer<'a> {
     }
 
     /// Get the next token or return None
-    fn next_token(&self, chars: &mut State) -> Result<Option<Token>, TokenizerError> {
+    fn next_token(
+        &self,
+        chars: &mut State,
+        prev_token: Option<&Token>,
+    ) -> Result<Option<Token>, TokenizerError> {
         match chars.peek() {
             Some(&ch) => match ch {
                 ' ' => self.consume_and_return(chars, Token::Whitespace(Whitespace::Space)),
@@ -1211,17 +1218,29 @@ impl<'a> Tokenizer<'a> {
                         chars.next();
                     }
 
+                    // If the dialect supports identifiers that start with a numeric prefix
+                    // and we have now consumed a dot, check if the previous token was a Word.
+                    // If so, what follows is definitely not part of a decimal number and
+                    // we should yield the dot as a dedicated token so compound identifiers
+                    // starting with digits can be parsed correctly.
+                    if s == "." && self.dialect.supports_numeric_prefix() {
+                        if let Some(Token::Word(_)) = prev_token {
+                            return Ok(Some(Token::Period));
+                        }
+                    }
+
+                    // Consume fractional digits.
                     s += &peeking_next_take_while(chars, |ch, next_ch| {
                         ch.is_ascii_digit() || is_number_separator(ch, next_ch)
                     });
 
-                    // No number -> Token::Period
+                    // No fraction -> Token::Period
                     if s == "." {
                         return Ok(Some(Token::Period));
                     }
 
-                    let mut exponent_part = String::new();
                     // Parse exponent as number
+                    let mut exponent_part = String::new();
                     if chars.peek() == Some(&'e') || chars.peek() == Some(&'E') {
                         let mut char_clone = chars.peekable.clone();
                         exponent_part.push(char_clone.next().unwrap());
@@ -1250,14 +1269,23 @@ impl<'a> Tokenizer<'a> {
                         }
                     }
 
-                    // mysql dialect supports identifiers that start with a numeric prefix,
-                    // as long as they aren't an exponent number.
-                    if self.dialect.supports_numeric_prefix() && exponent_part.is_empty() {
-                        let word =
-                            peeking_take_while(chars, |ch| self.dialect.is_identifier_part(ch));
+                    // If the dialect supports identifiers that start with a numeric prefix,
+                    // we need to check if the value is in fact an identifier and must thus
+                    // be tokenized as a word.
+                    if self.dialect.supports_numeric_prefix() {
+                        if exponent_part.is_empty() {
+                            // If it is not a number with an exponent, it may be
+                            // an identifier starting with digits.
+                            let word =
+                                peeking_take_while(chars, |ch| self.dialect.is_identifier_part(ch));
 
-                        if !word.is_empty() {
-                            s += word.as_str();
+                            if !word.is_empty() {
+                                s += word.as_str();
+                                return Ok(Some(Token::make_word(s.as_str(), None)));
+                            }
+                        } else if prev_token == Some(&Token::Period) {
+                            // If the previous token was a period, thus not belonging to a number,
+                            // the value we have is part of an identifier.
                             return Ok(Some(Token::make_word(s.as_str(), None)));
                         }
                     }
@@ -1377,6 +1405,9 @@ impl<'a> Tokenizer<'a> {
                                 ),
                                 _ => self.start_binop_opt(chars, "|>", None),
                             }
+                        }
+                        Some('>') if self.dialect.supports_pipe_operator() => {
+                            self.consume_for_binop(chars, "|>", Token::VerticalBarRightAngleBracket)
                         }
                         // Bitshift '|' operator
                         _ => self.start_binop(chars, "|", Token::Pipe),
@@ -2011,8 +2042,13 @@ impl<'a> Tokenizer<'a> {
                     num_consecutive_quotes = 0;
 
                     if let Some(next) = chars.peek() {
-                        if !self.unescape {
-                            // In no-escape mode, the given query has to be saved completely including backslashes.
+                        if !self.unescape
+                            || (self.dialect.ignores_wildcard_escapes()
+                                && (*next == '%' || *next == '_'))
+                        {
+                            // In no-escape mode, the given query has to be saved completely
+                            // including backslashes. Similarly, with ignore_like_wildcard_escapes,
+                            // the backslash is not stripped.
                             s.push(ch);
                             s.push(*next);
                             chars.next(); // consume next
@@ -3585,6 +3621,9 @@ mod tests {
             (r#"'\\a\\b\'c'"#, r#"\\a\\b\'c"#, r#"\a\b'c"#),
             (r#"'\'abcd'"#, r#"\'abcd"#, r#"'abcd"#),
             (r#"'''a''b'"#, r#"''a''b"#, r#"'a'b"#),
+            (r#"'\q'"#, r#"\q"#, r#"q"#),
+            (r#"'\%\_'"#, r#"\%\_"#, r#"%_"#),
+            (r#"'\\%\\_'"#, r#"\\%\\_"#, r#"\%\_"#),
         ] {
             let tokens = Tokenizer::new(&dialect, sql)
                 .with_unescape(false)
@@ -3612,6 +3651,16 @@ mod tests {
         // Non-escape dialect
         for (sql, expected) in [(r#"'\'"#, r#"\"#), (r#"'ab\'"#, r#"ab\"#)] {
             let dialect = GenericDialect {};
+            let tokens = Tokenizer::new(&dialect, sql).tokenize().unwrap();
+
+            let expected = vec![Token::SingleQuotedString(expected.to_string())];
+
+            compare(expected, tokens);
+        }
+
+        // MySQL special case for LIKE escapes
+        for (sql, expected) in [(r#"'\%'"#, r#"\%"#), (r#"'\_'"#, r#"\_"#)] {
+            let dialect = MySqlDialect {};
             let tokens = Tokenizer::new(&dialect, sql).tokenize().unwrap();
 
             let expected = vec![Token::SingleQuotedString(expected.to_string())];
@@ -3941,5 +3990,32 @@ mod tests {
                     }),
                 ],
             );
+    }
+
+    #[test]
+    fn test_tokenize_identifiers_numeric_prefix() {
+        all_dialects_where(|dialect| dialect.supports_numeric_prefix())
+            .tokenizes_to("123abc", vec![Token::make_word("123abc", None)]);
+
+        all_dialects_where(|dialect| dialect.supports_numeric_prefix())
+            .tokenizes_to("12e34", vec![Token::Number("12e34".to_string(), false)]);
+
+        all_dialects_where(|dialect| dialect.supports_numeric_prefix()).tokenizes_to(
+            "t.12e34",
+            vec![
+                Token::make_word("t", None),
+                Token::Period,
+                Token::make_word("12e34", None),
+            ],
+        );
+
+        all_dialects_where(|dialect| dialect.supports_numeric_prefix()).tokenizes_to(
+            "t.1two3",
+            vec![
+                Token::make_word("t", None),
+                Token::Period,
+                Token::make_word("1two3", None),
+            ],
+        );
     }
 }

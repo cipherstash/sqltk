@@ -43,14 +43,8 @@ pub struct Query {
     pub body: Box<SetExpr>,
     /// ORDER BY
     pub order_by: Option<OrderBy>,
-    /// `LIMIT { <N> | ALL }`
-    pub limit: Option<Expr>,
-
-    /// `LIMIT { <N> } BY { <expr>,<expr>,... } }`
-    pub limit_by: Vec<Expr>,
-
-    /// `OFFSET <N> [ { ROW | ROWS } ]`
-    pub offset: Option<Offset>,
+    /// `LIMIT ... OFFSET ... | LIMIT <offset>, <limit>`
+    pub limit_clause: Option<LimitClause>,
     /// `FETCH { FIRST | NEXT } <N> [ PERCENT ] { ROW | ROWS } | { ONLY | WITH TIES }`
     pub fetch: Option<Fetch>,
     /// `FOR { UPDATE | SHARE } [ OF table_name ] [ SKIP LOCKED | NOWAIT ]`
@@ -68,6 +62,9 @@ pub struct Query {
     /// [ClickHouse](https://clickhouse.com/docs/en/sql-reference/statements/select/format)
     /// (ClickHouse-specific)
     pub format_clause: Option<FormatClause>,
+
+    /// Pipe operator
+    pub pipe_operators: Vec<PipeOperator>,
 }
 
 impl fmt::Display for Query {
@@ -79,14 +76,9 @@ impl fmt::Display for Query {
         if let Some(ref order_by) = self.order_by {
             write!(f, " {order_by}")?;
         }
-        if let Some(ref limit) = self.limit {
-            write!(f, " LIMIT {limit}")?;
-        }
-        if let Some(ref offset) = self.offset {
-            write!(f, " {offset}")?;
-        }
-        if !self.limit_by.is_empty() {
-            write!(f, " BY {}", display_separated(&self.limit_by, ", "))?;
+
+        if let Some(ref limit_clause) = self.limit_clause {
+            limit_clause.fmt(f)?;
         }
         if let Some(ref settings) = self.settings {
             write!(f, " SETTINGS {}", display_comma_separated(settings))?;
@@ -102,6 +94,9 @@ impl fmt::Display for Query {
         }
         if let Some(ref format) = self.format_clause {
             write!(f, " {}", format)?;
+        }
+        for pipe_operator in &self.pipe_operators {
+            write!(f, " |> {}", pipe_operator)?;
         }
         Ok(())
     }
@@ -156,6 +151,7 @@ pub enum SetExpr {
     Values(Values),
     Insert(Statement),
     Update(Statement),
+    Delete(Statement),
     Table(Box<Table>),
 }
 
@@ -178,6 +174,7 @@ impl fmt::Display for SetExpr {
             SetExpr::Values(v) => write!(f, "{v}"),
             SetExpr::Insert(v) => write!(f, "{v}"),
             SetExpr::Update(v) => write!(f, "{v}"),
+            SetExpr::Delete(v) => write!(f, "{v}"),
             SetExpr::Table(t) => write!(f, "{t}"),
             SetExpr::SetOperation {
                 left,
@@ -1013,6 +1010,26 @@ impl fmt::Display for ExprWithAlias {
     }
 }
 
+/// An expression optionally followed by an alias and order by options.
+///
+/// Example:
+/// ```sql
+/// 42 AS myint ASC
+/// ```
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub struct ExprWithAliasAndOrderBy {
+    pub expr: ExprWithAlias,
+    pub order_by: OrderByOptions,
+}
+
+impl fmt::Display for ExprWithAliasAndOrderBy {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.expr, self.order_by)
+    }
+}
+
 /// Arguments to a table-valued function
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -1278,6 +1295,37 @@ pub enum TableFactor {
         pattern: MatchRecognizePattern,
         /// `DEFINE <symbol> AS <expr> [, ... ]`
         symbols: Vec<SymbolDefinition>,
+        alias: Option<TableAlias>,
+    },
+    /// The `XMLTABLE` table-valued function.
+    /// Part of the SQL standard, supported by PostgreSQL, Oracle, and DB2.
+    ///
+    /// <https://www.postgresql.org/docs/15/functions-xml.html#FUNCTIONS-XML-PROCESSING>
+    ///
+    /// ```sql
+    /// SELECT xmltable.*
+    /// FROM xmldata,
+    /// XMLTABLE('//ROWS/ROW'
+    ///     PASSING data
+    ///     COLUMNS id int PATH '@id',
+    ///     ordinality FOR ORDINALITY,
+    ///     "COUNTRY_NAME" text,
+    ///     country_id text PATH 'COUNTRY_ID',
+    ///     size_sq_km float PATH 'SIZE[@unit = "sq_km"]',
+    ///     size_other text PATH 'concat(SIZE[@unit!="sq_km"], " ", SIZE[@unit!="sq_km"]/@unit)',
+    ///     premier_name text PATH 'PREMIER_NAME' DEFAULT 'not specified'
+    /// );
+    /// ````
+    XmlTable {
+        /// Optional XMLNAMESPACES clause (empty if not present)
+        namespaces: Vec<XmlNamespaceDefinition>,
+        /// The row-generating XPath expression.
+        row_expression: Expr,
+        /// The PASSING clause specifying the document expression.
+        passing: XmlPassingClause,
+        /// The columns to be extracted from each generated row.
+        columns: Vec<XmlTableColumn>,
+        /// The alias for the table.
         alias: Option<TableAlias>,
     },
 }
@@ -1945,6 +1993,31 @@ impl fmt::Display for TableFactor {
                 }
                 Ok(())
             }
+            TableFactor::XmlTable {
+                row_expression,
+                passing,
+                columns,
+                alias,
+                namespaces,
+            } => {
+                write!(f, "XMLTABLE(")?;
+                if !namespaces.is_empty() {
+                    write!(
+                        f,
+                        "XMLNAMESPACES({}), ",
+                        display_comma_separated(namespaces)
+                    )?;
+                }
+                write!(
+                    f,
+                    "{row_expression}{passing} COLUMNS {columns})",
+                    columns = display_comma_separated(columns)
+                )?;
+                if let Some(alias) = alias {
+                    write!(f, " AS {alias}")?;
+                }
+                Ok(())
+            }
         }
     }
 }
@@ -2166,6 +2239,9 @@ impl fmt::Display for Join {
                 self.relation,
                 suffix(constraint)
             ),
+            JoinOperator::StraightJoin(constraint) => {
+                write!(f, " STRAIGHT_JOIN {}{}", self.relation, suffix(constraint))
+            }
         }
     }
 }
@@ -2206,6 +2282,10 @@ pub enum JoinOperator {
         match_condition: Expr,
         constraint: JoinConstraint,
     },
+    /// STRAIGHT_JOIN (non-standard)
+    ///
+    /// See <https://dev.mysql.com/doc/refman/8.4/en/join.html>.
+    StraightJoin(JoinConstraint),
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
@@ -2375,6 +2455,58 @@ impl fmt::Display for OrderByOptions {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub enum LimitClause {
+    /// Standard SQL syntax
+    ///
+    /// `LIMIT <limit> [BY <expr>,<expr>,...] [OFFSET <offset>]`
+    LimitOffset {
+        /// `LIMIT { <N> | ALL }`
+        limit: Option<Expr>,
+        /// `OFFSET <N> [ { ROW | ROWS } ]`
+        offset: Option<Offset>,
+        /// `BY { <expr>,<expr>,... } }`
+        ///
+        /// [ClickHouse](https://clickhouse.com/docs/sql-reference/statements/select/limit-by)
+        limit_by: Vec<Expr>,
+    },
+    /// [MySQL]-specific syntax; the order of expressions is reversed.
+    ///
+    /// `LIMIT <offset>, <limit>`
+    ///
+    /// [MySQL]: https://dev.mysql.com/doc/refman/8.4/en/select.html
+    OffsetCommaLimit { offset: Expr, limit: Expr },
+}
+
+impl fmt::Display for LimitClause {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            LimitClause::LimitOffset {
+                limit,
+                limit_by,
+                offset,
+            } => {
+                if let Some(ref limit) = limit {
+                    write!(f, " LIMIT {limit}")?;
+                }
+                if let Some(ref offset) = offset {
+                    write!(f, " {offset}")?;
+                }
+                if !limit_by.is_empty() {
+                    debug_assert!(limit.is_some());
+                    write!(f, " BY {}", display_separated(limit_by, ", "))?;
+                }
+                Ok(())
+            }
+            LimitClause::OffsetCommaLimit { offset, limit } => {
+                write!(f, " LIMIT {}, {}", offset, limit)
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub struct Offset {
     pub value: Expr,
     pub rows: OffsetRows,
@@ -2403,6 +2535,135 @@ impl fmt::Display for OffsetRows {
             OffsetRows::None => Ok(()),
             OffsetRows::Row => write!(f, " ROW"),
             OffsetRows::Rows => write!(f, " ROWS"),
+        }
+    }
+}
+
+/// Pipe syntax, first introduced in Google BigQuery.
+/// Example:
+///
+/// ```sql
+/// FROM Produce
+/// |> WHERE sales > 0
+/// |> AGGREGATE SUM(sales) AS total_sales, COUNT(*) AS num_sales
+///    GROUP BY item;
+/// ```
+///
+/// See <https://cloud.google.com/bigquery/docs/reference/standard-sql/pipe-syntax#pipe_syntax>
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub enum PipeOperator {
+    /// Limits the number of rows to return in a query, with an optional OFFSET clause to skip over rows.
+    ///
+    /// Syntax: `|> LIMIT <n> [OFFSET <m>]`
+    ///
+    /// See more at <https://cloud.google.com/bigquery/docs/reference/standard-sql/pipe-syntax#limit_pipe_operator>
+    Limit { expr: Expr, offset: Option<Expr> },
+    /// Filters the results of the input table.
+    ///
+    /// Syntax: `|> WHERE <condition>`
+    ///
+    /// See more at <https://cloud.google.com/bigquery/docs/reference/standard-sql/pipe-syntax#where_pipe_operator>
+    Where { expr: Expr },
+    /// `ORDER BY <expr> [ASC|DESC], ...`
+    OrderBy { exprs: Vec<OrderByExpr> },
+    /// Produces a new table with the listed columns, similar to the outermost SELECT clause in a table subquery in standard syntax.
+    ///
+    /// Syntax `|> SELECT <expr> [[AS] alias], ...`
+    ///
+    /// See more at <https://cloud.google.com/bigquery/docs/reference/standard-sql/pipe-syntax#select_pipe_operator>
+    Select { exprs: Vec<SelectItem> },
+    /// Propagates the existing table and adds computed columns, similar to SELECT *, new_column in standard syntax.
+    ///
+    /// Syntax: `|> EXTEND <expr> [[AS] alias], ...`
+    ///
+    /// See more at <https://cloud.google.com/bigquery/docs/reference/standard-sql/pipe-syntax#extend_pipe_operator>
+    Extend { exprs: Vec<SelectItem> },
+    /// Replaces the value of a column in the current table, similar to SELECT * REPLACE (expression AS column) in standard syntax.
+    ///
+    /// Syntax: `|> SET <column> = <expression>, ...`
+    ///
+    /// See more at <https://cloud.google.com/bigquery/docs/reference/standard-sql/pipe-syntax#set_pipe_operator>
+    Set { assignments: Vec<Assignment> },
+    /// Removes listed columns from the current table, similar to SELECT * EXCEPT (column) in standard syntax.
+    ///
+    /// Syntax: `|> DROP <column>, ...`
+    ///
+    /// See more at <https://cloud.google.com/bigquery/docs/reference/standard-sql/pipe-syntax#drop_pipe_operator>
+    Drop { columns: Vec<Ident> },
+    /// Introduces a table alias for the input table, similar to applying the AS alias clause on a table subquery in standard syntax.
+    ///
+    /// Syntax: `|> AS <alias>`
+    ///
+    /// See more at <https://cloud.google.com/bigquery/docs/reference/standard-sql/pipe-syntax#as_pipe_operator>
+    As { alias: Ident },
+    /// Performs aggregation on data across grouped rows or an entire table.
+    ///
+    /// Syntax: `|> AGGREGATE <agg_expr> [[AS] alias], ...`
+    ///
+    /// Syntax:
+    /// ```norust
+    /// |> AGGREGATE [<agg_expr> [[AS] alias], ...]
+    /// GROUP BY <grouping_expr> [AS alias], ...
+    /// ```
+    ///
+    /// See more at <https://cloud.google.com/bigquery/docs/reference/standard-sql/pipe-syntax#aggregate_pipe_operator>
+    Aggregate {
+        full_table_exprs: Vec<ExprWithAliasAndOrderBy>,
+        group_by_expr: Vec<ExprWithAliasAndOrderBy>,
+    },
+}
+
+impl fmt::Display for PipeOperator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            PipeOperator::Select { exprs } => {
+                write!(f, "SELECT {}", display_comma_separated(exprs.as_slice()))
+            }
+            PipeOperator::Extend { exprs } => {
+                write!(f, "EXTEND {}", display_comma_separated(exprs.as_slice()))
+            }
+            PipeOperator::Set { assignments } => {
+                write!(f, "SET {}", display_comma_separated(assignments.as_slice()))
+            }
+            PipeOperator::Drop { columns } => {
+                write!(f, "DROP {}", display_comma_separated(columns.as_slice()))
+            }
+            PipeOperator::As { alias } => {
+                write!(f, "AS {}", alias)
+            }
+            PipeOperator::Limit { expr, offset } => {
+                write!(f, "LIMIT {}", expr)?;
+                if let Some(offset) = offset {
+                    write!(f, " OFFSET {}", offset)?;
+                }
+                Ok(())
+            }
+            PipeOperator::Aggregate {
+                full_table_exprs,
+                group_by_expr,
+            } => {
+                write!(f, "AGGREGATE")?;
+                if !full_table_exprs.is_empty() {
+                    write!(
+                        f,
+                        " {}",
+                        display_comma_separated(full_table_exprs.as_slice())
+                    )?;
+                }
+                if !group_by_expr.is_empty() {
+                    write!(f, " GROUP BY {}", display_comma_separated(group_by_expr))?;
+                }
+                Ok(())
+            }
+
+            PipeOperator::Where { expr } => {
+                write!(f, "WHERE {}", expr)
+            }
+            PipeOperator::OrderBy { exprs } => {
+                write!(f, "ORDER BY {}", display_comma_separated(exprs.as_slice()))
+            }
         }
     }
 }
@@ -3031,4 +3292,134 @@ pub enum UpdateTableFromKind {
     /// Update Statement where the 'FROM' clause is after the 'SET' keyword (Which is the standard way)
     /// For Example: `UPDATE SET t1.name='aaa' FROM t1`
     AfterSet(Vec<TableWithJoins>),
+}
+
+/// Defines the options for an XmlTable column: Named or ForOrdinality
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum XmlTableColumnOption {
+    /// A named column with a type, optional path, and default value.
+    NamedInfo {
+        /// The type of the column to be extracted.
+        r#type: DataType,
+        /// The path to the column to be extracted. If None, defaults to the column name.
+        path: Option<Expr>,
+        /// Default value if path does not match
+        default: Option<Expr>,
+        /// Whether the column is nullable (NULL=true, NOT NULL=false)
+        nullable: bool,
+    },
+    /// The FOR ORDINALITY marker
+    ForOrdinality,
+}
+
+/// A single column definition in XMLTABLE
+///
+/// ```sql
+/// COLUMNS
+///     id int PATH '@id',
+///     ordinality FOR ORDINALITY,
+///     "COUNTRY_NAME" text,
+///     country_id text PATH 'COUNTRY_ID',
+///     size_sq_km float PATH 'SIZE[@unit = "sq_km"]',
+///     size_other text PATH 'concat(SIZE[@unit!="sq_km"], " ", SIZE[@unit!="sq_km"]/@unit)',
+///     premier_name text PATH 'PREMIER_NAME' DEFAULT 'not specified'
+/// ```
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct XmlTableColumn {
+    /// The name of the column.
+    pub name: Ident,
+    /// Column options: type/path/default or FOR ORDINALITY
+    pub option: XmlTableColumnOption,
+}
+
+impl fmt::Display for XmlTableColumn {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)?;
+        match &self.option {
+            XmlTableColumnOption::NamedInfo {
+                r#type,
+                path,
+                default,
+                nullable,
+            } => {
+                write!(f, " {}", r#type)?;
+                if let Some(p) = path {
+                    write!(f, " PATH {}", p)?;
+                }
+                if let Some(d) = default {
+                    write!(f, " DEFAULT {}", d)?;
+                }
+                if !*nullable {
+                    write!(f, " NOT NULL")?;
+                }
+                Ok(())
+            }
+            XmlTableColumnOption::ForOrdinality => {
+                write!(f, " FOR ORDINALITY")
+            }
+        }
+    }
+}
+
+/// Argument passed in the XMLTABLE PASSING clause
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct XmlPassingArgument {
+    pub expr: Expr,
+    pub alias: Option<Ident>,
+    pub by_value: bool, // True if BY VALUE is specified
+}
+
+impl fmt::Display for XmlPassingArgument {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.by_value {
+            write!(f, "BY VALUE ")?;
+        }
+        write!(f, "{}", self.expr)?;
+        if let Some(alias) = &self.alias {
+            write!(f, " AS {}", alias)?;
+        }
+        Ok(())
+    }
+}
+
+/// The PASSING clause for XMLTABLE
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct XmlPassingClause {
+    pub arguments: Vec<XmlPassingArgument>,
+}
+
+impl fmt::Display for XmlPassingClause {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if !self.arguments.is_empty() {
+            write!(f, " PASSING {}", display_comma_separated(&self.arguments))?;
+        }
+        Ok(())
+    }
+}
+
+/// Represents a single XML namespace definition in the XMLNAMESPACES clause.
+///
+/// `namespace_uri AS namespace_name`
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct XmlNamespaceDefinition {
+    /// The namespace URI (a text expression).
+    pub uri: Expr,
+    /// The alias for the namespace (a simple identifier).
+    pub name: Ident,
+}
+
+impl fmt::Display for XmlNamespaceDefinition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} AS {}", self.uri, self.name)
+    }
 }

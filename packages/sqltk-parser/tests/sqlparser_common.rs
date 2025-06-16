@@ -483,14 +483,13 @@ fn parse_update_set_from() {
                             flavor: SelectFlavor::Standard,
                         }))),
                         order_by: None,
-                        limit: None,
-                        limit_by: vec![],
-                        offset: None,
+                        limit_clause: None,
                         fetch: None,
                         locks: vec![],
                         for_clause: None,
                         settings: None,
                         format_clause: None,
+                        pipe_operators: vec![],
                     }),
                     alias: Some(TableAlias {
                         name: Ident::new("t2"),
@@ -900,7 +899,12 @@ fn parse_simple_select() {
     assert!(select.distinct.is_none());
     assert_eq!(3, select.projection.len());
     let select = verified_query(sql);
-    assert_eq!(Some(Expr::value(number("5"))), select.limit);
+    let expected_limit_clause = LimitClause::LimitOffset {
+        limit: Some(Expr::value(number("5"))),
+        offset: None,
+        limit_by: vec![],
+    };
+    assert_eq!(Some(expected_limit_clause), select.limit_clause);
 }
 
 #[test]
@@ -909,13 +913,30 @@ fn parse_limit() {
 }
 
 #[test]
+fn parse_invalid_limit_by() {
+    all_dialects()
+        .parse_sql_statements("SELECT * FROM user BY name")
+        .expect_err("BY without LIMIT");
+}
+
+#[test]
 fn parse_limit_is_not_an_alias() {
     // In dialects supporting LIMIT it shouldn't be parsed as a table alias
     let ast = verified_query("SELECT id FROM customer LIMIT 1");
-    assert_eq!(Some(Expr::value(number("1"))), ast.limit);
+    let expected_limit_clause = LimitClause::LimitOffset {
+        limit: Some(Expr::value(number("1"))),
+        offset: None,
+        limit_by: vec![],
+    };
+    assert_eq!(Some(expected_limit_clause), ast.limit_clause);
 
     let ast = verified_query("SELECT 1 LIMIT 5");
-    assert_eq!(Some(Expr::value(number("5"))), ast.limit);
+    let expected_limit_clause = LimitClause::LimitOffset {
+        limit: Some(Expr::value(number("5"))),
+        offset: None,
+        limit_by: vec![],
+    };
+    assert_eq!(Some(expected_limit_clause), ast.limit_clause);
 }
 
 #[test]
@@ -2204,7 +2225,21 @@ fn parse_in_subquery() {
     assert_eq!(
         Expr::InSubquery {
             expr: Box::new(Expr::Identifier(Ident::new("segment"))),
-            subquery: Box::new(verified_query("SELECT segm FROM bar")),
+            subquery: verified_query("SELECT segm FROM bar").body,
+            negated: false,
+        },
+        select.selection.unwrap()
+    );
+}
+
+#[test]
+fn parse_in_union() {
+    let sql = "SELECT * FROM customers WHERE segment IN ((SELECT segm FROM bar) UNION (SELECT segm FROM bar2))";
+    let select = verified_only_select(sql);
+    assert_eq!(
+        Expr::InSubquery {
+            expr: Box::new(Expr::Identifier(Ident::new("segment"))),
+            subquery: verified_query("(SELECT segm FROM bar) UNION (SELECT segm FROM bar2)").body,
             negated: false,
         },
         select.selection.unwrap()
@@ -2493,7 +2528,12 @@ fn parse_select_order_by_limit() {
         ]),
         select.order_by.expect("ORDER BY expected").kind
     );
-    assert_eq!(Some(Expr::value(number("2"))), select.limit);
+    let expected_limit_clause = LimitClause::LimitOffset {
+        limit: Some(Expr::value(number("2"))),
+        offset: None,
+        limit_by: vec![],
+    };
+    assert_eq!(Some(expected_limit_clause), select.limit_clause);
 }
 
 #[test]
@@ -2654,7 +2694,12 @@ fn parse_select_order_by_nulls_order() {
         ]),
         select.order_by.expect("ORDER BY expeccted").kind
     );
-    assert_eq!(Some(Expr::value(number("2"))), select.limit);
+    let expected_limit_clause = LimitClause::LimitOffset {
+        limit: Some(Expr::value(number("2"))),
+        offset: None,
+        limit_by: vec![],
+    };
+    assert_eq!(Some(expected_limit_clause), select.limit_clause);
 }
 
 #[test]
@@ -2863,6 +2908,14 @@ fn parse_limit_accepts_all() {
     one_statement_parses_to(
         "SELECT id, fname, lname FROM customer WHERE id = 1 LIMIT ALL",
         "SELECT id, fname, lname FROM customer WHERE id = 1",
+    );
+    one_statement_parses_to(
+        "SELECT id, fname, lname FROM customer WHERE id = 1 LIMIT ALL OFFSET 1",
+        "SELECT id, fname, lname FROM customer WHERE id = 1 OFFSET 1",
+    );
+    one_statement_parses_to(
+        "SELECT id, fname, lname FROM customer WHERE id = 1 OFFSET 1 LIMIT ALL",
+        "SELECT id, fname, lname FROM customer WHERE id = 1 OFFSET 1",
     );
 }
 
@@ -3604,7 +3657,7 @@ fn parse_create_table() {
             name,
             columns,
             constraints,
-            with_options,
+            table_options,
             if_not_exists: false,
             external: false,
             file_format: None,
@@ -3742,7 +3795,7 @@ fn parse_create_table() {
                     },
                 ]
             );
-            assert_eq!(with_options, vec![]);
+            assert_eq!(table_options, CreateTableOptions::None);
         }
         _ => unreachable!(),
     }
@@ -3787,7 +3840,7 @@ fn parse_create_table_with_constraint_characteristics() {
             name,
             columns,
             constraints,
-            with_options,
+            table_options,
             if_not_exists: false,
             external: false,
             file_format: None,
@@ -3881,7 +3934,7 @@ fn parse_create_table_with_constraint_characteristics() {
                     },
                 ]
             );
-            assert_eq!(with_options, vec![]);
+            assert_eq!(table_options, CreateTableOptions::None);
         }
         _ => unreachable!(),
     }
@@ -4170,6 +4223,11 @@ fn parse_create_schema() {
         }
         _ => unreachable!(),
     }
+
+    verified_stmt(r#"CREATE SCHEMA a.b.c OPTIONS(key1 = 'value1', key2 = 'value2')"#);
+    verified_stmt(r#"CREATE SCHEMA IF NOT EXISTS a OPTIONS(key1 = 'value1')"#);
+    verified_stmt(r#"CREATE SCHEMA IF NOT EXISTS a OPTIONS()"#);
+    verified_stmt(r#"CREATE SCHEMA IF NOT EXISTS a DEFAULT COLLATE 'und:ci' OPTIONS()"#);
 }
 
 #[test]
@@ -4247,14 +4305,13 @@ fn parse_create_table_as_table() {
             schema_name: None,
         }))),
         order_by: None,
-        limit: None,
-        limit_by: vec![],
-        offset: None,
+        limit_clause: None,
         fetch: None,
         locks: vec![],
         for_clause: None,
         settings: None,
         format_clause: None,
+        pipe_operators: vec![],
     });
 
     match verified_stmt(sql1) {
@@ -4274,14 +4331,13 @@ fn parse_create_table_as_table() {
             schema_name: Some("schema_name".to_string()),
         }))),
         order_by: None,
-        limit: None,
-        limit_by: vec![],
-        offset: None,
+        limit_clause: None,
         fetch: None,
         locks: vec![],
         for_clause: None,
         settings: None,
         format_clause: None,
+        pipe_operators: vec![],
     });
 
     match verified_stmt(sql2) {
@@ -4365,7 +4421,11 @@ fn parse_create_table_with_options() {
 
     let sql = "CREATE TABLE t (c INT) WITH (foo = 'bar', a = 123)";
     match generic.verified_stmt(sql) {
-        Statement::CreateTable(CreateTable { with_options, .. }) => {
+        Statement::CreateTable(CreateTable { table_options, .. }) => {
+            let with_options = match table_options {
+                CreateTableOptions::With(options) => options,
+                _ => unreachable!(),
+            };
             assert_eq!(
                 vec![
                     SqlOption::KeyValue {
@@ -4426,7 +4486,7 @@ fn parse_create_external_table() {
             name,
             columns,
             constraints,
-            with_options,
+            table_options,
             if_not_exists,
             external,
             file_format,
@@ -4469,7 +4529,7 @@ fn parse_create_external_table() {
             assert_eq!(FileFormat::TEXTFILE, file_format.unwrap());
             assert_eq!("/tmp/example.csv", location.unwrap());
 
-            assert_eq!(with_options, vec![]);
+            assert_eq!(table_options, CreateTableOptions::None);
             assert!(!if_not_exists);
         }
         _ => unreachable!(),
@@ -4494,7 +4554,7 @@ fn parse_create_or_replace_external_table() {
             name,
             columns,
             constraints,
-            with_options,
+            table_options,
             if_not_exists,
             external,
             file_format,
@@ -4523,7 +4583,7 @@ fn parse_create_or_replace_external_table() {
             assert_eq!(FileFormat::TEXTFILE, file_format.unwrap());
             assert_eq!("/tmp/example.csv", location.unwrap());
 
-            assert_eq!(with_options, vec![]);
+            assert_eq!(table_options, CreateTableOptions::None);
             assert!(!if_not_exists);
             assert!(or_replace);
         }
@@ -6273,14 +6333,13 @@ fn parse_interval_and_or_xor() {
             flavor: SelectFlavor::Standard,
         }))),
         order_by: None,
-        limit: None,
-        limit_by: vec![],
-        offset: None,
+        limit_clause: None,
         fetch: None,
         locks: vec![],
         for_clause: None,
         settings: None,
         format_clause: None,
+        pipe_operators: vec![],
     }))];
 
     assert_eq!(actual_ast, expected_ast);
@@ -7384,6 +7443,33 @@ fn parse_recursive_cte() {
 }
 
 #[test]
+fn parse_cte_in_data_modification_statements() {
+    match verified_stmt("WITH x AS (SELECT 1) UPDATE t SET bar = (SELECT * FROM x)") {
+        Statement::Query(query) => {
+            assert_eq!(query.with.unwrap().to_string(), "WITH x AS (SELECT 1)");
+            assert!(matches!(*query.body, SetExpr::Update(_)));
+        }
+        other => panic!("Expected: UPDATE, got: {:?}", other),
+    }
+
+    match verified_stmt("WITH t (x) AS (SELECT 9) DELETE FROM q WHERE id IN (SELECT x FROM t)") {
+        Statement::Query(query) => {
+            assert_eq!(query.with.unwrap().to_string(), "WITH t (x) AS (SELECT 9)");
+            assert!(matches!(*query.body, SetExpr::Delete(_)));
+        }
+        other => panic!("Expected: DELETE, got: {:?}", other),
+    }
+
+    match verified_stmt("WITH x AS (SELECT 42) INSERT INTO t SELECT foo FROM x") {
+        Statement::Query(query) => {
+            assert_eq!(query.with.unwrap().to_string(), "WITH x AS (SELECT 42)");
+            assert!(matches!(*query.body, SetExpr::Insert(_)));
+        }
+        other => panic!("Expected: INSERT, got: {:?}", other),
+    }
+}
+
+#[test]
 fn parse_derived_tables() {
     let sql = "SELECT a.x, b.y FROM (SELECT x FROM foo) AS a CROSS JOIN (SELECT y FROM bar) AS b";
     let _ = verified_only_select(sql);
@@ -7543,6 +7629,9 @@ fn parse_substring() {
     verified_stmt("SELECT SUBSTRING('1', 1, 3)");
     verified_stmt("SELECT SUBSTRING('1', 1)");
     verified_stmt("SELECT SUBSTRING('1' FOR 3)");
+    verified_stmt("SELECT SUBSTRING('foo' FROM 1 FOR 2) FROM t");
+    verified_stmt("SELECT SUBSTR('foo' FROM 1 FOR 2) FROM t");
+    verified_stmt("SELECT SUBSTR('foo', 1, 2) FROM t");
 }
 
 #[test]
@@ -7759,6 +7848,7 @@ fn parse_create_view() {
     let sql = "CREATE VIEW myschema.myview AS SELECT foo FROM bar";
     match verified_stmt(sql) {
         Statement::CreateView {
+            or_alter,
             name,
             columns,
             query,
@@ -7773,6 +7863,7 @@ fn parse_create_view() {
             to,
             params,
         } => {
+            assert_eq!(or_alter, false);
             assert_eq!("myschema.myview", name.to_string());
             assert_eq!(Vec::<ViewColumnDef>::new(), columns);
             assert_eq!("SELECT foo FROM bar", query.to_string());
@@ -7789,6 +7880,8 @@ fn parse_create_view() {
         }
         _ => unreachable!(),
     }
+
+    let _ = verified_stmt("CREATE OR ALTER VIEW v AS SELECT 1");
 }
 
 #[test]
@@ -7823,6 +7916,7 @@ fn parse_create_view_with_columns() {
     // match all_dialects().verified_stmt(sql) {
     match all_dialects_except(|d| d.is::<ClickHouseDialect>()).verified_stmt(sql) {
         Statement::CreateView {
+            or_alter,
             name,
             columns,
             or_replace,
@@ -7837,6 +7931,7 @@ fn parse_create_view_with_columns() {
             to,
             params,
         } => {
+            assert_eq!(or_alter, false);
             assert_eq!("v", name.to_string());
             assert_eq!(
                 columns,
@@ -7870,6 +7965,7 @@ fn parse_create_view_temporary() {
     let sql = "CREATE TEMPORARY VIEW myschema.myview AS SELECT foo FROM bar";
     match verified_stmt(sql) {
         Statement::CreateView {
+            or_alter,
             name,
             columns,
             query,
@@ -7884,6 +7980,7 @@ fn parse_create_view_temporary() {
             to,
             params,
         } => {
+            assert_eq!(or_alter, false);
             assert_eq!("myschema.myview", name.to_string());
             assert_eq!(Vec::<ViewColumnDef>::new(), columns);
             assert_eq!("SELECT foo FROM bar", query.to_string());
@@ -7907,6 +8004,7 @@ fn parse_create_or_replace_view() {
     let sql = "CREATE OR REPLACE VIEW v AS SELECT 1";
     match verified_stmt(sql) {
         Statement::CreateView {
+            or_alter,
             name,
             columns,
             or_replace,
@@ -7921,6 +8019,7 @@ fn parse_create_or_replace_view() {
             to,
             params,
         } => {
+            assert_eq!(or_alter, false);
             assert_eq!("v", name.to_string());
             assert_eq!(columns, vec![]);
             assert_eq!(options, CreateTableOptions::None);
@@ -7948,6 +8047,7 @@ fn parse_create_or_replace_materialized_view() {
     let sql = "CREATE OR REPLACE MATERIALIZED VIEW v AS SELECT 1";
     match verified_stmt(sql) {
         Statement::CreateView {
+            or_alter,
             name,
             columns,
             or_replace,
@@ -7962,6 +8062,7 @@ fn parse_create_or_replace_materialized_view() {
             to,
             params,
         } => {
+            assert_eq!(or_alter, false);
             assert_eq!("v", name.to_string());
             assert_eq!(columns, vec![]);
             assert_eq!(options, CreateTableOptions::None);
@@ -7985,6 +8086,7 @@ fn parse_create_materialized_view() {
     let sql = "CREATE MATERIALIZED VIEW myschema.myview AS SELECT foo FROM bar";
     match verified_stmt(sql) {
         Statement::CreateView {
+            or_alter,
             name,
             or_replace,
             columns,
@@ -7999,6 +8101,7 @@ fn parse_create_materialized_view() {
             to,
             params,
         } => {
+            assert_eq!(or_alter, false);
             assert_eq!("myschema.myview", name.to_string());
             assert_eq!(Vec::<ViewColumnDef>::new(), columns);
             assert_eq!("SELECT foo FROM bar", query.to_string());
@@ -8022,6 +8125,7 @@ fn parse_create_materialized_view_with_cluster_by() {
     let sql = "CREATE MATERIALIZED VIEW myschema.myview CLUSTER BY (foo) AS SELECT foo FROM bar";
     match verified_stmt(sql) {
         Statement::CreateView {
+            or_alter,
             name,
             or_replace,
             columns,
@@ -8036,6 +8140,7 @@ fn parse_create_materialized_view_with_cluster_by() {
             to,
             params,
         } => {
+            assert_eq!(or_alter, false);
             assert_eq!("myschema.myview", name.to_string());
             assert_eq!(Vec::<ViewColumnDef>::new(), columns);
             assert_eq!("SELECT foo FROM bar", query.to_string());
@@ -8130,6 +8235,9 @@ fn parse_drop_view() {
         }
         _ => unreachable!(),
     }
+
+    verified_stmt("DROP MATERIALIZED VIEW a.b.c");
+    verified_stmt("DROP MATERIALIZED VIEW IF EXISTS a.b.c");
 }
 
 #[test]
@@ -8148,55 +8256,65 @@ fn parse_offset() {
     let dialects =
         all_dialects_where(|d| !d.is_column_alias(&Keyword::OFFSET, &mut Parser::new(d)));
 
-    let expect = Some(Offset {
-        value: Expr::value(number("2")),
-        rows: OffsetRows::Rows,
+    let expected_limit_clause = &Some(LimitClause::LimitOffset {
+        limit: None,
+        offset: Some(Offset {
+            value: Expr::value(number("2")),
+            rows: OffsetRows::Rows,
+        }),
+        limit_by: vec![],
     });
     let ast = dialects.verified_query("SELECT foo FROM bar OFFSET 2 ROWS");
-    assert_eq!(ast.offset, expect);
+    assert_eq!(&ast.limit_clause, expected_limit_clause);
     let ast = dialects.verified_query("SELECT foo FROM bar WHERE foo = 4 OFFSET 2 ROWS");
-    assert_eq!(ast.offset, expect);
+    assert_eq!(&ast.limit_clause, expected_limit_clause);
     let ast = dialects.verified_query("SELECT foo FROM bar ORDER BY baz OFFSET 2 ROWS");
-    assert_eq!(ast.offset, expect);
+    assert_eq!(&ast.limit_clause, expected_limit_clause);
     let ast =
         dialects.verified_query("SELECT foo FROM bar WHERE foo = 4 ORDER BY baz OFFSET 2 ROWS");
-    assert_eq!(ast.offset, expect);
+    assert_eq!(&ast.limit_clause, expected_limit_clause);
     let ast =
         dialects.verified_query("SELECT foo FROM (SELECT * FROM bar OFFSET 2 ROWS) OFFSET 2 ROWS");
-    assert_eq!(ast.offset, expect);
+    assert_eq!(&ast.limit_clause, expected_limit_clause);
     match *ast.body {
         SetExpr::Select(s) => match only(s.from).relation {
             TableFactor::Derived { subquery, .. } => {
-                assert_eq!(subquery.offset, expect);
+                assert_eq!(&subquery.limit_clause, expected_limit_clause);
             }
             _ => panic!("Test broke"),
         },
         _ => panic!("Test broke"),
     }
-    let ast = dialects.verified_query("SELECT 'foo' OFFSET 0 ROWS");
-    assert_eq!(
-        ast.offset,
-        Some(Offset {
+    let expected_limit_clause = LimitClause::LimitOffset {
+        limit: None,
+        offset: Some(Offset {
             value: Expr::value(number("0")),
             rows: OffsetRows::Rows,
-        })
-    );
-    let ast = dialects.verified_query("SELECT 'foo' OFFSET 1 ROW");
-    assert_eq!(
-        ast.offset,
-        Some(Offset {
+        }),
+        limit_by: vec![],
+    };
+    let ast = dialects.verified_query("SELECT 'foo' OFFSET 0 ROWS");
+    assert_eq!(ast.limit_clause, Some(expected_limit_clause));
+    let expected_limit_clause = LimitClause::LimitOffset {
+        limit: None,
+        offset: Some(Offset {
             value: Expr::value(number("1")),
             rows: OffsetRows::Row,
-        })
-    );
-    let ast = dialects.verified_query("SELECT 'foo' OFFSET 1");
-    assert_eq!(
-        ast.offset,
-        Some(Offset {
-            value: Expr::value(number("1")),
+        }),
+        limit_by: vec![],
+    };
+    let ast = dialects.verified_query("SELECT 'foo' OFFSET 1 ROW");
+    assert_eq!(ast.limit_clause, Some(expected_limit_clause));
+    let expected_limit_clause = LimitClause::LimitOffset {
+        limit: None,
+        offset: Some(Offset {
+            value: Expr::value(number("2")),
             rows: OffsetRows::None,
-        })
-    );
+        }),
+        limit_by: vec![],
+    };
+    let ast = dialects.verified_query("SELECT 'foo' OFFSET 2");
+    assert_eq!(ast.limit_clause, Some(expected_limit_clause));
 }
 
 #[test]
@@ -8246,13 +8364,15 @@ fn parse_fetch() {
     let ast = verified_query(
         "SELECT foo FROM bar WHERE foo = 4 ORDER BY baz OFFSET 2 ROWS FETCH FIRST 2 ROWS ONLY",
     );
-    assert_eq!(
-        ast.offset,
-        Some(Offset {
+    let expected_limit_clause = Some(LimitClause::LimitOffset {
+        limit: None,
+        offset: Some(Offset {
             value: Expr::value(number("2")),
             rows: OffsetRows::Rows,
-        })
-    );
+        }),
+        limit_by: vec![],
+    });
+    assert_eq!(ast.limit_clause, expected_limit_clause);
     assert_eq!(ast.fetch, fetch_first_two_rows_only);
     let ast = verified_query(
         "SELECT foo FROM (SELECT * FROM bar FETCH FIRST 2 ROWS ONLY) FETCH FIRST 2 ROWS ONLY",
@@ -8268,24 +8388,20 @@ fn parse_fetch() {
         _ => panic!("Test broke"),
     }
     let ast = verified_query("SELECT foo FROM (SELECT * FROM bar OFFSET 2 ROWS FETCH FIRST 2 ROWS ONLY) OFFSET 2 ROWS FETCH FIRST 2 ROWS ONLY");
-    assert_eq!(
-        ast.offset,
-        Some(Offset {
+    let expected_limit_clause = &Some(LimitClause::LimitOffset {
+        limit: None,
+        offset: Some(Offset {
             value: Expr::value(number("2")),
             rows: OffsetRows::Rows,
-        })
-    );
+        }),
+        limit_by: vec![],
+    });
+    assert_eq!(&ast.limit_clause, expected_limit_clause);
     assert_eq!(ast.fetch, fetch_first_two_rows_only);
     match *ast.body {
         SetExpr::Select(s) => match only(s.from).relation {
             TableFactor::Derived { subquery, .. } => {
-                assert_eq!(
-                    subquery.offset,
-                    Some(Offset {
-                        value: Expr::value(number("2")),
-                        rows: OffsetRows::Rows,
-                    })
-                );
+                assert_eq!(&subquery.limit_clause, expected_limit_clause);
                 assert_eq!(subquery.fetch, fetch_first_two_rows_only);
             }
             _ => panic!("Test broke"),
@@ -8528,11 +8644,11 @@ fn parse_set_transaction() {
     // TRANSACTION, so no need to duplicate the tests here. We just do a quick
     // sanity check.
     match verified_stmt("SET TRANSACTION READ ONLY, READ WRITE, ISOLATION LEVEL SERIALIZABLE") {
-        Statement::SetTransaction {
+        Statement::Set(Set::SetTransaction {
             modes,
             session,
             snapshot,
-        } => {
+        }) => {
             assert_eq!(
                 modes,
                 vec![
@@ -8551,22 +8667,39 @@ fn parse_set_transaction() {
 #[test]
 fn parse_set_variable() {
     match verified_stmt("SET SOMETHING = '1'") {
-        Statement::SetVariable {
-            local,
+        Statement::Set(Set::SingleAssignment {
+            scope,
             hivevar,
-            variables,
-            value,
-        } => {
-            assert!(!local);
+            variable,
+            values,
+        }) => {
+            assert_eq!(scope, None);
             assert!(!hivevar);
+            assert_eq!(variable, ObjectName::from(vec!["SOMETHING".into()]));
             assert_eq!(
-                variables,
-                OneOrManyWithParens::One(ObjectName::from(vec!["SOMETHING".into()]))
-            );
-            assert_eq!(
-                value,
+                values,
                 vec![Expr::Value(
                     (Value::SingleQuotedString("1".into())).with_empty_span()
+                )]
+            );
+        }
+        _ => unreachable!(),
+    }
+
+    match verified_stmt("SET GLOBAL VARIABLE = 'Value'") {
+        Statement::Set(Set::SingleAssignment {
+            scope,
+            hivevar,
+            variable,
+            values,
+        }) => {
+            assert_eq!(scope, Some(ContextModifier::Global));
+            assert!(!hivevar);
+            assert_eq!(variable, ObjectName::from(vec!["VARIABLE".into()]));
+            assert_eq!(
+                values,
+                vec![Expr::Value(
+                    (Value::SingleQuotedString("Value".into())).with_empty_span()
                 )]
             );
         }
@@ -8576,24 +8709,17 @@ fn parse_set_variable() {
     let multi_variable_dialects = all_dialects_where(|d| d.supports_parenthesized_set_variables());
     let sql = r#"SET (a, b, c) = (1, 2, 3)"#;
     match multi_variable_dialects.verified_stmt(sql) {
-        Statement::SetVariable {
-            local,
-            hivevar,
-            variables,
-            value,
-        } => {
-            assert!(!local);
-            assert!(!hivevar);
+        Statement::Set(Set::ParenthesizedAssignments { variables, values }) => {
             assert_eq!(
                 variables,
-                OneOrManyWithParens::Many(vec![
+                vec![
                     ObjectName::from(vec!["a".into()]),
                     ObjectName::from(vec!["b".into()]),
                     ObjectName::from(vec!["c".into()]),
-                ])
+                ]
             );
             assert_eq!(
-                value,
+                values,
                 vec![
                     Expr::value(number("1")),
                     Expr::value(number("2")),
@@ -8653,20 +8779,17 @@ fn parse_set_variable() {
 #[test]
 fn parse_set_role_as_variable() {
     match verified_stmt("SET role = 'foobar'") {
-        Statement::SetVariable {
-            local,
+        Statement::Set(Set::SingleAssignment {
+            scope,
             hivevar,
-            variables,
-            value,
-        } => {
-            assert!(!local);
+            variable,
+            values,
+        }) => {
+            assert_eq!(scope, None);
             assert!(!hivevar);
+            assert_eq!(variable, ObjectName::from(vec!["role".into()]));
             assert_eq!(
-                variables,
-                OneOrManyWithParens::One(ObjectName::from(vec!["role".into()]))
-            );
-            assert_eq!(
-                value,
+                values,
                 vec![Expr::Value(
                     (Value::SingleQuotedString("foobar".into())).with_empty_span()
                 )]
@@ -8703,20 +8826,17 @@ fn parse_double_colon_cast_at_timezone() {
 #[test]
 fn parse_set_time_zone() {
     match verified_stmt("SET TIMEZONE = 'UTC'") {
-        Statement::SetVariable {
-            local,
+        Statement::Set(Set::SingleAssignment {
+            scope,
             hivevar,
-            variables: variable,
-            value,
-        } => {
-            assert!(!local);
+            variable,
+            values,
+        }) => {
+            assert_eq!(scope, None);
             assert!(!hivevar);
+            assert_eq!(variable, ObjectName::from(vec!["TIMEZONE".into()]));
             assert_eq!(
-                variable,
-                OneOrManyWithParens::One(ObjectName::from(vec!["TIMEZONE".into()]))
-            );
-            assert_eq!(
-                value,
+                values,
                 vec![Expr::Value(
                     (Value::SingleQuotedString("UTC".into())).with_empty_span()
                 )]
@@ -8726,20 +8846,6 @@ fn parse_set_time_zone() {
     }
 
     one_statement_parses_to("SET TIME ZONE TO 'UTC'", "SET TIMEZONE = 'UTC'");
-}
-
-#[test]
-fn parse_set_time_zone_alias() {
-    match verified_stmt("SET TIME ZONE 'UTC'") {
-        Statement::SetTimeZone { local, value } => {
-            assert!(!local);
-            assert_eq!(
-                value,
-                Expr::Value((Value::SingleQuotedString("UTC".into())).with_empty_span())
-            );
-        }
-        _ => unreachable!(),
-    }
 }
 
 #[test]
@@ -8842,22 +8948,28 @@ fn ensure_multiple_dialects_are_tested() {
 #[test]
 fn parse_create_index() {
     let sql = "CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test(name,age DESC)";
-    let indexed_columns = vec![
-        OrderByExpr {
-            expr: Expr::Identifier(Ident::new("name")),
-            options: OrderByOptions {
-                asc: None,
-                nulls_first: None,
+    let indexed_columns: Vec<IndexColumn> = vec![
+        IndexColumn {
+            operator_class: None,
+            column: OrderByExpr {
+                expr: Expr::Identifier(Ident::new("name")),
+                with_fill: None,
+                options: OrderByOptions {
+                    asc: None,
+                    nulls_first: None,
+                },
             },
-            with_fill: None,
         },
-        OrderByExpr {
-            expr: Expr::Identifier(Ident::new("age")),
-            options: OrderByOptions {
-                asc: Some(false),
-                nulls_first: None,
+        IndexColumn {
+            operator_class: None,
+            column: OrderByExpr {
+                expr: Expr::Identifier(Ident::new("age")),
+                with_fill: None,
+                options: OrderByOptions {
+                    asc: Some(false),
+                    nulls_first: None,
+                },
             },
-            with_fill: None,
         },
     ];
     match verified_stmt(sql) {
@@ -8881,23 +8993,29 @@ fn parse_create_index() {
 
 #[test]
 fn test_create_index_with_using_function() {
-    let sql = "CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test USING btree (name,age DESC)";
-    let indexed_columns = vec![
-        OrderByExpr {
-            expr: Expr::Identifier(Ident::new("name")),
-            options: OrderByOptions {
-                asc: None,
-                nulls_first: None,
+    let sql = "CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test USING BTREE (name,age DESC)";
+    let indexed_columns: Vec<IndexColumn> = vec![
+        IndexColumn {
+            operator_class: None,
+            column: OrderByExpr {
+                expr: Expr::Identifier(Ident::new("name")),
+                with_fill: None,
+                options: OrderByOptions {
+                    asc: None,
+                    nulls_first: None,
+                },
             },
-            with_fill: None,
         },
-        OrderByExpr {
-            expr: Expr::Identifier(Ident::new("age")),
-            options: OrderByOptions {
-                asc: Some(false),
-                nulls_first: None,
+        IndexColumn {
+            operator_class: None,
+            column: OrderByExpr {
+                expr: Expr::Identifier(Ident::new("age")),
+                with_fill: None,
+                options: OrderByOptions {
+                    asc: Some(false),
+                    nulls_first: None,
+                },
             },
-            with_fill: None,
         },
     ];
     match verified_stmt(sql) {
@@ -8916,7 +9034,7 @@ fn test_create_index_with_using_function() {
         }) => {
             assert_eq!("idx_name", name.to_string());
             assert_eq!("test", table_name.to_string());
-            assert_eq!("btree", using.unwrap().to_string());
+            assert_eq!("BTREE", using.unwrap().to_string());
             assert_eq!(indexed_columns, columns);
             assert!(unique);
             assert!(!concurrently);
@@ -8931,13 +9049,16 @@ fn test_create_index_with_using_function() {
 #[test]
 fn test_create_index_with_with_clause() {
     let sql = "CREATE UNIQUE INDEX title_idx ON films(title) WITH (fillfactor = 70, single_param)";
-    let indexed_columns = vec![OrderByExpr {
-        expr: Expr::Identifier(Ident::new("title")),
-        options: OrderByOptions {
-            asc: None,
-            nulls_first: None,
+    let indexed_columns: Vec<IndexColumn> = vec![IndexColumn {
+        column: OrderByExpr {
+            expr: Expr::Identifier(Ident::new("title")),
+            options: OrderByOptions {
+                asc: None,
+                nulls_first: None,
+            },
+            with_fill: None,
         },
-        with_fill: None,
+        operator_class: None,
     }];
     let with_parameters = vec![
         Expr::BinaryOp {
@@ -9276,6 +9397,7 @@ fn parse_merge() {
                 source,
                 on,
                 clauses,
+                ..
             },
             Statement::Merge {
                 into: no_into,
@@ -9283,6 +9405,7 @@ fn parse_merge() {
                 source: source_no_into,
                 on: on_no_into,
                 clauses: clauses_no_into,
+                ..
             },
         ) => {
             assert!(into);
@@ -9346,14 +9469,13 @@ fn parse_merge() {
                             flavor: SelectFlavor::Standard,
                         }))),
                         order_by: None,
-                        limit: None,
-                        limit_by: vec![],
-                        offset: None,
+                        limit_clause: None,
                         fetch: None,
                         locks: vec![],
                         for_clause: None,
                         settings: None,
                         format_clause: None,
+                        pipe_operators: vec![],
                     }),
                     alias: Some(TableAlias {
                         name: Ident {
@@ -9474,6 +9596,19 @@ fn parse_merge() {
     };
 
     let sql = "MERGE INTO s.bar AS dest USING newArrivals AS S ON (1 > 1) WHEN NOT MATCHED THEN INSERT VALUES (stg.A, stg.B, stg.C)";
+    verified_stmt(sql);
+}
+
+#[test]
+fn test_merge_with_output() {
+    let sql = "MERGE INTO target_table USING source_table \
+        ON target_table.id = source_table.oooid \
+        WHEN MATCHED THEN \
+            UPDATE SET target_table.description = source_table.description \
+        WHEN NOT MATCHED THEN \
+            INSERT (ID, description) VALUES (source_table.id, source_table.description) \
+        OUTPUT inserted.* INTO log_target";
+
     verified_stmt(sql);
 }
 
@@ -9666,21 +9801,18 @@ fn test_placeholder() {
         })
     );
 
-    let sql = "SELECT * FROM student LIMIT $1 OFFSET $2";
-    let ast = dialects.verified_query(sql);
-    assert_eq!(
-        ast.limit,
-        Some(Expr::Value(
-            (Value::Placeholder("$1".into())).with_empty_span()
-        ))
-    );
-    assert_eq!(
-        ast.offset,
-        Some(Offset {
+    let ast = dialects.verified_query("SELECT * FROM student LIMIT $1 OFFSET $2");
+    let expected_limit_clause = LimitClause::LimitOffset {
+        limit: Some(Expr::Value(
+            (Value::Placeholder("$1".into())).with_empty_span(),
+        )),
+        offset: Some(Offset {
             value: Expr::Value((Value::Placeholder("$2".into())).with_empty_span()),
             rows: OffsetRows::None,
         }),
-    );
+        limit_by: vec![],
+    };
+    assert_eq!(ast.limit_clause, Some(expected_limit_clause));
 
     let dialects = TestedDialects::new(vec![
         Box::new(GenericDialect {}),
@@ -9760,40 +9892,34 @@ fn verified_expr(query: &str) -> Expr {
 #[test]
 fn parse_offset_and_limit() {
     let sql = "SELECT foo FROM bar LIMIT 1 OFFSET 2";
-    let expect = Some(Offset {
-        value: Expr::value(number("2")),
-        rows: OffsetRows::None,
+    let expected_limit_clause = Some(LimitClause::LimitOffset {
+        limit: Some(Expr::value(number("1"))),
+        offset: Some(Offset {
+            value: Expr::value(number("2")),
+            rows: OffsetRows::None,
+        }),
+        limit_by: vec![],
     });
     let ast = verified_query(sql);
-    assert_eq!(ast.offset, expect);
-    assert_eq!(ast.limit, Some(Expr::value(number("1"))));
+    assert_eq!(ast.limit_clause, expected_limit_clause);
 
     // different order is OK
     one_statement_parses_to("SELECT foo FROM bar OFFSET 2 LIMIT 1", sql);
 
     // mysql syntax is ok for some dialects
-    TestedDialects::new(vec![
-        Box::new(GenericDialect {}),
-        Box::new(MySqlDialect {}),
-        Box::new(SQLiteDialect {}),
-        Box::new(ClickHouseDialect {}),
-    ])
-    .one_statement_parses_to("SELECT foo FROM bar LIMIT 2, 1", sql);
+    all_dialects_where(|d| d.supports_limit_comma())
+        .verified_query("SELECT foo FROM bar LIMIT 2, 1");
 
     // expressions are allowed
     let sql = "SELECT foo FROM bar LIMIT 1 + 2 OFFSET 3 * 4";
     let ast = verified_query(sql);
-    assert_eq!(
-        ast.limit,
-        Some(Expr::BinaryOp {
+    let expected_limit_clause = LimitClause::LimitOffset {
+        limit: Some(Expr::BinaryOp {
             left: Box::new(Expr::value(number("1"))),
             op: BinaryOperator::Plus,
             right: Box::new(Expr::value(number("2"))),
         }),
-    );
-    assert_eq!(
-        ast.offset,
-        Some(Offset {
+        offset: Some(Offset {
             value: Expr::BinaryOp {
                 left: Box::new(Expr::value(number("3"))),
                 op: BinaryOperator::Multiply,
@@ -9801,7 +9927,12 @@ fn parse_offset_and_limit() {
             },
             rows: OffsetRows::None,
         }),
-    );
+        limit_by: vec![],
+    };
+    assert_eq!(ast.limit_clause, Some(expected_limit_clause),);
+
+    // OFFSET without LIMIT
+    verified_stmt("SELECT foo FROM bar OFFSET 2");
 
     // Can't repeat OFFSET / LIMIT
     let res = parse_sql_statements("SELECT foo FROM bar OFFSET 2 OFFSET 2");
@@ -10387,15 +10518,8 @@ fn parse_with_recursion_limit() {
 
 #[test]
 fn parse_escaped_string_with_unescape() {
-    fn assert_mysql_query_value(sql: &str, quoted: &str) {
-        let stmt = TestedDialects::new(vec![
-            Box::new(MySqlDialect {}),
-            Box::new(BigQueryDialect {}),
-            Box::new(SnowflakeDialect {}),
-        ])
-        .one_statement_parses_to(sql, "");
-
-        match stmt {
+    fn assert_mysql_query_value(dialects: &TestedDialects, sql: &str, quoted: &str) {
+        match dialects.one_statement_parses_to(sql, "") {
             Statement::Query(query) => match *query.body {
                 SetExpr::Select(value) => {
                     let expr = expr_from_projection(only(&value.projection));
@@ -10411,17 +10535,38 @@ fn parse_escaped_string_with_unescape() {
             _ => unreachable!(),
         };
     }
+
+    let escaping_dialects =
+        &all_dialects_where(|dialect| dialect.supports_string_literal_backslash_escape());
+    let no_wildcard_exception = &all_dialects_where(|dialect| {
+        dialect.supports_string_literal_backslash_escape() && !dialect.ignores_wildcard_escapes()
+    });
+    let with_wildcard_exception = &all_dialects_where(|dialect| {
+        dialect.supports_string_literal_backslash_escape() && dialect.ignores_wildcard_escapes()
+    });
+
     let sql = r"SELECT 'I\'m fine'";
-    assert_mysql_query_value(sql, "I'm fine");
+    assert_mysql_query_value(escaping_dialects, sql, "I'm fine");
 
     let sql = r#"SELECT 'I''m fine'"#;
-    assert_mysql_query_value(sql, "I'm fine");
+    assert_mysql_query_value(escaping_dialects, sql, "I'm fine");
 
     let sql = r#"SELECT 'I\"m fine'"#;
-    assert_mysql_query_value(sql, "I\"m fine");
+    assert_mysql_query_value(escaping_dialects, sql, "I\"m fine");
 
     let sql = r"SELECT 'Testing: \0 \\ \% \_ \b \n \r \t \Z \a \h \ '";
-    assert_mysql_query_value(sql, "Testing: \0 \\ % _ \u{8} \n \r \t \u{1a} \u{7} h  ");
+    assert_mysql_query_value(
+        no_wildcard_exception,
+        sql,
+        "Testing: \0 \\ % _ \u{8} \n \r \t \u{1a} \u{7} h  ",
+    );
+
+    // check MySQL doesn't remove backslash from escaped LIKE wildcards
+    assert_mysql_query_value(
+        with_wildcard_exception,
+        sql,
+        "Testing: \0 \\ \\% \\_ \u{8} \n \r \t \u{1a} \u{7} h  ",
+    );
 }
 
 #[test]
@@ -11201,15 +11346,14 @@ fn parse_unload() {
                     flavor: SelectFlavor::Standard,
                 }))),
                 with: None,
-                limit: None,
-                limit_by: vec![],
-                offset: None,
+                limit_clause: None,
                 fetch: None,
                 locks: vec![],
                 for_clause: None,
                 order_by: None,
                 settings: None,
                 format_clause: None,
+                pipe_operators: vec![],
             }),
             to: Ident {
                 value: "s3://...".to_string(),
@@ -11280,7 +11424,9 @@ fn test_parse_inline_comment() {
     // [Hive](https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL#LanguageManualDDL-CreateTable)
     match all_dialects_except(|d| d.is::<HiveDialect>()).verified_stmt(sql) {
         Statement::CreateTable(CreateTable {
-            columns, comment, ..
+            columns,
+            table_options,
+            ..
         }) => {
             assert_eq!(
                 columns,
@@ -11294,8 +11440,10 @@ fn test_parse_inline_comment() {
                 }]
             );
             assert_eq!(
-                comment.unwrap(),
-                CommentDef::WithEq("comment with equal".to_string())
+                table_options,
+                CreateTableOptions::Plain(vec![SqlOption::Comment(CommentDef::WithEq(
+                    "comment with equal".to_string()
+                ))])
             );
         }
         _ => unreachable!(),
@@ -11524,6 +11672,20 @@ fn parse_connect_by() {
 
 #[test]
 fn test_selective_aggregation() {
+    let testing_dialects = all_dialects_where(|d| d.supports_filter_during_aggregation());
+    let expected_dialects: Vec<Box<dyn Dialect>> = vec![
+        Box::new(PostgreSqlDialect {}),
+        Box::new(DatabricksDialect {}),
+        Box::new(HiveDialect {}),
+        Box::new(SQLiteDialect {}),
+        Box::new(DuckDbDialect {}),
+        Box::new(GenericDialect {}),
+    ];
+    assert_eq!(testing_dialects.dialects.len(), expected_dialects.len());
+    expected_dialects
+        .into_iter()
+        .for_each(|d| assert!(d.supports_filter_during_aggregation()));
+
     let sql = concat!(
         "SELECT ",
         "ARRAY_AGG(name) FILTER (WHERE name IS NOT NULL), ",
@@ -11531,9 +11693,7 @@ fn test_selective_aggregation() {
         "FROM region"
     );
     assert_eq!(
-        all_dialects_where(|d| d.supports_filter_during_aggregation())
-            .verified_only_select(sql)
-            .projection,
+        testing_dialects.verified_only_select(sql).projection,
         vec![
             SelectItem::UnnamedExpr(Expr::Function(Function {
                 name: ObjectName::from(vec![Ident::new("ARRAY_AGG")]),
@@ -11608,6 +11768,44 @@ fn test_group_by_grouping_sets() {
             ])],
             vec![]
         )
+    );
+}
+
+#[test]
+fn test_xmltable() {
+    all_dialects()
+        .verified_only_select("SELECT * FROM XMLTABLE('/root' PASSING data COLUMNS element TEXT)");
+
+    // Minimal meaningful working example: returns a single row with a single column named y containing the value z
+    all_dialects().verified_only_select(
+        "SELECT y FROM XMLTABLE('/X' PASSING '<X><y>z</y></X>' COLUMNS y TEXT)",
+    );
+
+    // Test using subqueries
+    all_dialects().verified_only_select("SELECT y FROM XMLTABLE((SELECT '/X') PASSING (SELECT CAST('<X><y>z</y></X>' AS xml)) COLUMNS y TEXT PATH (SELECT 'y'))");
+
+    // NOT NULL
+    all_dialects().verified_only_select(
+        "SELECT y FROM XMLTABLE('/X' PASSING '<X></X>' COLUMNS y TEXT NOT NULL)",
+    );
+
+    all_dialects().verified_only_select("SELECT * FROM XMLTABLE('/root/row' PASSING xmldata COLUMNS id INT PATH '@id', name TEXT PATH 'name/text()', value FLOAT PATH 'value')");
+
+    all_dialects().verified_only_select("SELECT * FROM XMLTABLE('//ROWS/ROW' PASSING data COLUMNS row_num FOR ORDINALITY, id INT PATH '@id', name TEXT PATH 'NAME' DEFAULT 'unnamed')");
+
+    // Example from https://www.postgresql.org/docs/15/functions-xml.html#FUNCTIONS-XML-PROCESSING
+    all_dialects().verified_only_select(
+        "SELECT xmltable.* FROM xmldata, XMLTABLE('//ROWS/ROW' PASSING data COLUMNS id INT PATH '@id', ordinality FOR ORDINALITY, \"COUNTRY_NAME\" TEXT, country_id TEXT PATH 'COUNTRY_ID', size_sq_km FLOAT PATH 'SIZE[@unit = \"sq_km\"]', size_other TEXT PATH 'concat(SIZE[@unit!=\"sq_km\"], \" \", SIZE[@unit!=\"sq_km\"]/@unit)', premier_name TEXT PATH 'PREMIER_NAME' DEFAULT 'not specified')"
+    );
+
+    // Example from DB2 docs without explicit PASSING clause: https://www.ibm.com/docs/en/db2/12.1.0?topic=xquery-simple-column-name-passing-xmlexists-xmlquery-xmltable
+    all_dialects().verified_only_select(
+        "SELECT X.* FROM T1, XMLTABLE('$CUSTLIST/customers/customerinfo' COLUMNS \"Cid\" BIGINT PATH '@Cid', \"Info\" XML PATH 'document{.}', \"History\" XML PATH 'NULL') AS X"
+    );
+
+    // Example from PostgreSQL with XMLNAMESPACES
+    all_dialects().verified_only_select(
+        "SELECT xmltable.* FROM XMLTABLE(XMLNAMESPACES('http://example.com/myns' AS x, 'http://example.com/b' AS \"B\"), '/x:example/x:item' PASSING (SELECT data FROM xmldata) COLUMNS foo INT PATH '@foo', bar INT PATH '@B:bar')"
     );
 }
 
@@ -12271,21 +12469,6 @@ fn parse_select_wildcard_with_except() {
 }
 
 #[test]
-fn parse_auto_increment_too_large() {
-    let dialect = GenericDialect {};
-    let u64_max = u64::MAX;
-    let sql =
-        format!("CREATE TABLE foo (bar INT NOT NULL AUTO_INCREMENT) AUTO_INCREMENT=1{u64_max}");
-
-    let res = Parser::new(&dialect)
-        .try_with_sql(&sql)
-        .expect("tokenize to work")
-        .parse_statements();
-
-    assert!(res.is_err(), "{res:?}");
-}
-
-#[test]
 fn test_group_by_nothing() {
     let Select { group_by, .. } = all_dialects_where(|d| d.supports_group_by_expr())
         .verified_only_select("SELECT count(1) FROM t GROUP BY ()");
@@ -12374,14 +12557,13 @@ fn test_extract_seconds_ok() {
             flavor: SelectFlavor::Standard,
         }))),
         order_by: None,
-        limit: None,
-        limit_by: vec![],
-        offset: None,
+        limit_clause: None,
         fetch: None,
         locks: vec![],
         for_clause: None,
         settings: None,
         format_clause: None,
+        pipe_operators: vec![],
     }))];
 
     assert_eq!(actual_ast, expected_ast);
@@ -14004,8 +14186,7 @@ fn test_table_sample() {
 
 #[test]
 fn overflow() {
-    let expr = std::iter::repeat("1")
-        .take(1000)
+    let expr = std::iter::repeat_n("1", 1000)
         .collect::<Vec<_>>()
         .join(" + ");
     let sql = format!("SELECT {}", expr);
@@ -14117,6 +14298,221 @@ fn test_visit_order() {
             "4",
             "5"
         ]
+    );
+}
+
+#[test]
+fn parse_case_statement() {
+    let sql = "CASE 1 WHEN 2 THEN SELECT 1; SELECT 2; ELSE SELECT 3; END CASE";
+    let Statement::Case(stmt) = verified_stmt(sql) else {
+        unreachable!()
+    };
+
+    assert_eq!(Some(Expr::value(number("1"))), stmt.match_expr);
+    assert_eq!(
+        Some(Expr::value(number("2"))),
+        stmt.when_blocks[0].condition
+    );
+    assert_eq!(2, stmt.when_blocks[0].statements().len());
+    assert_eq!(1, stmt.else_block.unwrap().statements().len());
+
+    verified_stmt(concat!(
+        "CASE 1",
+        " WHEN a THEN",
+        " SELECT 1; SELECT 2; SELECT 3;",
+        " WHEN b THEN",
+        " SELECT 4; SELECT 5;",
+        " ELSE",
+        " SELECT 7; SELECT 8;",
+        " END CASE"
+    ));
+    verified_stmt(concat!(
+        "CASE 1",
+        " WHEN a THEN",
+        " SELECT 1; SELECT 2; SELECT 3;",
+        " WHEN b THEN",
+        " SELECT 4; SELECT 5;",
+        " END CASE"
+    ));
+    verified_stmt(concat!(
+        "CASE 1",
+        " WHEN a THEN",
+        " SELECT 1; SELECT 2; SELECT 3;",
+        " END CASE"
+    ));
+    verified_stmt(concat!(
+        "CASE 1",
+        " WHEN a THEN",
+        " SELECT 1; SELECT 2; SELECT 3;",
+        " END"
+    ));
+
+    assert_eq!(
+        ParserError::ParserError("Expected: THEN, found: END".to_string()),
+        parse_sql_statements("CASE 1 WHEN a END").unwrap_err()
+    );
+    assert_eq!(
+        ParserError::ParserError("Expected: WHEN, found: ELSE".to_string()),
+        parse_sql_statements("CASE 1 ELSE SELECT 1; END").unwrap_err()
+    );
+}
+
+#[test]
+fn test_case_statement_span() {
+    let sql = "CASE 1 WHEN 2 THEN SELECT 1; SELECT 2; ELSE SELECT 3; END CASE";
+    let mut parser = Parser::new(&GenericDialect {}).try_with_sql(sql).unwrap();
+    assert_eq!(
+        parser.parse_statement().unwrap().span(),
+        Span::new(Location::new(1, 1), Location::new(1, sql.len() as u64 + 1))
+    );
+}
+
+#[test]
+fn parse_if_statement() {
+    let dialects = all_dialects_except(|d| d.is::<MsSqlDialect>());
+
+    let sql = "IF 1 THEN SELECT 1; ELSEIF 2 THEN SELECT 2; ELSE SELECT 3; END IF";
+    let Statement::If(IfStatement {
+        if_block,
+        elseif_blocks,
+        else_block,
+        ..
+    }) = dialects.verified_stmt(sql)
+    else {
+        unreachable!()
+    };
+    assert_eq!(Some(Expr::value(number("1"))), if_block.condition);
+    assert_eq!(Some(Expr::value(number("2"))), elseif_blocks[0].condition);
+    assert_eq!(1, else_block.unwrap().statements().len());
+
+    dialects.verified_stmt(concat!(
+        "IF 1 THEN",
+        " SELECT 1;",
+        " SELECT 2;",
+        " SELECT 3;",
+        " ELSEIF 2 THEN",
+        " SELECT 4;",
+        " SELECT 5;",
+        " ELSEIF 3 THEN",
+        " SELECT 6;",
+        " SELECT 7;",
+        " ELSE",
+        " SELECT 8;",
+        " SELECT 9;",
+        " END IF"
+    ));
+    dialects.verified_stmt(concat!(
+        "IF 1 THEN",
+        " SELECT 1;",
+        " SELECT 2;",
+        " ELSE",
+        " SELECT 3;",
+        " SELECT 4;",
+        " END IF"
+    ));
+    dialects.verified_stmt(concat!(
+        "IF 1 THEN",
+        " SELECT 1;",
+        " SELECT 2;",
+        " SELECT 3;",
+        " ELSEIF 2 THEN",
+        " SELECT 3;",
+        " SELECT 4;",
+        " END IF"
+    ));
+    dialects.verified_stmt(concat!("IF 1 THEN", " SELECT 1;", " SELECT 2;", " END IF"));
+    dialects.verified_stmt(concat!(
+        "IF (1) THEN",
+        " SELECT 1;",
+        " SELECT 2;",
+        " END IF"
+    ));
+    dialects.verified_stmt("IF 1 THEN END IF");
+    dialects.verified_stmt("IF 1 THEN SELECT 1; ELSEIF 1 THEN END IF");
+
+    assert_eq!(
+        ParserError::ParserError("Expected: IF, found: EOF".to_string()),
+        dialects
+            .parse_sql_statements("IF 1 THEN SELECT 1; ELSEIF 1 THEN SELECT 2; END")
+            .unwrap_err()
+    );
+}
+
+#[test]
+fn test_if_statement_span() {
+    let sql = "IF 1=1 THEN SELECT 1; ELSEIF 1=2 THEN SELECT 2; ELSE SELECT 3; END IF";
+    let mut parser = Parser::new(&GenericDialect {}).try_with_sql(sql).unwrap();
+    assert_eq!(
+        parser.parse_statement().unwrap().span(),
+        Span::new(Location::new(1, 1), Location::new(1, sql.len() as u64 + 1))
+    );
+}
+
+#[test]
+fn test_if_statement_multiline_span() {
+    let sql_line1 = "IF 1 = 1 THEN SELECT 1;";
+    let sql_line2 = "ELSEIF 1 = 2 THEN SELECT 2;";
+    let sql_line3 = "ELSE SELECT 3;";
+    let sql_line4 = "END IF";
+    let sql = [sql_line1, sql_line2, sql_line3, sql_line4].join("\n");
+    let mut parser = Parser::new(&GenericDialect {}).try_with_sql(&sql).unwrap();
+    assert_eq!(
+        parser.parse_statement().unwrap().span(),
+        Span::new(
+            Location::new(1, 1),
+            Location::new(4, sql_line4.len() as u64 + 1)
+        )
+    );
+}
+
+#[test]
+fn test_conditional_statement_span() {
+    let sql = "IF 1=1 THEN SELECT 1; ELSEIF 1=2 THEN SELECT 2; ELSE SELECT 3; END IF";
+    let mut parser = Parser::new(&GenericDialect {}).try_with_sql(sql).unwrap();
+    match parser.parse_statement().unwrap() {
+        Statement::If(IfStatement {
+            if_block,
+            elseif_blocks,
+            else_block,
+            ..
+        }) => {
+            assert_eq!(
+                Span::new(Location::new(1, 1), Location::new(1, 21)),
+                if_block.span()
+            );
+            assert_eq!(
+                Span::new(Location::new(1, 23), Location::new(1, 47)),
+                elseif_blocks[0].span()
+            );
+            assert_eq!(
+                Span::new(Location::new(1, 49), Location::new(1, 62)),
+                else_block.unwrap().span()
+            );
+        }
+        stmt => panic!("Unexpected statement: {:?}", stmt),
+    }
+}
+
+#[test]
+fn parse_raise_statement() {
+    let sql = "RAISE USING MESSAGE = 42";
+    let Statement::Raise(stmt) = verified_stmt(sql) else {
+        unreachable!()
+    };
+    assert_eq!(
+        Some(RaiseStatementValue::UsingMessage(Expr::value(number("42")))),
+        stmt.value
+    );
+
+    verified_stmt("RAISE USING MESSAGE = 'error'");
+    verified_stmt("RAISE myerror");
+    verified_stmt("RAISE 42");
+    verified_stmt("RAISE using");
+    verified_stmt("RAISE");
+
+    assert_eq!(
+        ParserError::ParserError("Expected: =, found: error".to_string()),
+        parse_sql_statements("RAISE USING MESSAGE error").unwrap_err()
     );
 }
 
@@ -14239,14 +14635,13 @@ fn test_select_from_first() {
                 flavor,
             }))),
             order_by: None,
-            limit: None,
-            offset: None,
+            limit_clause: None,
             fetch: None,
             locks: vec![],
-            limit_by: vec![],
             for_clause: None,
             settings: None,
             format_clause: None,
+            pipe_operators: vec![],
         };
         assert_eq!(expected, ast);
         assert_eq!(ast.to_string(), q);
@@ -14306,7 +14701,7 @@ fn test_geometric_unary_operators() {
 }
 
 #[test]
-fn test_geomtery_type() {
+fn test_geometry_type() {
     let sql = "point '1,2'";
     assert_eq!(
         all_dialects_where(|d| d.supports_geometric_types()).verified_expr(sql),
@@ -14616,4 +15011,184 @@ fn parse_array_type_def_with_brackets() {
     let dialects = all_dialects_where(|d| d.supports_array_typedef_with_brackets());
     dialects.verified_stmt("SELECT x::INT[]");
     dialects.verified_stmt("SELECT STRING_TO_ARRAY('1,2,3', ',')::INT[3]");
+}
+
+#[test]
+fn parse_set_names() {
+    let dialects = all_dialects_where(|d| d.supports_set_names());
+    dialects.verified_stmt("SET NAMES 'UTF8'");
+    dialects.verified_stmt("SET NAMES 'utf8'");
+    dialects.verified_stmt("SET NAMES UTF8 COLLATE bogus");
+}
+
+#[test]
+fn parse_pipeline_operator() {
+    let dialects = all_dialects_where(|d| d.supports_pipe_operator());
+
+    // select pipe operator
+    dialects.verified_stmt("SELECT * FROM users |> SELECT id");
+    dialects.verified_stmt("SELECT * FROM users |> SELECT id, name");
+    dialects.verified_query_with_canonical(
+        "SELECT * FROM users |> SELECT id user_id",
+        "SELECT * FROM users |> SELECT id AS user_id",
+    );
+    dialects.verified_stmt("SELECT * FROM users |> SELECT id AS user_id");
+
+    // extend pipe operator
+    dialects.verified_stmt("SELECT * FROM users |> EXTEND id + 1 AS new_id");
+    dialects.verified_stmt("SELECT * FROM users |> EXTEND id AS new_id, name AS new_name");
+    dialects.verified_query_with_canonical(
+        "SELECT * FROM users |> EXTEND id user_id",
+        "SELECT * FROM users |> EXTEND id AS user_id",
+    );
+
+    // set pipe operator
+    dialects.verified_stmt("SELECT * FROM users |> SET id = id + 1");
+    dialects.verified_stmt("SELECT * FROM users |> SET id = id + 1, name = name + ' Doe'");
+
+    // drop pipe operator
+    dialects.verified_stmt("SELECT * FROM users |> DROP id");
+    dialects.verified_stmt("SELECT * FROM users |> DROP id, name");
+
+    // as pipe operator
+    dialects.verified_stmt("SELECT * FROM users |> AS new_users");
+
+    // limit pipe operator
+    dialects.verified_stmt("SELECT * FROM users |> LIMIT 10");
+    dialects.verified_stmt("SELECT * FROM users |> LIMIT 10 OFFSET 5");
+    dialects.verified_stmt("SELECT * FROM users |> LIMIT 10 |> LIMIT 5");
+    dialects.verified_stmt("SELECT * FROM users |> LIMIT 10 |> WHERE true");
+
+    // where pipe operator
+    dialects.verified_stmt("SELECT * FROM users |> WHERE id = 1");
+    dialects.verified_stmt("SELECT * FROM users |> WHERE id = 1 AND name = 'John'");
+    dialects.verified_stmt("SELECT * FROM users |> WHERE id = 1 OR name = 'John'");
+
+    // aggregate pipe operator full table
+    dialects.verified_stmt("SELECT * FROM users |> AGGREGATE COUNT(*)");
+    dialects.verified_query_with_canonical(
+        "SELECT * FROM users |> AGGREGATE COUNT(*) total_users",
+        "SELECT * FROM users |> AGGREGATE COUNT(*) AS total_users",
+    );
+    dialects.verified_stmt("SELECT * FROM users |> AGGREGATE COUNT(*) AS total_users");
+    dialects.verified_stmt("SELECT * FROM users |> AGGREGATE COUNT(*), MIN(id)");
+
+    // aggregate pipe opeprator with grouping
+    dialects.verified_stmt(
+        "SELECT * FROM users |> AGGREGATE SUM(o_totalprice) AS price, COUNT(*) AS cnt GROUP BY EXTRACT(YEAR FROM o_orderdate) AS year",
+    );
+    dialects.verified_stmt(
+        "SELECT * FROM users |> AGGREGATE GROUP BY EXTRACT(YEAR FROM o_orderdate) AS year",
+    );
+    dialects
+        .verified_stmt("SELECT * FROM users |> AGGREGATE GROUP BY EXTRACT(YEAR FROM o_orderdate)");
+    dialects.verified_stmt("SELECT * FROM users |> AGGREGATE GROUP BY a, b");
+    dialects.verified_stmt("SELECT * FROM users |> AGGREGATE SUM(c) GROUP BY a, b");
+    dialects.verified_stmt("SELECT * FROM users |> AGGREGATE SUM(c) ASC");
+
+    // order by pipe operator
+    dialects.verified_stmt("SELECT * FROM users |> ORDER BY id ASC");
+    dialects.verified_stmt("SELECT * FROM users |> ORDER BY id DESC");
+    dialects.verified_stmt("SELECT * FROM users |> ORDER BY id DESC, name ASC");
+
+    // many pipes
+    dialects.verified_stmt(
+        "SELECT * FROM CustomerOrders |> AGGREGATE SUM(cost) AS total_cost GROUP BY customer_id, state, item_type |> EXTEND COUNT(*) OVER (PARTITION BY customer_id) AS num_orders |> WHERE num_orders > 1 |> AGGREGATE AVG(total_cost) AS average GROUP BY state DESC, item_type ASC",
+    );
+}
+
+#[test]
+fn parse_multiple_set_statements() -> Result<(), ParserError> {
+    let dialects = all_dialects_where(|d| d.supports_comma_separated_set_assignments());
+    let stmt = dialects.verified_stmt("SET @a = 1, b = 2");
+
+    match stmt {
+        Statement::Set(Set::MultipleAssignments { assignments }) => {
+            assert_eq!(
+                assignments,
+                vec![
+                    SetAssignment {
+                        scope: None,
+                        name: ObjectName::from(vec!["@a".into()]),
+                        value: Expr::value(number("1"))
+                    },
+                    SetAssignment {
+                        scope: None,
+                        name: ObjectName::from(vec!["b".into()]),
+                        value: Expr::value(number("2"))
+                    }
+                ]
+            );
+        }
+        _ => panic!("Expected SetVariable with 2 variables and 2 values"),
+    };
+
+    let stmt = dialects.verified_stmt("SET GLOBAL @a = 1, SESSION b = 2, LOCAL c = 3, d = 4");
+
+    match stmt {
+        Statement::Set(Set::MultipleAssignments { assignments }) => {
+            assert_eq!(
+                assignments,
+                vec![
+                    SetAssignment {
+                        scope: Some(ContextModifier::Global),
+                        name: ObjectName::from(vec!["@a".into()]),
+                        value: Expr::value(number("1"))
+                    },
+                    SetAssignment {
+                        scope: Some(ContextModifier::Session),
+                        name: ObjectName::from(vec!["b".into()]),
+                        value: Expr::value(number("2"))
+                    },
+                    SetAssignment {
+                        scope: Some(ContextModifier::Local),
+                        name: ObjectName::from(vec!["c".into()]),
+                        value: Expr::value(number("3"))
+                    },
+                    SetAssignment {
+                        scope: None,
+                        name: ObjectName::from(vec!["d".into()]),
+                        value: Expr::value(number("4"))
+                    }
+                ]
+            );
+        }
+        _ => panic!("Expected MultipleAssignments with 4 scoped variables and 4 values"),
+    };
+
+    Ok(())
+}
+
+#[test]
+fn parse_set_time_zone_alias() {
+    match all_dialects().verified_stmt("SET TIME ZONE 'UTC'") {
+        Statement::Set(Set::SetTimeZone { local, value }) => {
+            assert!(!local);
+            assert_eq!(
+                value,
+                Expr::Value((Value::SingleQuotedString("UTC".into())).with_empty_span())
+            );
+        }
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn parse_return() {
+    let stmt = all_dialects().verified_stmt("RETURN");
+    assert_eq!(stmt, Statement::Return(ReturnStatement { value: None }));
+
+    let _ = all_dialects().verified_stmt("RETURN 1");
+}
+
+#[test]
+fn test_open() {
+    let open_cursor = "OPEN Employee_Cursor";
+    let stmt = all_dialects().verified_stmt(open_cursor);
+    assert_eq!(
+        stmt,
+        Statement::Open(OpenStatement {
+            cursor_name: Ident::new("Employee_Cursor"),
+        })
+    );
 }

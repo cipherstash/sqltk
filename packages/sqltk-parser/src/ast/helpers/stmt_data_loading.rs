@@ -21,15 +21,13 @@
 
 #[cfg(not(feature = "std"))]
 use alloc::string::String;
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
 use core::fmt;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::ast::helpers::key_value_options::KeyValueOptions;
-use crate::ast::{Ident, ObjectName};
+use crate::ast::{Ident, ObjectName, SelectItem};
 #[cfg(feature = "visitor")]
 use sqltk_parser_derive::{Visit, VisitMut};
 
@@ -42,6 +40,25 @@ pub struct StageParamsObject {
     pub endpoint: Option<String>,
     pub storage_integration: Option<String>,
     pub credentials: KeyValueOptions,
+}
+
+/// This enum enables support for both standard SQL select item expressions
+/// and Snowflake-specific ones for data loading.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub enum StageLoadSelectItemKind {
+    SelectItem(SelectItem),
+    StageLoadSelectItem(StageLoadSelectItem),
+}
+
+impl fmt::Display for StageLoadSelectItemKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            StageLoadSelectItemKind::SelectItem(item) => write!(f, "{item}"),
+            StageLoadSelectItemKind::StageLoadSelectItem(item) => write!(f, "{item}"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
