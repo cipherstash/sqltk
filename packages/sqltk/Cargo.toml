@@ -2,7 +2,7 @@
 name = "sqltk"
 resolver = "2"
 description = "Enhanced Visitor implementation for sqlparser"
-version = "0.9.0"
+version = "0.10.0"
 publish = true
 edition = "2021"
 authors = [
@@ -11,13 +11,7 @@ authors = [
 ]
 homepage = "https://github.com/cipherstash/sqltk"
 documentation = "https://docs.rs/sqltk/"
-keywords = [
-    "sql",
-    "visitor",
-    "transform",
-    "analyze",
-    "cipherstash",
-]
+keywords = ["sql", "visitor", "transform", "analyze", "cipherstash"]
 repository = "https://github.com/cipherstash/sqltk"
 license = "MIT"
 readme = "../../README.md"
@@ -31,4 +25,6 @@ include = [
 
 [dependencies]
 bigdecimal = { version = "^0.4" }
-sqltk-parser = { path = "../sqltk-parser", version = "0.56.0-cipherstash.1", features = ["bigdecimal"]}
+sqltk-parser = { path = "../sqltk-parser", version = "0.56.0-cipherstash.2", features = [
+    "bigdecimal",
+] }
