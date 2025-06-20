@@ -5959,3 +5959,10 @@ fn parse_varbit_datatype() {
         _ => unreachable!(),
     }
 }
+
+#[test]
+fn parse_order_by_in_subquery_with_case() {
+    pg().verified_only_select(
+        "SELECT name FROM customers WHERE id IN (SELECT id FROM encrypted WHERE id = $1 ORDER BY id DESC LIMIT 10 OFFSET 0) GROUP BY name",
+    );
+}
