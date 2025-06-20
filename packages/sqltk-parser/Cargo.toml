@@ -16,20 +16,16 @@
 # under the License.
 
 [package]
-name = "sqltk-parser" # previously "sqlparser"
+name = "sqltk-parser"
 description = "Extensible SQL Lexer and Parser with support for ANSI SQL:2011"
-version = "0.56.0-cipherstash.1"
+version = "0.56.0-cipherstash.2"
 authors = ["Apache DataFusion <dev@datafusion.apache.org>"]
 homepage = "https://github.com/apache/datafusion-sqlparser-rs"
 documentation = "https://docs.rs/sqlparser/"
 keywords = ["ansi", "sql", "lexer", "parser"]
 repository = "https://github.com/apache/datafusion-sqlparser-rs"
 license = "Apache-2.0"
-include = [
-    "src/**/*.rs",
-    "Cargo.toml",
-    "LICENSE.TXT",
-]
+include = ["src/**/*.rs", "Cargo.toml", "LICENSE.TXT"]
 edition = "2021"
 
 [lib]
@@ -47,9 +43,12 @@ visitor = ["sqltk-parser-derive"]
 [dependencies]
 bigdecimal = { version = "0.4.1", features = ["serde"], optional = true }
 log = "0.4"
-recursive = { version = "0.1.1", optional = true}
+recursive = { version = "0.1.1", optional = true }
 
-serde = { version = "1.0", default-features = false, features = ["derive", "alloc"], optional = true }
+serde = { version = "1.0", default-features = false, features = [
+    "derive",
+    "alloc",
+], optional = true }
 # serde_json is only used in examples/cli, but we have to put it outside
 # of dev-dependencies because of
 # https://github.com/rust-lang/cargo/issues/1596
