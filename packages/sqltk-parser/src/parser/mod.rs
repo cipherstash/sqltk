@@ -3471,15 +3471,17 @@ impl<'a> Parser<'a> {
                     right
                 };
 
-                if !dialect_of!(self is PostgreSqlDialect) && !matches!(
-                    op,
-                    BinaryOperator::Gt
-                        | BinaryOperator::Lt
-                        | BinaryOperator::GtEq
-                        | BinaryOperator::LtEq
-                        | BinaryOperator::Eq
-                        | BinaryOperator::NotEq
-                ) {
+                if !dialect_of!(self is PostgreSqlDialect)
+                    && !matches!(
+                        op,
+                        BinaryOperator::Gt
+                            | BinaryOperator::Lt
+                            | BinaryOperator::GtEq
+                            | BinaryOperator::LtEq
+                            | BinaryOperator::Eq
+                            | BinaryOperator::NotEq
+                    )
+                {
                     return parser_err!(
                         format!(
                         "Expected one of [=, >, <, =>, =<, !=] as comparison operator, found: {op}"
@@ -3817,7 +3819,7 @@ impl<'a> Parser<'a> {
             });
         }
         self.expect_token(&Token::LParen)?;
-        let in_op = match self.maybe_parse(|p| p.parse_query_body(p.dialect.prec_unknown()))? {
+        let in_op = match self.maybe_parse(|p| p.parse_query())? {
             Some(subquery) => Expr::InSubquery {
                 expr: Box::new(expr),
                 subquery,

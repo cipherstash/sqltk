@@ -60,7 +60,7 @@ To update:
 cargo run -p sqltk-codegen
 
 # Commit the changes
-git a packages/sqltk/src/generated
+git add packages/sqltk/src/generated
 git commit -m 'Re-generated trait implementations with `cargo run -p sqltk-codegen`'
 ```
 
