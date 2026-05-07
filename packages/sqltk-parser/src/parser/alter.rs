@@ -92,8 +92,8 @@ impl Parser<'_> {
                 table_name,
                 operation: AlterPolicyOperation::Apply {
                     to,
-                    using,
-                    with_check,
+                    using: Box::new(using),
+                    with_check: Box::new(with_check),
                 },
             })
         }
@@ -190,7 +190,7 @@ impl Parser<'_> {
             if self.parse_keywords(&[Keyword::FROM, Keyword::CURRENT]) {
                 AlterRoleOperation::Set {
                     config_name,
-                    config_value: SetConfigValue::FromCurrent,
+                    config_value: Box::new(SetConfigValue::FromCurrent),
                     in_database,
                 }
             // { TO | = } { value | DEFAULT }
@@ -198,13 +198,13 @@ impl Parser<'_> {
                 if self.parse_keyword(Keyword::DEFAULT) {
                     AlterRoleOperation::Set {
                         config_name,
-                        config_value: SetConfigValue::Default,
+                        config_value: Box::new(SetConfigValue::Default),
                         in_database,
                     }
                 } else if let Ok(expr) = self.parse_expr() {
                     AlterRoleOperation::Set {
                         config_name,
-                        config_value: SetConfigValue::Value(expr),
+                        config_value: Box::new(SetConfigValue::Value(Box::new(expr))),
                         in_database,
                     }
                 } else {
@@ -288,7 +288,7 @@ impl Parser<'_> {
                 let password = if self.parse_keyword(Keyword::NULL) {
                     Password::NullPassword
                 } else {
-                    Password::Password(Expr::Value(self.parse_value()?))
+                    Password::Password(Box::new(Expr::Value(self.parse_value()?)))
                 };
                 RoleOption::Password(password)
             }

@@ -553,7 +553,7 @@ where
 ///           uses_odbc_syntax: false,
 ///           args: FunctionArguments::List(FunctionArgumentList {
 ///               duplicate_treatment: None,
-///               args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(old_expr))],
+///               args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(old_expr)))],
 ///               clauses: vec![],
 ///           }),
 ///           null_treatment: None,

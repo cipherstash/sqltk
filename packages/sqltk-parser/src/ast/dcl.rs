@@ -105,7 +105,7 @@ impl fmt::Display for RoleOption {
 pub enum SetConfigValue {
     Default,
     FromCurrent,
-    Value(Expr),
+    Value(Box<Expr>),
 }
 
 /// RESET config option:
@@ -143,7 +143,7 @@ pub enum AlterRoleOperation {
     },
     Set {
         config_name: ObjectName,
-        config_value: SetConfigValue,
+        config_value: Box<SetConfigValue>,
         in_database: Option<ObjectName>,
     },
     Reset {
@@ -176,7 +176,7 @@ impl fmt::Display for AlterRoleOperation {
                     write!(f, "IN DATABASE {} ", database_name)?;
                 }
 
-                match config_value {
+                match config_value.as_ref() {
                     SetConfigValue::Default => write!(f, "SET {config_name} TO DEFAULT"),
                     SetConfigValue::FromCurrent => write!(f, "SET {config_name} FROM CURRENT"),
                     SetConfigValue::Value(expr) => write!(f, "SET {config_name} TO {expr}"),

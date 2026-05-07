@@ -230,12 +230,15 @@ impl Dialect for SnowflakeDialect {
             let with = parser.parse_keyword(Keyword::WITH);
 
             if parser.parse_keyword(Keyword::IDENTITY) {
-                Ok(parse_identity_property(parser)
-                    .map(|p| Some(ColumnOption::Identity(IdentityPropertyKind::Identity(p)))))
+                Ok(parse_identity_property(parser).map(|p| {
+                    Some(ColumnOption::Identity(Box::new(
+                        IdentityPropertyKind::Identity(p),
+                    )))
+                }))
             } else if parser.parse_keyword(Keyword::AUTOINCREMENT) {
                 Ok(parse_identity_property(parser).map(|p| {
-                    Some(ColumnOption::Identity(IdentityPropertyKind::Autoincrement(
-                        p,
+                    Some(ColumnOption::Identity(Box::new(
+                        IdentityPropertyKind::Autoincrement(p),
                     )))
                 }))
             } else if parser.parse_keywords(&[Keyword::MASKING, Keyword::POLICY]) {
@@ -891,9 +894,9 @@ fn parse_select_items_for_data_load(
             // [<alias>.]$<file_col_num>[.<element>] [ , [<alias>.]$<file_col_num>[.<element>] ... ]
             Some(item) => select_items.push(StageLoadSelectItemKind::StageLoadSelectItem(item)),
             // Fallback, try to parse a standard SQL select item
-            None => select_items.push(StageLoadSelectItemKind::SelectItem(
+            None => select_items.push(StageLoadSelectItemKind::SelectItem(Box::new(
                 parser.parse_select_item()?,
-            )),
+            ))),
         }
         if matches!(parser.peek_token_ref().token, Token::Comma) {
             parser.advance_token();

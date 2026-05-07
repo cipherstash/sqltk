@@ -48,7 +48,7 @@ pub struct StageParamsObject {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub enum StageLoadSelectItemKind {
-    SelectItem(SelectItem),
+    SelectItem(Box<SelectItem>),
     StageLoadSelectItem(StageLoadSelectItem),
 }
 

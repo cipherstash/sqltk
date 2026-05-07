@@ -59,7 +59,7 @@ impl Codegen {
         let transformable_impls_for_main_nodes = main_nodes.iter().map(|(type_path, type_def)| {
             TransformableImpl::new(
                 type_path.clone(),
-                AstNode::SqlParserTypeDef(type_def.clone()),
+                AstNode::SqlParserTypeDef(Box::new(type_def.clone())),
             )
         });
 
@@ -125,7 +125,7 @@ impl Codegen {
         let visitable_impls_for_main_nodes = main_nodes.into_iter().map(|(type_path, type_def)| {
             VisitableImpl::new(
                 type_path,
-                AstNode::SqlParserTypeDef(type_def),
+                AstNode::SqlParserTypeDef(Box::new(type_def)),
                 reachability.clone(),
                 terminal_nodes.clone(),
             )

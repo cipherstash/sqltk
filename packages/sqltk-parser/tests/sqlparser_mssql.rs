@@ -571,9 +571,9 @@ fn parse_mssql_top_paren() {
     let select = ms_and_generic().verified_only_select(sql);
     let top = select.top.unwrap();
     assert_eq!(
-        Some(TopQuantity::Expr(Expr::Value(
+        Some(TopQuantity::Expr(Box::new(Expr::Value(
             (number("5")).with_empty_span()
-        ))),
+        )))),
         top.quantity
     );
     assert!(!top.percent);
@@ -585,9 +585,9 @@ fn parse_mssql_top_percent() {
     let select = ms_and_generic().verified_only_select(sql);
     let top = select.top.unwrap();
     assert_eq!(
-        Some(TopQuantity::Expr(Expr::Value(
+        Some(TopQuantity::Expr(Box::new(Expr::Value(
             (number("5")).with_empty_span()
-        ))),
+        )))),
         top.quantity
     );
     assert!(top.percent);
@@ -599,9 +599,9 @@ fn parse_mssql_top_with_ties() {
     let select = ms_and_generic().verified_only_select(sql);
     let top = select.top.unwrap();
     assert_eq!(
-        Some(TopQuantity::Expr(Expr::Value(
+        Some(TopQuantity::Expr(Box::new(Expr::Value(
             (number("5")).with_empty_span()
-        ))),
+        )))),
         top.quantity
     );
     assert!(top.with_ties);
@@ -613,9 +613,9 @@ fn parse_mssql_top_percent_with_ties() {
     let select = ms_and_generic().verified_only_select(sql);
     let top = select.top.unwrap();
     assert_eq!(
-        Some(TopQuantity::Expr(Expr::Value(
+        Some(TopQuantity::Expr(Box::new(Expr::Value(
             (number("10")).with_empty_span()
-        ))),
+        )))),
         top.quantity
     );
     assert!(top.percent);
@@ -850,34 +850,34 @@ fn parse_mssql_json_object() {
             ..
         }) => {
             assert!(matches!(
-                args[0],
+                &args[0],
                 FunctionArg::ExprNamed {
-                    name: Expr::Value(ValueWithSpan {
+                    name,
+                    arg,
+                    operator: FunctionArgOperator::Colon
+                } if matches!(&**name, Expr::Value(ValueWithSpan {
                         value: Value::SingleQuotedString(_),
                         span: _
-                    }),
-                    arg: FunctionArgExpr::Expr(Expr::Function(_)),
-                    operator: FunctionArgOperator::Colon
-                }
+                    })) && matches!(&**arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::Function(_)))
             ));
             assert!(matches!(
-                args[1],
+                &args[1],
                 FunctionArg::ExprNamed {
-                    name: Expr::Function(_),
-                    arg: FunctionArgExpr::Expr(Expr::Identifier(_)),
+                    name,
+                    arg,
                     operator: FunctionArgOperator::Colon
-                }
+                } if matches!(&**name, Expr::Function(_)) && matches!(&**arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::Identifier(_)))
             ));
             assert!(matches!(
-                args[2],
+                &args[2],
                 FunctionArg::ExprNamed {
-                    name: Expr::Value(ValueWithSpan {
+                    name,
+                    arg,
+                    operator: FunctionArgOperator::Colon
+                } if matches!(&**name, Expr::Value(ValueWithSpan {
                         value: Value::SingleQuotedString(_),
                         span: _
-                    }),
-                    arg: FunctionArgExpr::Expr(Expr::Subquery(_)),
-                    operator: FunctionArgOperator::Colon
-                }
+                    })) && matches!(&**arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::Subquery(_)))
             ));
             assert_eq!(
                 &[FunctionArgumentClause::JsonNullClause(
@@ -903,37 +903,37 @@ fn parse_mssql_json_object() {
             ..
         } => {
             assert!(matches!(
-                args[0],
+                &args[0],
                 FunctionArg::ExprNamed {
-                    name: Expr::Value(ValueWithSpan {
+                    name,
+                    arg,
+                    operator: FunctionArgOperator::Colon
+                } if matches!(&**name, Expr::Value(ValueWithSpan {
                         value: Value::SingleQuotedString(_),
                         span: _
-                    }),
-                    arg: FunctionArgExpr::Expr(Expr::CompoundIdentifier(_)),
-                    operator: FunctionArgOperator::Colon
-                }
+                    })) && matches!(&**arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::CompoundIdentifier(_)))
             ));
             assert!(matches!(
-                args[1],
+                &args[1],
                 FunctionArg::ExprNamed {
-                    name: Expr::Value(ValueWithSpan {
+                    name,
+                    arg,
+                    operator: FunctionArgOperator::Colon
+                } if matches!(&**name, Expr::Value(ValueWithSpan {
                         value: Value::SingleQuotedString(_),
                         span: _
-                    }),
-                    arg: FunctionArgExpr::Expr(Expr::CompoundIdentifier(_)),
-                    operator: FunctionArgOperator::Colon
-                }
+                    })) && matches!(&**arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::CompoundIdentifier(_)))
             ));
             assert!(matches!(
-                args[2],
+                &args[2],
                 FunctionArg::ExprNamed {
-                    name: Expr::Value(ValueWithSpan {
+                    name,
+                    arg,
+                    operator: FunctionArgOperator::Colon
+                } if matches!(&**name, Expr::Value(ValueWithSpan {
                         value: Value::SingleQuotedString(_),
                         span: _
-                    }),
-                    arg: FunctionArgExpr::Expr(Expr::CompoundIdentifier(_)),
-                    operator: FunctionArgOperator::Colon
-                }
+                    })) && matches!(&**arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::CompoundIdentifier(_)))
             ));
         }
         _ => unreachable!(),
@@ -950,18 +950,18 @@ fn parse_mssql_json_array() {
         }) => {
             assert_eq!(
                 &[
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                         (Value::SingleQuotedString("a".into())).with_empty_span()
-                    ))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                    )))),
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                         (number("1")).with_empty_span()
-                    ))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                    )))),
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                         (Value::Null).with_empty_span()
-                    ))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                    )))),
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                         (number("2")).with_empty_span()
-                    ))),
+                    )))),
                 ],
                 &args[..]
             );
@@ -982,18 +982,18 @@ fn parse_mssql_json_array() {
         }) => {
             assert_eq!(
                 &[
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                         (Value::SingleQuotedString("a".into())).with_empty_span()
-                    ))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                    )))),
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                         (number("1")).with_empty_span()
-                    ))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                    )))),
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                         (Value::Null).with_empty_span()
-                    ))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                    )))),
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                         (number("2")).with_empty_span()
-                    ))),
+                    )))),
                 ],
                 &args[..]
             );
@@ -1047,14 +1047,14 @@ fn parse_mssql_json_array() {
             ..
         }) => {
             assert_eq!(
-                &FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                &FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                     (Value::SingleQuotedString("a".into())).with_empty_span()
-                ))),
+                )))),
                 &args[0]
             );
             assert!(matches!(
-                args[1],
-                FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Function(_)))
+                &args[1],
+                FunctionArg::Unnamed(arg) if matches!(arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::Function(_)))
             ));
             assert_eq!(
                 &[FunctionArgumentClause::JsonNullClause(
@@ -1074,18 +1074,18 @@ fn parse_mssql_json_array() {
             ..
         }) => {
             assert_eq!(
-                &FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                &FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                     (Value::SingleQuotedString("a".into())).with_empty_span()
-                ))),
+                )))),
                 &args[0]
             );
             assert!(matches!(
-                args[1],
-                FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Function(_)))
+                &args[1],
+                FunctionArg::Unnamed(arg) if matches!(arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::Function(_)))
             ));
             assert!(matches!(
-                args[2],
-                FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Function(_)))
+                &args[2],
+                FunctionArg::Unnamed(arg) if matches!(arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::Function(_)))
             ));
         }
         _ => unreachable!(),
@@ -1097,18 +1097,18 @@ fn parse_mssql_json_array() {
             ..
         }) => {
             assert_eq!(
-                &FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                &FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                     (number("1")).with_empty_span()
-                ))),
+                )))),
                 &args[0]
             );
             assert!(matches!(
-                args[1],
-                FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Identifier(_)))
+                &args[1],
+                FunctionArg::Unnamed(arg) if matches!(arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::Identifier(_)))
             ));
             assert!(matches!(
-                args[2],
-                FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Subquery(_)))
+                &args[2],
+                FunctionArg::Unnamed(arg) if matches!(arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::Subquery(_)))
             ));
         }
         _ => unreachable!(),
@@ -1128,16 +1128,16 @@ fn parse_mssql_json_array() {
             ..
         } => {
             assert!(matches!(
-                args[0],
-                FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::CompoundIdentifier(_)))
+                &args[0],
+                FunctionArg::Unnamed(arg) if matches!(arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::CompoundIdentifier(_)))
             ));
             assert!(matches!(
-                args[1],
-                FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::CompoundIdentifier(_)))
+                &args[1],
+                FunctionArg::Unnamed(arg) if matches!(arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::CompoundIdentifier(_)))
             ));
             assert!(matches!(
-                args[2],
-                FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::CompoundIdentifier(_)))
+                &args[2],
+                FunctionArg::Unnamed(arg) if matches!(arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::CompoundIdentifier(_)))
             ));
             assert_eq!(
                 &[FunctionArgumentClause::JsonNullClause(
@@ -1568,11 +1568,11 @@ fn parse_create_table_with_valid_options() {
                         quote_style: None,
                         span: Span::empty(),
                     },
-                    value: Expr::Identifier(Ident {
+                    value: Box::new(Expr::Identifier(Ident {
                         value: "ROUND_ROBIN".to_string(),
                         quote_style: None,
                         span: Span::empty(),
-                    })
+                    }))
                 },
                 SqlOption::Partition {
                     column_name: "column_a".into(),
@@ -1647,7 +1647,7 @@ fn parse_create_table_with_valid_options() {
                         quote_style: None,
                         span: Span::empty(),
                     },
-                    value: Expr::Function(
+                    value: Box::new(Expr::Function(
                         Function {
                             name: ObjectName::from(
                                 vec![
@@ -1666,24 +1666,24 @@ fn parse_create_table_with_valid_options() {
                                     args: vec![
                                         FunctionArg::Unnamed(
                                             FunctionArgExpr::Expr(
-                                                Expr::Identifier(
+                                                Box::new(Expr::Identifier(
                                                     Ident {
                                                         value: "column_a".to_string(),
                                                         quote_style: None,
                                                         span: Span::empty(),
                                                     },
-                                                ),
+                                                )),
                                             ),
                                         ),
                                         FunctionArg::Unnamed(
                                             FunctionArgExpr::Expr(
-                                                Expr::Identifier(
+                                                Box::new(Expr::Identifier(
                                                     Ident {
                                                         value: "column_b".to_string(),
                                                         quote_style: None,
                                                         span: Span::empty(),
                                                     },
-                                                ),
+                                                )),
                                             ),
                                         ),
                                     ],
@@ -1695,7 +1695,7 @@ fn parse_create_table_with_valid_options() {
                             over: None,
                             within_group: vec![],
                         },
-                    ),
+                    )),
                 },
                 SqlOption::Ident("HEAP".into()),
             ],
@@ -1847,12 +1847,12 @@ fn parse_create_table_with_identity_column() {
             vec![
                 ColumnOptionDef {
                     name: None,
-                    option: ColumnOption::Identity(IdentityPropertyKind::Identity(
+                    option: ColumnOption::Identity(Box::new(IdentityPropertyKind::Identity(
                         IdentityProperty {
                             parameters: None,
                             order: None,
                         },
-                    )),
+                    ))),
                 },
                 ColumnOptionDef {
                     name: None,
@@ -1865,7 +1865,7 @@ fn parse_create_table_with_identity_column() {
             vec![
                 ColumnOptionDef {
                     name: None,
-                    option: ColumnOption::Identity(IdentityPropertyKind::Identity(
+                    option: ColumnOption::Identity(Box::new(IdentityPropertyKind::Identity(
                         IdentityProperty {
                             parameters: Some(IdentityPropertyFormatKind::FunctionCall(
                                 IdentityParameters {
@@ -1875,7 +1875,7 @@ fn parse_create_table_with_identity_column() {
                             )),
                             order: None,
                         },
-                    )),
+                    ))),
                 },
                 ColumnOptionDef {
                     name: None,

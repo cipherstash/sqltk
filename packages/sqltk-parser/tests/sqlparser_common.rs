@@ -1107,7 +1107,7 @@ fn parse_select_wildcard() {
     assert_eq!(
         &SelectItem::QualifiedWildcard(
             SelectItemQualifiedWildcardKind::ObjectName(ObjectName::from(vec![Ident::new("foo")])),
-            WildcardAdditionalOptions::default()
+            Box::<WildcardAdditionalOptions>::default()
         ),
         only(&select.projection)
     );
@@ -1120,7 +1120,7 @@ fn parse_select_wildcard() {
                 Ident::new("myschema"),
                 Ident::new("mytable"),
             ])),
-            WildcardAdditionalOptions::default(),
+            Box::<WildcardAdditionalOptions>::default(),
         ),
         only(&select.projection)
     );
@@ -1190,15 +1190,16 @@ fn parse_select_expr_star() {
 
     // Arbitrary compound expression with wildcard expansion.
     let select = dialects.verified_only_select("SELECT foo - bar.* FROM T");
-    let SelectItem::QualifiedWildcard(
-        SelectItemQualifiedWildcardKind::Expr(Expr::BinaryOp { left, op, right }),
-        _,
-    ) = only(&select.projection)
+    let SelectItem::QualifiedWildcard(SelectItemQualifiedWildcardKind::Expr(expr), _) =
+        only(&select.projection)
     else {
         unreachable!(
             "expected wildcard select item: got {:?}",
             &select.projection[0]
         )
+    };
+    let Expr::BinaryOp { left, op, right } = expr.as_ref() else {
+        unreachable!("expected binary op expr: got {:?}", &select.projection[0])
     };
     let (Expr::Identifier(left), BinaryOperator::Minus, Expr::Identifier(right)) =
         (left.as_ref(), op, right.as_ref())
@@ -1210,18 +1211,22 @@ fn parse_select_expr_star() {
 
     // Arbitrary expression wildcard expansion.
     let select = dialects.verified_only_select("SELECT myfunc().foo.* FROM T");
-    let SelectItem::QualifiedWildcard(
-        SelectItemQualifiedWildcardKind::Expr(Expr::CompoundFieldAccess { root, access_chain }),
-        _,
-    ) = only(&select.projection)
+    let SelectItem::QualifiedWildcard(SelectItemQualifiedWildcardKind::Expr(expr), _) =
+        only(&select.projection)
     else {
         unreachable!("expected wildcard expr: got {:?}", &select.projection[0])
+    };
+    let Expr::CompoundFieldAccess { root, access_chain } = expr.as_ref() else {
+        unreachable!(
+            "expected compound field access expr: got {:?}",
+            &select.projection[0]
+        )
     };
     assert!(matches!(root.as_ref(), Expr::Function(_)));
     assert_eq!(1, access_chain.len());
     assert!(matches!(
         &access_chain[0],
-        AccessExpr::Dot(Expr::Identifier(_))
+        AccessExpr::Dot(e) if matches!(e.as_ref(), Expr::Identifier(_))
     ));
 
     dialects.one_statement_parses_to(
@@ -1302,10 +1307,12 @@ fn parse_select_count_distinct() {
             parameters: FunctionArguments::None,
             args: FunctionArguments::List(FunctionArgumentList {
                 duplicate_treatment: Some(DuplicateTreatment::Distinct),
-                args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::UnaryOp {
-                    op: UnaryOperator::Plus,
-                    expr: Box::new(Expr::Identifier(Ident::new("x"))),
-                }))],
+                args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
+                    Expr::UnaryOp {
+                        op: UnaryOperator::Plus,
+                        expr: Box::new(Expr::Identifier(Ident::new("x"))),
+                    }
+                )))],
                 clauses: vec![],
             }),
             null_treatment: None,
@@ -1662,15 +1669,19 @@ fn parse_json_object() {
         }) => assert_eq!(
             &[
                 FunctionArg::ExprNamed {
-                    name: Expr::Value((Value::SingleQuotedString("name".into())).with_empty_span()),
-                    arg: FunctionArgExpr::Expr(Expr::Value(
-                        (Value::SingleQuotedString("value".into())).with_empty_span()
+                    name: Box::new(Expr::Value(
+                        (Value::SingleQuotedString("name".into())).with_empty_span()
                     )),
+                    arg: Box::new(FunctionArgExpr::Expr(Box::new(Expr::Value(
+                        (Value::SingleQuotedString("value".into())).with_empty_span()
+                    )))),
                     operator: FunctionArgOperator::Colon
                 },
                 FunctionArg::ExprNamed {
-                    name: Expr::Value((Value::SingleQuotedString("type".into())).with_empty_span()),
-                    arg: FunctionArgExpr::Expr(Expr::value(number("1"))),
+                    name: Box::new(Expr::Value(
+                        (Value::SingleQuotedString("type".into())).with_empty_span()
+                    )),
+                    arg: Box::new(FunctionArgExpr::Expr(Box::new(Expr::value(number("1"))))),
                     operator: FunctionArgOperator::Colon
                 }
             ],
@@ -1688,19 +1699,21 @@ fn parse_json_object() {
             assert_eq!(
                 &[
                     FunctionArg::ExprNamed {
-                        name: Expr::Value(
+                        name: Box::new(Expr::Value(
                             (Value::SingleQuotedString("name".into())).with_empty_span()
-                        ),
-                        arg: FunctionArgExpr::Expr(Expr::Value(
-                            (Value::SingleQuotedString("value".into())).with_empty_span()
                         )),
+                        arg: Box::new(FunctionArgExpr::Expr(Box::new(Expr::Value(
+                            (Value::SingleQuotedString("value".into())).with_empty_span()
+                        )))),
                         operator: FunctionArgOperator::Colon
                     },
                     FunctionArg::ExprNamed {
-                        name: Expr::Value(
+                        name: Box::new(Expr::Value(
                             (Value::SingleQuotedString("type".into())).with_empty_span()
-                        ),
-                        arg: FunctionArgExpr::Expr(Expr::Value((Value::Null).with_empty_span())),
+                        )),
+                        arg: Box::new(FunctionArgExpr::Expr(Box::new(Expr::Value(
+                            (Value::Null).with_empty_span()
+                        )))),
                         operator: FunctionArgOperator::Colon
                     }
                 ],
@@ -1757,24 +1770,26 @@ fn parse_json_object() {
         }) => {
             assert_eq!(
                 &FunctionArg::ExprNamed {
-                    name: Expr::Value((Value::SingleQuotedString("name".into())).with_empty_span()),
-                    arg: FunctionArgExpr::Expr(Expr::Value(
-                        (Value::SingleQuotedString("value".into())).with_empty_span()
+                    name: Box::new(Expr::Value(
+                        (Value::SingleQuotedString("name".into())).with_empty_span()
                     )),
+                    arg: Box::new(FunctionArgExpr::Expr(Box::new(Expr::Value(
+                        (Value::SingleQuotedString("value".into())).with_empty_span()
+                    )))),
                     operator: FunctionArgOperator::Colon
                 },
                 &args[0]
             );
             assert!(matches!(
-                args[1],
+                &args[1],
                 FunctionArg::ExprNamed {
-                    name: Expr::Value(ValueWithSpan {
+                    name,
+                    arg,
+                    operator: FunctionArgOperator::Colon
+                } if matches!(&**name, Expr::Value(ValueWithSpan {
                         value: Value::SingleQuotedString(_),
                         span: _
-                    }),
-                    arg: FunctionArgExpr::Expr(Expr::Function(_)),
-                    operator: FunctionArgOperator::Colon
-                }
+                    })) && matches!(&**arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::Function(_)))
             ));
             assert_eq!(
                 &[FunctionArgumentClause::JsonNullClause(
@@ -1795,24 +1810,26 @@ fn parse_json_object() {
         }) => {
             assert_eq!(
                 &FunctionArg::ExprNamed {
-                    name: Expr::Value((Value::SingleQuotedString("name".into())).with_empty_span()),
-                    arg: FunctionArgExpr::Expr(Expr::Value(
-                        (Value::SingleQuotedString("value".into())).with_empty_span()
+                    name: Box::new(Expr::Value(
+                        (Value::SingleQuotedString("name".into())).with_empty_span()
                     )),
+                    arg: Box::new(FunctionArgExpr::Expr(Box::new(Expr::Value(
+                        (Value::SingleQuotedString("value".into())).with_empty_span()
+                    )))),
                     operator: FunctionArgOperator::Colon
                 },
                 &args[0]
             );
             assert!(matches!(
-                args[1],
+                &args[1],
                 FunctionArg::ExprNamed {
-                    name: Expr::Value(ValueWithSpan {
+                    name,
+                    arg,
+                    operator: FunctionArgOperator::Colon
+                } if matches!(&**name, Expr::Value(ValueWithSpan {
                         value: Value::SingleQuotedString(_),
                         span: _
-                    }),
-                    arg: FunctionArgExpr::Expr(Expr::Function(_)),
-                    operator: FunctionArgOperator::Colon
-                }
+                    })) && matches!(&**arg, FunctionArgExpr::Expr(e) if matches!(&**e, Expr::Function(_)))
             ));
             assert_eq!(
                 &[FunctionArgumentClause::JsonNullClause(
@@ -2808,15 +2825,17 @@ fn parse_group_by_special_grouping_sets() {
                         Expr::Identifier(Ident::new("a")),
                         Expr::Identifier(Ident::new("b"))
                     ],
-                    vec![GroupByWithModifier::GroupingSets(Expr::GroupingSets(vec![
-                        vec![
-                            Expr::Identifier(Ident::new("a")),
-                            Expr::Identifier(Ident::new("b"))
-                        ],
-                        vec![Expr::Identifier(Ident::new("a")),],
-                        vec![Expr::Identifier(Ident::new("b"))],
-                        vec![]
-                    ]))]
+                    vec![GroupByWithModifier::GroupingSets(Box::new(
+                        Expr::GroupingSets(vec![
+                            vec![
+                                Expr::Identifier(Ident::new("a")),
+                                Expr::Identifier(Ident::new("b"))
+                            ],
+                            vec![Expr::Identifier(Ident::new("a")),],
+                            vec![Expr::Identifier(Ident::new("b"))],
+                            vec![]
+                        ])
+                    ))]
                 )
             );
         }
@@ -3285,12 +3304,12 @@ fn parse_listagg() {
             args: FunctionArguments::List(FunctionArgumentList {
                 duplicate_treatment: Some(DuplicateTreatment::Distinct),
                 args: vec![
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Identifier(Ident::new(
-                        "dateid"
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Identifier(
+                        Ident::new("dateid")
                     )))),
-                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                    FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                         (Value::SingleQuotedString(", ".to_owned())).with_empty_span()
-                    )))
+                    ))))
                 ],
                 clauses: vec![FunctionArgumentClause::OnOverflow(
                     ListAggOnOverflow::Truncate {
@@ -3452,9 +3471,13 @@ fn parse_window_function_null_treatment_arg() {
                 .all(|clause| !matches!(clause, FunctionArgumentClause::OrderBy(_)))
         });
         assert_eq!(1, arg_list.args.len());
-        let FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Identifier(actual_expr))) =
-            &arg_list.args[0]
-        else {
+        let FunctionArg::Unnamed(arg_expr) = &arg_list.args[0] else {
+            unreachable!()
+        };
+        let FunctionArgExpr::Expr(expr) = arg_expr else {
+            unreachable!()
+        };
+        let Expr::Identifier(actual_expr) = expr.as_ref() else {
             unreachable!()
         };
         assert_eq!(&Ident::new(expected_expr), actual_expr);
@@ -4432,13 +4455,13 @@ fn parse_create_table_with_options() {
                 vec![
                     SqlOption::KeyValue {
                         key: "foo".into(),
-                        value: Expr::Value(
+                        value: Box::new(Expr::Value(
                             (Value::SingleQuotedString("bar".into())).with_empty_span()
-                        ),
+                        )),
                     },
                     SqlOption::KeyValue {
                         key: "a".into(),
-                        value: Expr::value(number("123")),
+                        value: Box::new(Expr::value(number("123"))),
                     },
                 ],
                 with_options
@@ -4664,9 +4687,9 @@ fn parse_alter_table() {
                         quote_style: Some('\''),
                         span: Span::empty(),
                     },
-                    value: Expr::Value(
+                    value: Box::new(Expr::Value(
                         (Value::SingleQuotedString("parquet".to_string())).with_empty_span()
-                    ),
+                    )),
                 }],
             );
         }
@@ -4810,13 +4833,13 @@ fn parse_alter_view_with_options() {
                 vec![
                     SqlOption::KeyValue {
                         key: "foo".into(),
-                        value: Expr::Value(
+                        value: Box::new(Expr::Value(
                             (Value::SingleQuotedString("bar".into())).with_empty_span()
-                        ),
+                        )),
                     },
                     SqlOption::KeyValue {
                         key: "a".into(),
-                        value: Expr::value(number("123")),
+                        value: Box::new(Expr::value(number("123"))),
                     },
                 ],
                 with_options
@@ -5316,16 +5339,16 @@ fn parse_named_argument_function() {
                 args: vec![
                     FunctionArg::Named {
                         name: Ident::new("a"),
-                        arg: FunctionArgExpr::Expr(Expr::Value(
+                        arg: FunctionArgExpr::Expr(Box::new(Expr::Value(
                             (Value::SingleQuotedString("1".to_owned())).with_empty_span()
-                        )),
+                        ))),
                         operator: FunctionArgOperator::RightArrow
                     },
                     FunctionArg::Named {
                         name: Ident::new("b"),
-                        arg: FunctionArgExpr::Expr(Expr::Value(
+                        arg: FunctionArgExpr::Expr(Box::new(Expr::Value(
                             (Value::SingleQuotedString("2".to_owned())).with_empty_span()
-                        )),
+                        ))),
                         operator: FunctionArgOperator::RightArrow
                     },
                 ],
@@ -5356,16 +5379,16 @@ fn parse_named_argument_function_with_eq_operator() {
                 args: vec![
                     FunctionArg::Named {
                         name: Ident::new("a"),
-                        arg: FunctionArgExpr::Expr(Expr::Value(
+                        arg: FunctionArgExpr::Expr(Box::new(Expr::Value(
                             (Value::SingleQuotedString("1".to_owned())).with_empty_span()
-                        )),
+                        ))),
                         operator: FunctionArgOperator::Equals
                     },
                     FunctionArg::Named {
                         name: Ident::new("b"),
-                        arg: FunctionArgExpr::Expr(Expr::Value(
+                        arg: FunctionArgExpr::Expr(Box::new(Expr::Value(
                             (Value::SingleQuotedString("2".to_owned())).with_empty_span()
-                        )),
+                        ))),
                         operator: FunctionArgOperator::Equals
                     },
                 ],
@@ -5561,13 +5584,13 @@ fn test_parse_named_window() {
                     parameters: FunctionArguments::None,
                     args: FunctionArguments::List(FunctionArgumentList {
                         duplicate_treatment: None,
-                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
                             Expr::Identifier(Ident {
                                 value: "c12".to_string(),
                                 quote_style: None,
                                 span: Span::empty(),
                             }),
-                        ))],
+                        )))],
                         clauses: vec![],
                     }),
                     null_treatment: None,
@@ -5596,13 +5619,13 @@ fn test_parse_named_window() {
                     parameters: FunctionArguments::None,
                     args: FunctionArguments::List(FunctionArgumentList {
                         duplicate_treatment: None,
-                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
                             Expr::Identifier(Ident {
                                 value: "c12".to_string(),
                                 quote_style: None,
                                 span: Span::empty(),
                             }),
-                        ))],
+                        )))],
                         clauses: vec![],
                     }),
                     null_treatment: None,
@@ -6973,11 +6996,11 @@ fn parse_joins_on() {
                 index_hints: vec![],
             },
             global,
-            join_operator: f(JoinConstraint::On(Expr::BinaryOp {
+            join_operator: f(JoinConstraint::On(Box::new(Expr::BinaryOp {
                 left: Box::new(Expr::Identifier("c1".into())),
                 op: BinaryOperator::Eq,
                 right: Box::new(Expr::Identifier("c2".into())),
-            })),
+            }))),
         }
     }
     // Test parsing of aliases
@@ -7895,13 +7918,13 @@ fn parse_create_view_with_options() {
                 CreateTableOptions::With(vec![
                     SqlOption::KeyValue {
                         key: "foo".into(),
-                        value: Expr::Value(
+                        value: Box::new(Expr::Value(
                             (Value::SingleQuotedString("bar".into())).with_empty_span()
-                        ),
+                        )),
                     },
                     SqlOption::KeyValue {
                         key: "a".into(),
-                        value: Expr::value(number("123")),
+                        value: Box::new(Expr::value(number("123"))),
                     },
                 ]),
                 options
@@ -8450,9 +8473,9 @@ fn lateral_derived() {
         let join = &from.joins[0];
         assert_eq!(
             join.join_operator,
-            JoinOperator::Left(JoinConstraint::On(Expr::Value(
+            JoinOperator::Left(JoinConstraint::On(Box::new(Expr::Value(
                 (test_utils::number("1")).with_empty_span()
-            )))
+            ))))
         );
         if let TableFactor::Derived {
             lateral,
@@ -8512,11 +8535,14 @@ fn lateral_function() {
                     lateral: true,
                     name: ObjectName::from(vec!["generate_series".into()]),
                     args: vec![
-                        FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                        FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                             (number("1")).with_empty_span(),
-                        ))),
-                        FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::CompoundIdentifier(
-                            vec![Ident::new("customer"), Ident::new("id")],
+                        )))),
+                        FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
+                            Expr::CompoundIdentifier(vec![
+                                Ident::new("customer"),
+                                Ident::new("id"),
+                            ]),
                         ))),
                     ],
                     alias: None,
@@ -10269,11 +10295,13 @@ fn parse_cache_table() {
             options: vec![
                 SqlOption::KeyValue {
                     key: Ident::with_quote('\'', "K1"),
-                    value: Expr::Value((Value::SingleQuotedString("V1".into())).with_empty_span()),
+                    value: Box::new(Expr::Value(
+                        (Value::SingleQuotedString("V1".into())).with_empty_span()
+                    )),
                 },
                 SqlOption::KeyValue {
                     key: Ident::with_quote('\'', "K2"),
-                    value: Expr::value(number("0.88")),
+                    value: Box::new(Expr::value(number("0.88"))),
                 },
             ],
             query: None,
@@ -10294,11 +10322,11 @@ fn parse_cache_table() {
             options: vec![
                 SqlOption::KeyValue {
                     key: Ident::with_quote('\'', "K1"),
-                    value: Expr::Value((Value::SingleQuotedString("V1".into())).with_empty_span()),
+                    value: Box::new(Expr::Value((Value::SingleQuotedString("V1".into())).with_empty_span())),
                 },
                 SqlOption::KeyValue {
                     key: Ident::with_quote('\'', "K2"),
-                    value: Expr::value(number("0.88")),
+                    value: Box::new(Expr::value(number("0.88"))),
                 },
             ],
             query: Some(query.clone().into()),
@@ -10319,11 +10347,11 @@ fn parse_cache_table() {
             options: vec![
                 SqlOption::KeyValue {
                     key: Ident::with_quote('\'', "K1"),
-                    value: Expr::Value((Value::SingleQuotedString("V1".into())).with_empty_span()),
+                    value: Box::new(Expr::Value((Value::SingleQuotedString("V1".into())).with_empty_span())),
                 },
                 SqlOption::KeyValue {
                     key: Ident::with_quote('\'', "K2"),
-                    value: Expr::value(number("0.88")),
+                    value: Box::new(Expr::value(number("0.88"))),
                 },
             ],
             query: Some(query.clone().into()),
@@ -11156,8 +11184,8 @@ fn parse_call() {
             parameters: FunctionArguments::None,
             args: FunctionArguments::List(FunctionArgumentList {
                 duplicate_treatment: None,
-                args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
-                    (Value::SingleQuotedString("a".to_string())).with_empty_span()
+                args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
+                    Expr::Value((Value::SingleQuotedString("a".to_string())).with_empty_span())
                 )))],
                 clauses: vec![],
             }),
@@ -11368,9 +11396,9 @@ fn parse_unload() {
                     quote_style: None,
                     span: Span::empty(),
                 },
-                value: Expr::Value(
+                value: Box::new(Expr::Value(
                     (Value::SingleQuotedString("AVRO".to_string())).with_empty_span()
-                )
+                ))
             }]
         }
     );
@@ -11479,13 +11507,13 @@ fn parse_map_access_expr() {
             "users",
         ))),
         access_chain: vec![
-            AccessExpr::Subscript(Subscript::Index {
+            AccessExpr::Subscript(Box::new(Subscript::Index {
                 index: Expr::UnaryOp {
                     op: UnaryOperator::Minus,
                     expr: Expr::value(number("1")).into(),
                 },
-            }),
-            AccessExpr::Subscript(Subscript::Index {
+            })),
+            AccessExpr::Subscript(Box::new(Subscript::Index {
                 index: Expr::Function(Function {
                     name: ObjectName::from(vec![Ident::with_span(
                         Span::new(Location::of(1, 11), Location::of(1, 22)),
@@ -11494,8 +11522,8 @@ fn parse_map_access_expr() {
                     parameters: FunctionArguments::None,
                     args: FunctionArguments::List(FunctionArgumentList {
                         duplicate_treatment: None,
-                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
-                            (number("2")).with_empty_span(),
+                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
+                            Expr::Value((number("2")).with_empty_span()),
                         )))],
                         clauses: vec![],
                     }),
@@ -11505,7 +11533,7 @@ fn parse_map_access_expr() {
                     within_group: vec![],
                     uses_odbc_syntax: false,
                 }),
-            }),
+            })),
         ],
     };
     assert_eq!(expr, expected);
@@ -11703,9 +11731,9 @@ fn test_selective_aggregation() {
                 parameters: FunctionArguments::None,
                 args: FunctionArguments::List(FunctionArgumentList {
                     duplicate_treatment: None,
-                    args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+                    args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
                         Expr::Identifier(Ident::new("name"))
-                    ))],
+                    )))],
                     clauses: vec![],
                 }),
                 filter: Some(Box::new(Expr::IsNotNull(Box::new(Expr::Identifier(
@@ -11722,9 +11750,9 @@ fn test_selective_aggregation() {
                     parameters: FunctionArguments::None,
                     args: FunctionArguments::List(FunctionArgumentList {
                         duplicate_treatment: None,
-                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
                             Expr::Identifier(Ident::new("name"))
-                        ))],
+                        )))],
                         clauses: vec![],
                     }),
                     filter: Some(Box::new(Expr::Like {
@@ -12374,9 +12402,9 @@ fn test_map_syntax() {
                     },
                 ],
             })),
-            access_chain: vec![AccessExpr::Subscript(Subscript::Index {
+            access_chain: vec![AccessExpr::Subscript(Box::new(Subscript::Index {
                 index: Expr::Value((Value::SingleQuotedString("a".to_owned())).with_empty_span()),
-            })],
+            }))],
         },
     );
 
@@ -13024,15 +13052,15 @@ fn test_create_connector() {
                 Some(vec![
                     SqlOption::KeyValue {
                         key: Ident::with_quote('\'', "user"),
-                        value: Expr::Value(
+                        value: Box::new(Expr::Value(
                             (Value::SingleQuotedString("root".to_string())).with_empty_span()
-                        )
+                        ))
                     },
                     SqlOption::KeyValue {
                         key: Ident::with_quote('\'', "password"),
-                        value: Expr::Value(
+                        value: Box::new(Expr::Value(
                             (Value::SingleQuotedString("password".to_string())).with_empty_span()
-                        )
+                        ))
                     }
                 ])
             );
@@ -13095,15 +13123,15 @@ fn test_alter_connector() {
                 Some(vec![
                     SqlOption::KeyValue {
                         key: Ident::with_quote('\'', "user"),
-                        value: Expr::Value(
+                        value: Box::new(Expr::Value(
                             (Value::SingleQuotedString("root".to_string())).with_empty_span()
-                        )
+                        ))
                     },
                     SqlOption::KeyValue {
                         key: Ident::with_quote('\'', "password"),
-                        value: Expr::Value(
+                        value: Box::new(Expr::Value(
                             (Value::SingleQuotedString("password".to_string())).with_empty_span()
-                        )
+                        ))
                     }
                 ])
             );
@@ -13240,16 +13268,15 @@ fn parse_method_select() {
 fn parse_method_expr() {
     let expr =
         verified_expr("LEFT('abc', 1).value('.', 'NVARCHAR(MAX)').value('.', 'NVARCHAR(MAX)')");
+    fn is_dot_function(access: &AccessExpr) -> bool {
+        matches!(access, AccessExpr::Dot(e) if matches!(e.as_ref(), Expr::Function(_)))
+    }
     match expr {
         Expr::CompoundFieldAccess { root, access_chain } => {
             assert!(matches!(*root, Expr::Function(_)));
-            assert!(matches!(
-                access_chain[..],
-                [
-                    AccessExpr::Dot(Expr::Function(_)),
-                    AccessExpr::Dot(Expr::Function(_))
-                ]
-            ));
+            assert_eq!(access_chain.len(), 2);
+            assert!(is_dot_function(&access_chain[0]));
+            assert!(is_dot_function(&access_chain[1]));
         }
         _ => unreachable!(),
     }
@@ -13260,10 +13287,8 @@ fn parse_method_expr() {
     match expr {
         Expr::CompoundFieldAccess { root, access_chain } => {
             assert!(matches!(*root, Expr::Subquery(_)));
-            assert!(matches!(
-                access_chain[..],
-                [AccessExpr::Dot(Expr::Function(_))]
-            ));
+            assert_eq!(access_chain.len(), 1);
+            assert!(is_dot_function(&access_chain[0]));
         }
         _ => unreachable!(),
     }
@@ -13271,10 +13296,8 @@ fn parse_method_expr() {
     match expr {
         Expr::CompoundFieldAccess { root, access_chain } => {
             assert!(matches!(*root, Expr::Cast { .. }));
-            assert!(matches!(
-                access_chain[..],
-                [AccessExpr::Dot(Expr::Function(_))]
-            ));
+            assert_eq!(access_chain.len(), 1);
+            assert!(is_dot_function(&access_chain[0]));
         }
         _ => unreachable!(),
     }
@@ -13288,13 +13311,9 @@ fn parse_method_expr() {
     match expr {
         Expr::CompoundFieldAccess { root, access_chain } => {
             assert!(matches!(*root, Expr::Convert { .. }));
-            assert!(matches!(
-                access_chain[..],
-                [
-                    AccessExpr::Dot(Expr::Function(_)),
-                    AccessExpr::Dot(Expr::Function(_))
-                ]
-            ));
+            assert_eq!(access_chain.len(), 2);
+            assert!(is_dot_function(&access_chain[0]));
+            assert!(is_dot_function(&access_chain[1]));
         }
         _ => unreachable!(),
     }
@@ -13975,9 +13994,9 @@ fn parse_composite_access_expr() {
                 parameters: FunctionArguments::None,
                 args: FunctionArguments::List(FunctionArgumentList {
                     duplicate_treatment: None,
-                    args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+                    args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
                         Expr::Identifier(Ident::new("a"))
-                    ))],
+                    )))],
                     clauses: vec![],
                 }),
                 null_treatment: None,
@@ -13985,7 +14004,7 @@ fn parse_composite_access_expr() {
                 over: None,
                 within_group: vec![]
             })),
-            access_chain: vec![AccessExpr::Dot(Expr::Identifier(Ident::new("b")))]
+            access_chain: vec![AccessExpr::Dot(Box::new(Expr::Identifier(Ident::new("b"))))]
         }
     );
 
@@ -13999,9 +14018,9 @@ fn parse_composite_access_expr() {
                 parameters: FunctionArguments::None,
                 args: FunctionArguments::List(FunctionArgumentList {
                     duplicate_treatment: None,
-                    args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+                    args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
                         Expr::Identifier(Ident::new("a"))
-                    ))],
+                    )))],
                     clauses: vec![],
                 }),
                 null_treatment: None,
@@ -14010,8 +14029,8 @@ fn parse_composite_access_expr() {
                 within_group: vec![]
             })),
             access_chain: vec![
-                AccessExpr::Dot(Expr::Identifier(Ident::new("b"))),
-                AccessExpr::Dot(Expr::Identifier(Ident::new("c"))),
+                AccessExpr::Dot(Box::new(Expr::Identifier(Ident::new("b")))),
+                AccessExpr::Dot(Box::new(Expr::Identifier(Ident::new("c")))),
             ]
         }
     );
@@ -14025,9 +14044,9 @@ fn parse_composite_access_expr() {
             parameters: FunctionArguments::None,
             args: FunctionArguments::List(FunctionArgumentList {
                 duplicate_treatment: None,
-                args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+                args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
                     Expr::Identifier(Ident::new("a")),
-                ))],
+                )))],
                 clauses: vec![],
             }),
             null_treatment: None,
@@ -14035,7 +14054,7 @@ fn parse_composite_access_expr() {
             over: None,
             within_group: vec![],
         })),
-        access_chain: vec![AccessExpr::Dot(Expr::Identifier(Ident::new("b")))],
+        access_chain: vec![AccessExpr::Dot(Box::new(Expr::Identifier(Ident::new("b"))))],
     };
 
     assert_eq!(stmt.projection[0], SelectItem::UnnamedExpr(expr.clone()));
@@ -14081,8 +14100,8 @@ fn parse_composite_access_expr() {
             fields: vec![],
         }),
         access_chain: vec![
-            AccessExpr::Dot(Expr::Identifier(Ident::new("c"))),
-            AccessExpr::Dot(Expr::Identifier(Ident::new("a"))),
+            AccessExpr::Dot(Box::new(Expr::Identifier(Ident::new("c")))),
+            AccessExpr::Dot(Box::new(Expr::Identifier(Ident::new("a")))),
         ],
     });
     assert_eq!(stmt.projection[0], expected);
@@ -14102,15 +14121,15 @@ fn parse_create_table_with_enum_types() {
                             vec![
                                 EnumMember::NamedValue(
                                     "a".to_string(),
-                                    Expr::Value(
+                                    Box::new(Expr::Value(
                                         (Number("1".parse().unwrap(), false)).with_empty_span()
-                                    )
+                                    ))
                                 ),
                                 EnumMember::NamedValue(
                                     "b".to_string(),
-                                    Expr::Value(
+                                    Box::new(Expr::Value(
                                         (Number("2".parse().unwrap(), false)).with_empty_span()
-                                    )
+                                    ))
                                 )
                             ],
                             Some(8)
@@ -14123,15 +14142,15 @@ fn parse_create_table_with_enum_types() {
                             vec![
                                 EnumMember::NamedValue(
                                     "a".to_string(),
-                                    Expr::Value(
+                                    Box::new(Expr::Value(
                                         (Number("1".parse().unwrap(), false)).with_empty_span()
-                                    )
+                                    ))
                                 ),
                                 EnumMember::NamedValue(
                                     "b".to_string(),
-                                    Expr::Value(
+                                    Box::new(Expr::Value(
                                         (Number("2".parse().unwrap(), false)).with_empty_span()
-                                    )
+                                    ))
                                 )
                             ],
                             Some(16)
@@ -14284,7 +14303,7 @@ fn test_visit_order() {
     let sql = "SELECT CASE a WHEN 1 THEN 2 WHEN 3 THEN 4 ELSE 5 END";
     let stmt = verified_stmt(sql);
     let mut visited = vec![];
-    sqltk_parser::ast::visit_expressions(&stmt, |expr| {
+    let _ = sqltk_parser::ast::visit_expressions(&stmt, |expr| {
         visited.push(expr.to_string());
         core::ops::ControlFlow::<()>::Continue(())
     });
@@ -15167,7 +15186,7 @@ fn parse_set_time_zone_alias() {
         Statement::Set(Set::SetTimeZone { local, value }) => {
             assert!(!local);
             assert_eq!(
-                value,
+                *value,
                 Expr::Value((Value::SingleQuotedString("UTC".into())).with_empty_span())
             );
         }

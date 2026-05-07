@@ -37,7 +37,7 @@ pub enum EnumMember {
     /// ClickHouse allows to specify an integer value for each enum value.
     ///
     /// [ClickHouse](https://clickhouse.com/docs/en/sql-reference/data-types/enum)
-    NamedValue(String, Expr),
+    NamedValue(String, Box<Expr>),
 }
 
 /// SQL data types

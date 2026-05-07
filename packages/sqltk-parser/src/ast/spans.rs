@@ -1607,8 +1607,8 @@ impl Spanned for Subscript {
             } => union_spans(
                 [
                     lower_bound.as_ref().map(|i| i.span()),
-                    upper_bound.as_ref().map(|i| i.span()),
-                    stride.as_ref().map(|i| i.span()),
+                    (**upper_bound).as_ref().map(|i| i.span()),
+                    (**stride).as_ref().map(|i| i.span()),
                 ]
                 .into_iter()
                 .flatten(),
