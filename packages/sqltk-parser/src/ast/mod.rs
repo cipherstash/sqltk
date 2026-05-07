@@ -2662,7 +2662,7 @@ impl fmt::Display for Declare {
 }
 
 /// Sql options of a `CREATE TABLE` statement.
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[derive(Debug, Default, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 #[derive(Default)]
