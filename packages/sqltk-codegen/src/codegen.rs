@@ -6,7 +6,32 @@ use proc_macro2::TokenStream;
 
 use quote::{quote, ToTokens, TokenStreamExt};
 
-use std::{collections::HashSet, fs::File, io::Write, path::PathBuf};
+use std::{
+    collections::HashSet,
+    fs::File,
+    io::Write,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
+
+fn rustfmt(source: &str) -> Option<String> {
+    let mut child = Command::new("rustfmt")
+        .args(["--edition", "2021", "--emit", "stdout"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .ok()?;
+
+    child.stdin.as_mut()?.write_all(source.as_bytes()).ok()?;
+
+    let output = child.wait_with_output().ok()?;
+    if output.status.success() {
+        String::from_utf8(output.stdout).ok()
+    } else {
+        None
+    }
+}
 
 pub struct Codegen {
     meta: SqlParserMetaQuery,
@@ -57,9 +82,11 @@ impl Codegen {
         let formatted = parsed.map(|parsed| prettyplease::unparse(&parsed));
 
         match formatted {
-            Ok(formatted) => file
-                .write_all(formatted.as_bytes())
-                .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display())),
+            Ok(formatted) => {
+                let canonical = rustfmt(&formatted).unwrap_or(formatted);
+                file.write_all(canonical.as_bytes())
+                    .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()))
+            }
             Err(_) => file
                 .write_all(generated_code.to_string().as_bytes())
                 .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display())),
@@ -129,7 +156,8 @@ impl Codegen {
                 .expect("BUG! Generated Rust code could not be parsed"),
         );
 
-        file.write_all(formatted.as_bytes())
+        let canonical = rustfmt(&formatted).unwrap_or(formatted);
+        file.write_all(canonical.as_bytes())
             .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()));
     }
 }
