@@ -2665,7 +2665,9 @@ impl fmt::Display for Declare {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[derive(Default)]
 pub enum CreateTableOptions {
+    #[default]
     None,
     /// Options specified using the `WITH` keyword.
     /// e.g. `WITH (description = "123")`
@@ -2692,12 +2694,6 @@ pub enum CreateTableOptions {
     Plain(Vec<SqlOption>),
 
     TableProperties(Vec<SqlOption>),
-}
-
-impl Default for CreateTableOptions {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 impl fmt::Display for CreateTableOptions {

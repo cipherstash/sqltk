@@ -105,25 +105,21 @@ impl SqlParserAstAnalyser {
                     trait_: Some((_, trait_path, _)),
                     self_ty,
                     ..
-                }) => {
-                    if is_impl_of_sqlparser_visit(trait_path) {
-                        let type_path = syn_type_to_path(path, self_ty.deref());
-                        if let Some(ty) = self
-                            .internal_types
-                            .get_mut(&InternalTypePath(type_path.clone()))
-                        {
-                            ty.has_visit_impl = true;
-                        }
+                }) if is_impl_of_sqlparser_visit(trait_path) => {
+                    let type_path = syn_type_to_path(path, self_ty.deref());
+                    if let Some(ty) = self
+                        .internal_types
+                        .get_mut(&InternalTypePath(type_path.clone()))
+                    {
+                        ty.has_visit_impl = true;
                     }
                 }
                 Item::Use(ItemUse {
                     tree,
                     vis: Visibility::Public(_),
                     ..
-                }) => {
-                    if in_public_mod {
-                        self.walk_use_tree(tree, &mut path.clone());
-                    }
+                }) if in_public_mod => {
+                    self.walk_use_tree(tree, &mut path.clone());
                 }
                 _ => {}
             }

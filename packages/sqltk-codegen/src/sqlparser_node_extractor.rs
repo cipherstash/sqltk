@@ -7,11 +7,9 @@ use super::meta::SqlParserMeta;
 use super::*;
 
 pub fn extract() -> SqlParserMeta {
-    let sqlparser_features = vec!["visitor", "bigdecimal"];
+    let sqlparser_features = ["visitor", "bigdecimal"];
 
-    let sql_parser_dir = Path::new(
-        std::env::var("CARGO_MANIFEST_DIR").unwrap().as_str()
-    )
+    let sql_parser_dir = Path::new(std::env::var("CARGO_MANIFEST_DIR").unwrap().as_str())
         .join("..")
         .join("sqltk-parser");
 

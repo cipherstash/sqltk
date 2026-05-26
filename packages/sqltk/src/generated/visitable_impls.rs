@@ -381,10 +381,7 @@ impl crate::Visitable for sqltk_parser::ast::AlterColumnOperation {
                         value.accept(visitor)?;
                     }
                     sqltk_parser::ast::AlterColumnOperation::DropDefault => {}
-                    sqltk_parser::ast::AlterColumnOperation::SetDataType {
-                        data_type,
-                        using,
-                    } => {
+                    sqltk_parser::ast::AlterColumnOperation::SetDataType { data_type, using } => {
                         data_type.accept(visitor)?;
                         using.accept(visitor)?;
                     }
@@ -449,9 +446,7 @@ impl crate::Visitable for sqltk_parser::ast::AlterIndexOperation {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqltk_parser::ast::AlterIndexOperation::RenameIndex {
-                        index_name,
-                    } => {
+                    sqltk_parser::ast::AlterIndexOperation::RenameIndex { index_name } => {
                         index_name.accept(visitor)?;
                     }
                 }
@@ -520,9 +515,7 @@ impl crate::Visitable for sqltk_parser::ast::AlterRoleOperation {
                     sqltk_parser::ast::AlterRoleOperation::AddMember { member_name } => {
                         member_name.accept(visitor)?;
                     }
-                    sqltk_parser::ast::AlterRoleOperation::DropMember {
-                        member_name,
-                    } => {
+                    sqltk_parser::ast::AlterRoleOperation::DropMember { member_name } => {
                         member_name.accept(visitor)?;
                     }
                     sqltk_parser::ast::AlterRoleOperation::WithOptions { options } => {
@@ -647,10 +640,7 @@ impl crate::Visitable for sqltk_parser::ast::AlterTableOperation {
                         name.accept(visitor)?;
                         select.accept(visitor)?;
                     }
-                    sqltk_parser::ast::AlterTableOperation::DropProjection {
-                        if_exists,
-                        name,
-                    } => {
+                    sqltk_parser::ast::AlterTableOperation::DropProjection { if_exists, name } => {
                         if_exists.accept(visitor)?;
                         name.accept(visitor)?;
                     }
@@ -697,14 +687,10 @@ impl crate::Visitable for sqltk_parser::ast::AlterTableOperation {
                         if_exists.accept(visitor)?;
                         drop_behavior.accept(visitor)?;
                     }
-                    sqltk_parser::ast::AlterTableOperation::AttachPartition {
-                        partition,
-                    } => {
+                    sqltk_parser::ast::AlterTableOperation::AttachPartition { partition } => {
                         partition.accept(visitor)?;
                     }
-                    sqltk_parser::ast::AlterTableOperation::DetachPartition {
-                        partition,
-                    } => {
+                    sqltk_parser::ast::AlterTableOperation::DetachPartition { partition } => {
                         partition.accept(visitor)?;
                     }
                     sqltk_parser::ast::AlterTableOperation::FreezePartition {
@@ -725,24 +711,16 @@ impl crate::Visitable for sqltk_parser::ast::AlterTableOperation {
                     sqltk_parser::ast::AlterTableOperation::DropForeignKey { name } => {
                         name.accept(visitor)?;
                     }
-                    sqltk_parser::ast::AlterTableOperation::EnableAlwaysRule {
-                        name,
-                    } => {
+                    sqltk_parser::ast::AlterTableOperation::EnableAlwaysRule { name } => {
                         name.accept(visitor)?;
                     }
-                    sqltk_parser::ast::AlterTableOperation::EnableAlwaysTrigger {
-                        name,
-                    } => {
+                    sqltk_parser::ast::AlterTableOperation::EnableAlwaysTrigger { name } => {
                         name.accept(visitor)?;
                     }
-                    sqltk_parser::ast::AlterTableOperation::EnableReplicaRule {
-                        name,
-                    } => {
+                    sqltk_parser::ast::AlterTableOperation::EnableReplicaRule { name } => {
                         name.accept(visitor)?;
                     }
-                    sqltk_parser::ast::AlterTableOperation::EnableReplicaTrigger {
-                        name,
-                    } => {
+                    sqltk_parser::ast::AlterTableOperation::EnableReplicaTrigger { name } => {
                         name.accept(visitor)?;
                     }
                     sqltk_parser::ast::AlterTableOperation::EnableRowLevelSecurity => {}
@@ -780,9 +758,7 @@ impl crate::Visitable for sqltk_parser::ast::AlterTableOperation {
                         old_column_name.accept(visitor)?;
                         new_column_name.accept(visitor)?;
                     }
-                    sqltk_parser::ast::AlterTableOperation::RenameTable {
-                        table_name,
-                    } => {
+                    sqltk_parser::ast::AlterTableOperation::RenameTable { table_name } => {
                         table_name.accept(visitor)?;
                     }
                     sqltk_parser::ast::AlterTableOperation::ChangeColumn {
@@ -816,10 +792,7 @@ impl crate::Visitable for sqltk_parser::ast::AlterTableOperation {
                         old_name.accept(visitor)?;
                         new_name.accept(visitor)?;
                     }
-                    sqltk_parser::ast::AlterTableOperation::AlterColumn {
-                        column_name,
-                        op,
-                    } => {
+                    sqltk_parser::ast::AlterTableOperation::AlterColumn { column_name, op } => {
                         column_name.accept(visitor)?;
                         op.accept(visitor)?;
                     }
@@ -840,10 +813,7 @@ impl crate::Visitable for sqltk_parser::ast::AlterTableOperation {
                     sqltk_parser::ast::AlterTableOperation::DropClusteringKey => {}
                     sqltk_parser::ast::AlterTableOperation::SuspendRecluster => {}
                     sqltk_parser::ast::AlterTableOperation::ResumeRecluster => {}
-                    sqltk_parser::ast::AlterTableOperation::Algorithm {
-                        equals,
-                        algorithm,
-                    } => {
+                    sqltk_parser::ast::AlterTableOperation::Algorithm { equals, algorithm } => {
                         equals.accept(visitor)?;
                         algorithm.accept(visitor)?;
                     }
@@ -851,10 +821,7 @@ impl crate::Visitable for sqltk_parser::ast::AlterTableOperation {
                         equals.accept(visitor)?;
                         lock.accept(visitor)?;
                     }
-                    sqltk_parser::ast::AlterTableOperation::AutoIncrement {
-                        equals,
-                        value,
-                    } => {
+                    sqltk_parser::ast::AlterTableOperation::AutoIncrement { equals, value } => {
                         equals.accept(visitor)?;
                         value.accept(visitor)?;
                     }
@@ -1123,10 +1090,7 @@ impl crate::Visitable for sqltk_parser::ast::ArrayElemTypeDef {
                     sqltk_parser::ast::ArrayElemTypeDef::AngleBracket(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::ArrayElemTypeDef::SquareBracket(
-                        field0,
-                        field1,
-                    ) => {
+                    sqltk_parser::ast::ArrayElemTypeDef::SquareBracket(field0, field1) => {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
                     }
@@ -1370,9 +1334,7 @@ impl crate::Visitable for sqltk_parser::ast::BinaryOperator {
                     sqltk_parser::ast::BinaryOperator::Question => {}
                     sqltk_parser::ast::BinaryOperator::QuestionAnd => {}
                     sqltk_parser::ast::BinaryOperator::QuestionPipe => {}
-                    sqltk_parser::ast::BinaryOperator::PGCustomBinaryOperator(
-                        field0,
-                    ) => {
+                    sqltk_parser::ast::BinaryOperator::PGCustomBinaryOperator(field0) => {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::BinaryOperator::Overlaps => {}
@@ -1609,10 +1571,7 @@ impl crate::Visitable for sqltk_parser::ast::CharacterLength {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqltk_parser::ast::CharacterLength::IntegerLength {
-                        length,
-                        unit,
-                    } => {
+                    sqltk_parser::ast::CharacterLength::IntegerLength { length, unit } => {
                         length.accept(visitor)?;
                         unit.accept(visitor)?;
                     }
@@ -2013,9 +1972,7 @@ impl crate::Visitable for sqltk_parser::ast::ConditionalStatements {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqltk_parser::ast::ConditionalStatements::Sequence {
-                        statements,
-                    } => {
+                    sqltk_parser::ast::ConditionalStatements::Sequence { statements } => {
                         statements.accept(visitor)?;
                     }
                     sqltk_parser::ast::ConditionalStatements::BeginEnd(field0) => {
@@ -2305,7 +2262,10 @@ impl crate::Visitable for sqltk_parser::ast::CopySource {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqltk_parser::ast::CopySource::Table { table_name, columns } => {
+                    sqltk_parser::ast::CopySource::Table {
+                        table_name,
+                        columns,
+                    } => {
                         table_name.accept(visitor)?;
                         columns.accept(visitor)?;
                     }
@@ -3656,10 +3616,7 @@ impl crate::Visitable for sqltk_parser::ast::ExactNumberInfo {
                     sqltk_parser::ast::ExactNumberInfo::Precision(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::ExactNumberInfo::PrecisionAndScale(
-                        field0,
-                        field1,
-                    ) => {
+                    sqltk_parser::ast::ExactNumberInfo::PrecisionAndScale(field0, field1) => {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
                     }
@@ -3747,10 +3704,7 @@ impl crate::Visitable for sqltk_parser::ast::Expr {
                     sqltk_parser::ast::Expr::CompoundIdentifier(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Expr::CompoundFieldAccess {
-                        root,
-                        access_chain,
-                    } => {
+                    sqltk_parser::ast::Expr::CompoundFieldAccess { root, access_chain } => {
                         root.accept(visitor)?;
                         access_chain.accept(visitor)?;
                     }
@@ -3790,27 +3744,48 @@ impl crate::Visitable for sqltk_parser::ast::Expr {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Expr::IsNormalized { expr, form, negated } => {
+                    sqltk_parser::ast::Expr::IsNormalized {
+                        expr,
+                        form,
+                        negated,
+                    } => {
                         expr.accept(visitor)?;
                         form.accept(visitor)?;
                         negated.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Expr::InList { expr, list, negated } => {
+                    sqltk_parser::ast::Expr::InList {
+                        expr,
+                        list,
+                        negated,
+                    } => {
                         expr.accept(visitor)?;
                         list.accept(visitor)?;
                         negated.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Expr::InSubquery { expr, subquery, negated } => {
+                    sqltk_parser::ast::Expr::InSubquery {
+                        expr,
+                        subquery,
+                        negated,
+                    } => {
                         subquery.accept(visitor)?;
                         expr.accept(visitor)?;
                         negated.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Expr::InUnnest { expr, array_expr, negated } => {
+                    sqltk_parser::ast::Expr::InUnnest {
+                        expr,
+                        array_expr,
+                        negated,
+                    } => {
                         expr.accept(visitor)?;
                         array_expr.accept(visitor)?;
                         negated.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Expr::Between { expr, negated, low, high } => {
+                    sqltk_parser::ast::Expr::Between {
+                        expr,
+                        negated,
+                        low,
+                        high,
+                    } => {
                         expr.accept(visitor)?;
                         negated.accept(visitor)?;
                         low.accept(visitor)?;
@@ -3880,7 +3855,11 @@ impl crate::Visitable for sqltk_parser::ast::Expr {
                         right.accept(visitor)?;
                         is_some.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Expr::AllOp { left, compare_op, right } => {
+                    sqltk_parser::ast::Expr::AllOp {
+                        left,
+                        compare_op,
+                        right,
+                    } => {
                         left.accept(visitor)?;
                         compare_op.accept(visitor)?;
                         right.accept(visitor)?;
@@ -3904,17 +3883,29 @@ impl crate::Visitable for sqltk_parser::ast::Expr {
                         target_before_value.accept(visitor)?;
                         styles.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Expr::Cast { kind, expr, data_type, format } => {
+                    sqltk_parser::ast::Expr::Cast {
+                        kind,
+                        expr,
+                        data_type,
+                        format,
+                    } => {
                         kind.accept(visitor)?;
                         expr.accept(visitor)?;
                         data_type.accept(visitor)?;
                         format.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Expr::AtTimeZone { timestamp, time_zone } => {
+                    sqltk_parser::ast::Expr::AtTimeZone {
+                        timestamp,
+                        time_zone,
+                    } => {
                         timestamp.accept(visitor)?;
                         time_zone.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Expr::Extract { field, syntax, expr } => {
+                    sqltk_parser::ast::Expr::Extract {
+                        field,
+                        syntax,
+                        expr,
+                    } => {
                         field.accept(visitor)?;
                         syntax.accept(visitor)?;
                         expr.accept(visitor)?;
@@ -4544,7 +4535,11 @@ impl crate::Visitable for sqltk_parser::ast::FunctionArg {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqltk_parser::ast::FunctionArg::Named { name, arg, operator } => {
+                    sqltk_parser::ast::FunctionArg::Named {
+                        name,
+                        arg,
+                        operator,
+                    } => {
                         name.accept(visitor)?;
                         arg.accept(visitor)?;
                         operator.accept(visitor)?;
@@ -4645,9 +4640,7 @@ impl crate::Visitable for sqltk_parser::ast::FunctionArgumentClause {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqltk_parser::ast::FunctionArgumentClause::IgnoreOrRespectNulls(
-                        field0,
-                    ) => {
+                    sqltk_parser::ast::FunctionArgumentClause::IgnoreOrRespectNulls(field0) => {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::FunctionArgumentClause::OrderBy(field0) => {
@@ -4665,9 +4658,7 @@ impl crate::Visitable for sqltk_parser::ast::FunctionArgumentClause {
                     sqltk_parser::ast::FunctionArgumentClause::Separator(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::FunctionArgumentClause::JsonNullClause(
-                        field0,
-                    ) => {
+                    sqltk_parser::ast::FunctionArgumentClause::JsonNullClause(field0) => {
                         field0.accept(visitor)?;
                     }
                 }
@@ -4965,9 +4956,7 @@ impl crate::Visitable for sqltk_parser::ast::GrantObjects {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqltk_parser::ast::GrantObjects::AllSequencesInSchema {
-                        schemas,
-                    } => {
+                    sqltk_parser::ast::GrantObjects::AllSequencesInSchema { schemas } => {
                         schemas.accept(visitor)?;
                     }
                     sqltk_parser::ast::GrantObjects::AllTablesInSchema { schemas } => {
@@ -5294,9 +5283,7 @@ impl crate::Visitable for sqltk_parser::ast::HiveDistributionStyle {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqltk_parser::ast::HiveDistributionStyle::PARTITIONED {
-                        columns,
-                    } => {
+                    sqltk_parser::ast::HiveDistributionStyle::PARTITIONED { columns } => {
                         columns.accept(visitor)?;
                     }
                     sqltk_parser::ast::HiveDistributionStyle::SKEWED {
@@ -5592,14 +5579,10 @@ impl crate::Visitable for sqltk_parser::ast::IdentityPropertyFormatKind {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqltk_parser::ast::IdentityPropertyFormatKind::FunctionCall(
-                        field0,
-                    ) => {
+                    sqltk_parser::ast::IdentityPropertyFormatKind::FunctionCall(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::IdentityPropertyFormatKind::StartAndIncrement(
-                        field0,
-                    ) => {
+                    sqltk_parser::ast::IdentityPropertyFormatKind::StartAndIncrement(field0) => {
                         field0.accept(visitor)?;
                     }
                 }
@@ -6422,10 +6405,7 @@ impl crate::Visitable for sqltk_parser::ast::LimitClause {
                         offset.accept(visitor)?;
                         limit_by.accept(visitor)?;
                     }
-                    sqltk_parser::ast::LimitClause::OffsetCommaLimit {
-                        offset,
-                        limit,
-                    } => {
+                    sqltk_parser::ast::LimitClause::OffsetCommaLimit { offset, limit } => {
                         offset.accept(visitor)?;
                         limit.accept(visitor)?;
                     }
@@ -6454,10 +6434,7 @@ impl crate::Visitable for sqltk_parser::ast::ListAggOnOverflow {
             |visitor| {
                 match self {
                     sqltk_parser::ast::ListAggOnOverflow::Error => {}
-                    sqltk_parser::ast::ListAggOnOverflow::Truncate {
-                        filler,
-                        with_count,
-                    } => {
+                    sqltk_parser::ast::ListAggOnOverflow::Truncate { filler, with_count } => {
                         filler.accept(visitor)?;
                         with_count.accept(visitor)?;
                     }
@@ -6739,10 +6716,7 @@ impl crate::Visitable for sqltk_parser::ast::MatchRecognizePattern {
                     sqltk_parser::ast::MatchRecognizePattern::Alternation(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::MatchRecognizePattern::Repetition(
-                        field0,
-                        field1,
-                    ) => {
+                    sqltk_parser::ast::MatchRecognizePattern::Repetition(field0, field1) => {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
                     }
@@ -7957,7 +7931,9 @@ impl crate::Visitable for sqltk_parser::ast::Privileges {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqltk_parser::ast::Privileges::All { with_privileges_keyword } => {
+                    sqltk_parser::ast::Privileges::All {
+                        with_privileges_keyword,
+                    } => {
                         with_privileges_keyword.accept(visitor)?;
                     }
                     sqltk_parser::ast::Privileges::Actions(field0) => {
@@ -8509,10 +8485,7 @@ impl crate::Visitable for sqltk_parser::ast::SchemaName {
                     sqltk_parser::ast::SchemaName::UnnamedAuthorization(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::SchemaName::NamedAuthorization(
-                        field0,
-                        field1,
-                    ) => {
+                    sqltk_parser::ast::SchemaName::NamedAuthorization(field0, field1) => {
                         field0.accept(visitor)?;
                         field1.accept(visitor)?;
                     }
@@ -8755,9 +8728,7 @@ impl crate::Visitable for sqltk_parser::ast::SelectItemQualifiedWildcardKind {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqltk_parser::ast::SelectItemQualifiedWildcardKind::ObjectName(
-                        field0,
-                    ) => {
+                    sqltk_parser::ast::SelectItemQualifiedWildcardKind::ObjectName(field0) => {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::SelectItemQualifiedWildcardKind::Expr(field0) => {
@@ -8896,10 +8867,7 @@ impl crate::Visitable for sqltk_parser::ast::Set {
                         variable.accept(visitor)?;
                         values.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Set::ParenthesizedAssignments {
-                        variables,
-                        values,
-                    } => {
+                    sqltk_parser::ast::Set::ParenthesizedAssignments { variables, values } => {
                         variables.accept(visitor)?;
                         values.accept(visitor)?;
                     }
@@ -8909,7 +8877,10 @@ impl crate::Visitable for sqltk_parser::ast::Set {
                     sqltk_parser::ast::Set::SetSessionParam(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Set::SetRole { context_modifier, role_name } => {
+                    sqltk_parser::ast::Set::SetRole {
+                        context_modifier,
+                        role_name,
+                    } => {
                         context_modifier.accept(visitor)?;
                         role_name.accept(visitor)?;
                     }
@@ -10201,7 +10172,11 @@ impl crate::Visitable for sqltk_parser::ast::Statement {
                         comment.accept(visitor)?;
                         if_exists.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Statement::Commit { chain, end, modifier } => {
+                    sqltk_parser::ast::Statement::Commit {
+                        chain,
+                        end,
+                        modifier,
+                    } => {
                         chain.accept(visitor)?;
                         end.accept(visitor)?;
                         modifier.accept(visitor)?;
@@ -10450,7 +10425,10 @@ impl crate::Visitable for sqltk_parser::ast::Statement {
                         options.accept(visitor)?;
                         query.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Statement::UNCache { table_name, if_exists } => {
+                    sqltk_parser::ast::Statement::UNCache {
+                        table_name,
+                        if_exists,
+                    } => {
                         table_name.accept(visitor)?;
                         if_exists.accept(visitor)?;
                     }
@@ -11256,9 +11234,7 @@ impl crate::Visitable for sqltk_parser::ast::TableOptionsClustered {
             |visitor| {
                 match self {
                     sqltk_parser::ast::TableOptionsClustered::ColumnstoreIndex => {}
-                    sqltk_parser::ast::TableOptionsClustered::ColumnstoreIndexOrder(
-                        field0,
-                    ) => {
+                    sqltk_parser::ast::TableOptionsClustered::ColumnstoreIndexOrder(field0) => {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::TableOptionsClustered::Index(field0) => {
@@ -12274,14 +12250,10 @@ impl crate::Visitable for sqltk_parser::ast::UserDefinedTypeRepresentation {
             #[allow(unused_variables)]
             |visitor| {
                 match self {
-                    sqltk_parser::ast::UserDefinedTypeRepresentation::Composite {
-                        attributes,
-                    } => {
+                    sqltk_parser::ast::UserDefinedTypeRepresentation::Composite { attributes } => {
                         attributes.accept(visitor)?;
                     }
-                    sqltk_parser::ast::UserDefinedTypeRepresentation::Enum {
-                        labels,
-                    } => {
+                    sqltk_parser::ast::UserDefinedTypeRepresentation::Enum { labels } => {
                         labels.accept(visitor)?;
                     }
                 }
@@ -12360,14 +12332,10 @@ impl crate::Visitable for sqltk_parser::ast::Value {
                     sqltk_parser::ast::Value::DoubleQuotedByteStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Value::TripleSingleQuotedByteStringLiteral(
-                        field0,
-                    ) => {
+                    sqltk_parser::ast::Value::TripleSingleQuotedByteStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Value::TripleDoubleQuotedByteStringLiteral(
-                        field0,
-                    ) => {
+                    sqltk_parser::ast::Value::TripleDoubleQuotedByteStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::Value::SingleQuotedRawStringLiteral(field0) => {
@@ -12376,14 +12344,10 @@ impl crate::Visitable for sqltk_parser::ast::Value {
                     sqltk_parser::ast::Value::DoubleQuotedRawStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Value::TripleSingleQuotedRawStringLiteral(
-                        field0,
-                    ) => {
+                    sqltk_parser::ast::Value::TripleSingleQuotedRawStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::ast::Value::TripleDoubleQuotedRawStringLiteral(
-                        field0,
-                    ) => {
+                    sqltk_parser::ast::Value::TripleDoubleQuotedRawStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::ast::Value::NationalStringLiteral(field0) => {
@@ -12934,8 +12898,7 @@ impl crate::AsNodeKey for sqltk_parser::ast::helpers::key_value_options::KeyValu
     }
 }
 #[automatically_derived]
-impl crate::Visitable
-for sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType {
+impl crate::Visitable for sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
         visitor: &mut V,
@@ -12957,15 +12920,13 @@ for sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType {
     }
 }
 #[automatically_derived]
-impl crate::AsNodeKey
-for sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType {
+impl crate::AsNodeKey for sqltk_parser::ast::helpers::key_value_options::KeyValueOptionType {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
 }
 #[automatically_derived]
-impl crate::Visitable
-for sqltk_parser::ast::helpers::key_value_options::KeyValueOptions {
+impl crate::Visitable for sqltk_parser::ast::helpers::key_value_options::KeyValueOptions {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
         visitor: &mut V,
@@ -12982,15 +12943,13 @@ for sqltk_parser::ast::helpers::key_value_options::KeyValueOptions {
     }
 }
 #[automatically_derived]
-impl crate::AsNodeKey
-for sqltk_parser::ast::helpers::key_value_options::KeyValueOptions {
+impl crate::AsNodeKey for sqltk_parser::ast::helpers::key_value_options::KeyValueOptions {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
 }
 #[automatically_derived]
-impl crate::Visitable
-for sqltk_parser::ast::helpers::stmt_data_loading::FileStagingCommand {
+impl crate::Visitable for sqltk_parser::ast::helpers::stmt_data_loading::FileStagingCommand {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
         visitor: &mut V,
@@ -13008,15 +12967,13 @@ for sqltk_parser::ast::helpers::stmt_data_loading::FileStagingCommand {
     }
 }
 #[automatically_derived]
-impl crate::AsNodeKey
-for sqltk_parser::ast::helpers::stmt_data_loading::FileStagingCommand {
+impl crate::AsNodeKey for sqltk_parser::ast::helpers::stmt_data_loading::FileStagingCommand {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
 }
 #[automatically_derived]
-impl crate::Visitable
-for sqltk_parser::ast::helpers::stmt_data_loading::StageLoadSelectItem {
+impl crate::Visitable for sqltk_parser::ast::helpers::stmt_data_loading::StageLoadSelectItem {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
         visitor: &mut V,
@@ -13036,15 +12993,13 @@ for sqltk_parser::ast::helpers::stmt_data_loading::StageLoadSelectItem {
     }
 }
 #[automatically_derived]
-impl crate::AsNodeKey
-for sqltk_parser::ast::helpers::stmt_data_loading::StageLoadSelectItem {
+impl crate::AsNodeKey for sqltk_parser::ast::helpers::stmt_data_loading::StageLoadSelectItem {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
 }
 #[automatically_derived]
-impl crate::Visitable
-for sqltk_parser::ast::helpers::stmt_data_loading::StageLoadSelectItemKind {
+impl crate::Visitable for sqltk_parser::ast::helpers::stmt_data_loading::StageLoadSelectItemKind {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
         visitor: &mut V,
@@ -13072,15 +13027,13 @@ for sqltk_parser::ast::helpers::stmt_data_loading::StageLoadSelectItemKind {
     }
 }
 #[automatically_derived]
-impl crate::AsNodeKey
-for sqltk_parser::ast::helpers::stmt_data_loading::StageLoadSelectItemKind {
+impl crate::AsNodeKey for sqltk_parser::ast::helpers::stmt_data_loading::StageLoadSelectItemKind {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
 }
 #[automatically_derived]
-impl crate::Visitable
-for sqltk_parser::ast::helpers::stmt_data_loading::StageParamsObject {
+impl crate::Visitable for sqltk_parser::ast::helpers::stmt_data_loading::StageParamsObject {
     fn accept<'ast, V: crate::Visitor<'ast>>(
         &'ast self,
         visitor: &mut V,
@@ -13101,8 +13054,7 @@ for sqltk_parser::ast::helpers::stmt_data_loading::StageParamsObject {
     }
 }
 #[automatically_derived]
-impl crate::AsNodeKey
-for sqltk_parser::ast::helpers::stmt_data_loading::StageParamsObject {
+impl crate::AsNodeKey for sqltk_parser::ast::helpers::stmt_data_loading::StageParamsObject {
     fn as_node_key(&self) -> crate::NodeKey<'_> {
         crate::NodeKey::new(self)
     }
@@ -14165,44 +14117,28 @@ impl crate::Visitable for sqltk_parser::tokenizer::Token {
                     sqltk_parser::tokenizer::Token::DollarQuotedString(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::tokenizer::Token::SingleQuotedByteStringLiteral(
-                        field0,
-                    ) => {
+                    sqltk_parser::tokenizer::Token::SingleQuotedByteStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::tokenizer::Token::DoubleQuotedByteStringLiteral(
-                        field0,
-                    ) => {
+                    sqltk_parser::tokenizer::Token::DoubleQuotedByteStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::tokenizer::Token::TripleSingleQuotedByteStringLiteral(
-                        field0,
-                    ) => {
+                    sqltk_parser::tokenizer::Token::TripleSingleQuotedByteStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::tokenizer::Token::TripleDoubleQuotedByteStringLiteral(
-                        field0,
-                    ) => {
+                    sqltk_parser::tokenizer::Token::TripleDoubleQuotedByteStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::tokenizer::Token::SingleQuotedRawStringLiteral(
-                        field0,
-                    ) => {
+                    sqltk_parser::tokenizer::Token::SingleQuotedRawStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::tokenizer::Token::DoubleQuotedRawStringLiteral(
-                        field0,
-                    ) => {
+                    sqltk_parser::tokenizer::Token::DoubleQuotedRawStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::tokenizer::Token::TripleSingleQuotedRawStringLiteral(
-                        field0,
-                    ) => {
+                    sqltk_parser::tokenizer::Token::TripleSingleQuotedRawStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
-                    sqltk_parser::tokenizer::Token::TripleDoubleQuotedRawStringLiteral(
-                        field0,
-                    ) => {
+                    sqltk_parser::tokenizer::Token::TripleDoubleQuotedRawStringLiteral(field0) => {
                         field0.accept(visitor)?;
                     }
                     sqltk_parser::tokenizer::Token::NationalStringLiteral(field0) => {
@@ -14356,10 +14292,7 @@ impl crate::Visitable for sqltk_parser::tokenizer::Whitespace {
                     sqltk_parser::tokenizer::Whitespace::Space => {}
                     sqltk_parser::tokenizer::Whitespace::Newline => {}
                     sqltk_parser::tokenizer::Whitespace::Tab => {}
-                    sqltk_parser::tokenizer::Whitespace::SingleLineComment {
-                        comment,
-                        prefix,
-                    } => {
+                    sqltk_parser::tokenizer::Whitespace::SingleLineComment { comment, prefix } => {
                         comment.accept(visitor)?;
                         prefix.accept(visitor)?;
                     }
@@ -14413,7 +14346,7 @@ impl crate::Visitable for bigdecimal::BigDecimal {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| { std::ops::ControlFlow::Continue(()) },
+            |visitor| std::ops::ControlFlow::Continue(()),
         )
     }
 }
@@ -14433,7 +14366,7 @@ impl crate::Visitable for bool {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| { std::ops::ControlFlow::Continue(()) },
+            |visitor| std::ops::ControlFlow::Continue(()),
         )
     }
 }
@@ -14453,7 +14386,7 @@ impl crate::Visitable for char {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| { std::ops::ControlFlow::Continue(()) },
+            |visitor| std::ops::ControlFlow::Continue(()),
         )
     }
 }
@@ -14473,7 +14406,7 @@ impl crate::Visitable for i16 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| { std::ops::ControlFlow::Continue(()) },
+            |visitor| std::ops::ControlFlow::Continue(()),
         )
     }
 }
@@ -14493,7 +14426,7 @@ impl crate::Visitable for i32 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| { std::ops::ControlFlow::Continue(()) },
+            |visitor| std::ops::ControlFlow::Continue(()),
         )
     }
 }
@@ -14513,7 +14446,7 @@ impl crate::Visitable for i64 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| { std::ops::ControlFlow::Continue(()) },
+            |visitor| std::ops::ControlFlow::Continue(()),
         )
     }
 }
@@ -14533,7 +14466,7 @@ impl crate::Visitable for i8 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| { std::ops::ControlFlow::Continue(()) },
+            |visitor| std::ops::ControlFlow::Continue(()),
         )
     }
 }
@@ -14553,7 +14486,7 @@ impl crate::Visitable for String {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| { std::ops::ControlFlow::Continue(()) },
+            |visitor| std::ops::ControlFlow::Continue(()),
         )
     }
 }
@@ -14573,7 +14506,7 @@ impl crate::Visitable for u16 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| { std::ops::ControlFlow::Continue(()) },
+            |visitor| std::ops::ControlFlow::Continue(()),
         )
     }
 }
@@ -14593,7 +14526,7 @@ impl crate::Visitable for u32 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| { std::ops::ControlFlow::Continue(()) },
+            |visitor| std::ops::ControlFlow::Continue(()),
         )
     }
 }
@@ -14613,7 +14546,7 @@ impl crate::Visitable for u64 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| { std::ops::ControlFlow::Continue(()) },
+            |visitor| std::ops::ControlFlow::Continue(()),
         )
     }
 }
@@ -14633,7 +14566,7 @@ impl crate::Visitable for u8 {
             self,
             visitor,
             #[allow(unused_variables)]
-            |visitor| { std::ops::ControlFlow::Continue(()) },
+            |visitor| std::ops::ControlFlow::Continue(()),
         )
     }
 }
