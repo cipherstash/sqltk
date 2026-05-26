@@ -128,6 +128,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::upper_case_acronyms)]
+// The following lints are allowed to minimise source divergence from the
+// upstream sqlparser-rs fork.
+#![allow(clippy::empty_line_after_outer_attr)]
+#![allow(clippy::large_enum_variant)]
+#![allow(clippy::unnecessary_unwrap)]
 
 // Allow proc-macros to find this crate
 extern crate self as sqltk_parser;
