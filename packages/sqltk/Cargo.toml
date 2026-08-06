@@ -2,7 +2,7 @@
 name = "sqltk"
 resolver = "2"
 description = "Enhanced Visitor implementation for sqlparser"
-version = "0.10.0"
+version = "0.11.0"
 publish = true
 edition = "2021"
 authors = [
@@ -25,6 +25,6 @@ include = [
 
 [dependencies]
 bigdecimal = { version = "^0.4" }
-sqltk-parser = { path = "../sqltk-parser", version = "0.56.0-cipherstash.2", features = [
+sqltk-parser = { path = "../sqltk-parser", version = "0.56.0-cipherstash.3", features = [
     "bigdecimal",
 ] }
