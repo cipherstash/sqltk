@@ -2665,7 +2665,6 @@ impl fmt::Display for Declare {
 #[derive(Debug, Default, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
-#[derive(Default)]
 pub enum CreateTableOptions {
     #[default]
     None,

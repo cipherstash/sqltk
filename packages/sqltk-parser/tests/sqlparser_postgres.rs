@@ -2161,7 +2161,7 @@ fn parse_pg_unary_ops() {
     ];
 
     for (str_op, op) in pg_unary_ops {
-        let select = pg().verified_only_select(&format!("SELECT {}a", &str_op));
+        let select = pg().verified_only_select(&format!("SELECT {}a", str_op));
         assert_eq!(
             SelectItem::UnnamedExpr(Expr::UnaryOp {
                 op: *op,
@@ -2177,7 +2177,7 @@ fn parse_pg_postfix_factorial() {
     let postfix_factorial = &[("!", UnaryOperator::PGPostfixFactorial)];
 
     for (str_op, op) in postfix_factorial {
-        let select = pg().verified_only_select(&format!("SELECT a{}", &str_op));
+        let select = pg().verified_only_select(&format!("SELECT a{}", str_op));
         assert_eq!(
             SelectItem::UnnamedExpr(Expr::UnaryOp {
                 op: *op,
@@ -2198,7 +2198,7 @@ fn parse_pg_regex_match_ops() {
     ];
 
     for (str_op, op) in pg_regex_match_ops {
-        let select = pg().verified_only_select(&format!("SELECT 'abc' {} '^a'", &str_op));
+        let select = pg().verified_only_select(&format!("SELECT 'abc' {} '^a'", str_op));
         assert_eq!(
             SelectItem::UnnamedExpr(Expr::BinaryOp {
                 left: Box::new(Expr::Value(
@@ -2224,7 +2224,7 @@ fn parse_pg_like_match_ops() {
     ];
 
     for (str_op, op) in pg_like_match_ops {
-        let select = pg().verified_only_select(&format!("SELECT 'abc' {} 'a_c%'", &str_op));
+        let select = pg().verified_only_select(&format!("SELECT 'abc' {} 'a_c%'", str_op));
         assert_eq!(
             SelectItem::UnnamedExpr(Expr::BinaryOp {
                 left: Box::new(Expr::Value(

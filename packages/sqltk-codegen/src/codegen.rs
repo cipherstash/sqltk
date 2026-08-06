@@ -76,7 +76,7 @@ impl Codegen {
         });
 
         let mut file = File::create(dest_file)
-            .unwrap_or_else(|_| panic!("Could not open {}", &dest_file.display()));
+            .unwrap_or_else(|_| panic!("Could not open {}", dest_file.display()));
 
         let parsed = syn::parse_file(&generated_code.to_string());
         let formatted = parsed.map(|parsed| prettyplease::unparse(&parsed));
@@ -85,11 +85,11 @@ impl Codegen {
             Ok(formatted) => {
                 let canonical = rustfmt(&formatted).unwrap_or(formatted);
                 file.write_all(canonical.as_bytes())
-                    .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()))
+                    .unwrap_or_else(|_| panic!("Could not write to {}", dest_file.display()))
             }
             Err(_) => file
                 .write_all(generated_code.to_string().as_bytes())
-                .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display())),
+                .unwrap_or_else(|_| panic!("Could not write to {}", dest_file.display())),
         }
     }
 
@@ -101,9 +101,8 @@ impl Codegen {
         let reachability = Reachability::derive(&self.meta);
 
         if let Some(reachability_debug_file) = reachability_debug_file {
-            let mut file = File::create(reachability_debug_file).unwrap_or_else(|_| {
-                panic!("Could not open {}", &reachability_debug_file.display())
-            });
+            let mut file = File::create(reachability_debug_file)
+                .unwrap_or_else(|_| panic!("Could not open {}", reachability_debug_file.display()));
 
             for (ty, source_node_reachable) in &reachability {
                 let _ = file.write(
@@ -149,7 +148,7 @@ impl Codegen {
         });
 
         let mut file = File::create(dest_file)
-            .unwrap_or_else(|_| panic!("Could not open {}", &dest_file.display()));
+            .unwrap_or_else(|_| panic!("Could not open {}", dest_file.display()));
 
         let formatted = prettyplease::unparse(
             &syn::parse_file(&generated_code.to_string())
@@ -158,6 +157,6 @@ impl Codegen {
 
         let canonical = rustfmt(&formatted).unwrap_or(formatted);
         file.write_all(canonical.as_bytes())
-            .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()));
+            .unwrap_or_else(|_| panic!("Could not write to {}", dest_file.display()));
     }
 }

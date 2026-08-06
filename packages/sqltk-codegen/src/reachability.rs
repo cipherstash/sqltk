@@ -75,7 +75,7 @@ impl Reachability {
     /// bool(255) as a value in the map indicates that the corresponding
     /// node does not have a reachability relationship with a source node.
     fn execute(&mut self) -> HashMap<Ident, bool> {
-        for (node, _) in self.nodes.clone().iter() {
+        for node in self.nodes.clone().keys() {
             let source_node_reachable = self.reachability_for_node_type(node);
             self.results.insert(node.clone(), source_node_reachable);
         }
