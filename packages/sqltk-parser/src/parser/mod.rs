@@ -155,7 +155,7 @@ pub enum IsLateral {
 }
 
 pub enum WildcardExpr {
-    Expr(Expr),
+    Expr(Box<Expr>),
     QualifiedWildcard(ObjectName),
     Wildcard,
 }
@@ -471,10 +471,10 @@ impl<'a> Parser<'a> {
                 Token::EOF => break,
 
                 // end of statement
-                Token::Word(word) => {
-                    if expecting_statement_delimiter && word.keyword == Keyword::END {
-                        break;
-                    }
+                Token::Word(word)
+                    if expecting_statement_delimiter && word.keyword == Keyword::END =>
+                {
+                    break;
                 }
                 _ => {}
             }
@@ -1150,32 +1150,31 @@ impl<'a> Parser<'a> {
 
         let next_token = self.next_token();
         match next_token.token {
-            t @ (Token::Word(_) | Token::SingleQuotedString(_)) => {
-                if self.peek_token().token == Token::Period {
-                    let mut id_parts: Vec<Ident> = vec![match t {
-                        Token::Word(w) => w.into_ident(next_token.span),
-                        Token::SingleQuotedString(s) => Ident::with_quote('\'', s),
-                        _ => unreachable!(), // We matched above
-                    }];
+            t @ (Token::Word(_) | Token::SingleQuotedString(_))
+                if self.peek_token().token == Token::Period =>
+            {
+                let mut id_parts: Vec<Ident> = vec![match t {
+                    Token::Word(w) => w.into_ident(next_token.span),
+                    Token::SingleQuotedString(s) => Ident::with_quote('\'', s),
+                    _ => unreachable!(), // We matched above
+                }];
 
-                    while self.consume_token(&Token::Period) {
-                        let next_token = self.next_token();
-                        match next_token.token {
-                            Token::Word(w) => id_parts.push(w.into_ident(next_token.span)),
-                            Token::SingleQuotedString(s) => {
-                                // SQLite has single-quoted identifiers
-                                id_parts.push(Ident::with_quote('\'', s))
-                            }
-                            Token::Mul => {
-                                return Ok(Expr::QualifiedWildcard(
-                                    ObjectName::from(id_parts),
-                                    AttachedToken(next_token),
-                                ));
-                            }
-                            _ => {
-                                return self
-                                    .expected("an identifier or a '*' after '.'", next_token);
-                            }
+                while self.consume_token(&Token::Period) {
+                    let next_token = self.next_token();
+                    match next_token.token {
+                        Token::Word(w) => id_parts.push(w.into_ident(next_token.span)),
+                        Token::SingleQuotedString(s) => {
+                            // SQLite has single-quoted identifiers
+                            id_parts.push(Ident::with_quote('\'', s))
+                        }
+                        Token::Mul => {
+                            return Ok(Expr::QualifiedWildcard(
+                                ObjectName::from(id_parts),
+                                AttachedToken(next_token),
+                            ));
+                        }
+                        _ => {
+                            return self.expected("an identifier or a '*' after '.'", next_token);
                         }
                     }
                 }
@@ -1747,7 +1746,7 @@ impl<'a> Parser<'a> {
                     Token::SingleQuotedString(s) => {
                         let expr =
                             Expr::Identifier(Ident::with_quote_and_span('\'', next_token.span, s));
-                        chain.push(AccessExpr::Dot(expr));
+                        chain.push(AccessExpr::Dot(Box::new(expr)));
                         self.advance_token(); // The consumed string
                     }
                     // Fallback to parsing an arbitrary expression.
@@ -1761,13 +1760,17 @@ impl<'a> Parser<'a> {
                         // `foo.(bar.baz)` (i.e. a root with an access chain with
                         // 1 entry`).
                         Expr::CompoundFieldAccess { root, access_chain } => {
-                            chain.push(AccessExpr::Dot(*root));
+                            chain.push(AccessExpr::Dot(Box::new(*root)));
                             chain.extend(access_chain);
                         }
-                        Expr::CompoundIdentifier(parts) => chain
-                            .extend(parts.into_iter().map(Expr::Identifier).map(AccessExpr::Dot)),
+                        Expr::CompoundIdentifier(parts) => chain.extend(
+                            parts
+                                .into_iter()
+                                .map(Expr::Identifier)
+                                .map(|e| AccessExpr::Dot(Box::new(e))),
+                        ),
                         expr => {
-                            chain.push(AccessExpr::Dot(expr));
+                            chain.push(AccessExpr::Dot(Box::new(expr)));
                         }
                     },
                 }
@@ -1830,22 +1833,25 @@ impl<'a> Parser<'a> {
         if matches!(root, Expr::Identifier(_))
             && matches!(
                 access_chain.last(),
-                Some(AccessExpr::Dot(Expr::Function(_)))
+                Some(AccessExpr::Dot(e)) if matches!(e.as_ref(), Expr::Function(_))
             )
             && access_chain
                 .iter()
                 .rev()
                 .skip(1) // All except the Function
-                .all(|access| matches!(access, AccessExpr::Dot(Expr::Identifier(_))))
+                .all(|access| matches!(access, AccessExpr::Dot(e) if matches!(e.as_ref(), Expr::Identifier(_))))
         {
-            let Some(AccessExpr::Dot(Expr::Function(mut func))) = access_chain.pop() else {
+            let Some(AccessExpr::Dot(boxed_func_expr)) = access_chain.pop() else {
+                return parser_err!("expected function expression", root.span().start);
+            };
+            let Expr::Function(mut func) = *boxed_func_expr else {
                 return parser_err!("expected function expression", root.span().start);
             };
 
             let compound_func_name = [root]
                 .into_iter()
                 .chain(access_chain.into_iter().flat_map(|access| match access {
-                    AccessExpr::Dot(expr) => Some(expr),
+                    AccessExpr::Dot(expr) => Some(*expr),
                     _ => None,
                 }))
                 .flat_map(|expr| match expr {
@@ -1867,10 +1873,13 @@ impl<'a> Parser<'a> {
         if access_chain.len() == 1
             && matches!(
                 access_chain.last(),
-                Some(AccessExpr::Dot(Expr::OuterJoin(_)))
+                Some(AccessExpr::Dot(e)) if matches!(e.as_ref(), Expr::OuterJoin(_))
             )
         {
-            let Some(AccessExpr::Dot(Expr::OuterJoin(inner_expr))) = access_chain.pop() else {
+            let Some(AccessExpr::Dot(boxed_outer_expr)) = access_chain.pop() else {
+                return parser_err!("expected (+) expression", root.span().start);
+            };
+            let Expr::OuterJoin(inner_expr) = *boxed_outer_expr else {
                 return parser_err!("expected (+) expression", root.span().start);
             };
 
@@ -1913,7 +1922,7 @@ impl<'a> Parser<'a> {
         }
         fields
             .iter()
-            .all(|x| matches!(x, AccessExpr::Dot(Expr::Identifier(_))))
+            .all(|x| matches!(x, AccessExpr::Dot(e) if matches!(e.as_ref(), Expr::Identifier(_))))
     }
 
     /// Convert a root and a list of fields to a list of identifiers.
@@ -1922,13 +1931,21 @@ impl<'a> Parser<'a> {
         if let Expr::Identifier(root) = root {
             idents.push(root);
             for x in fields {
-                if let AccessExpr::Dot(Expr::Identifier(ident)) = x {
-                    idents.push(ident);
-                } else {
+                let AccessExpr::Dot(boxed) = x else {
                     return parser_err!(
                         format!("Expected identifier, found: {}", x),
                         x.span().start
                     );
+                };
+                let span_start = boxed.span().start;
+                match *boxed {
+                    Expr::Identifier(ident) => idents.push(ident),
+                    other => {
+                        return parser_err!(
+                            format!("Expected identifier, found: {}", other),
+                            span_start
+                        );
+                    }
                 }
             }
             Ok(idents)
@@ -2554,10 +2571,7 @@ impl<'a> Parser<'a> {
         self.expect_token(&Token::LParen)?;
         let mut trim_where = None;
         if let Token::Word(word) = self.peek_token().token {
-            if [Keyword::BOTH, Keyword::LEADING, Keyword::TRAILING]
-                .iter()
-                .any(|d| word.keyword == *d)
-            {
+            if [Keyword::BOTH, Keyword::LEADING, Keyword::TRAILING].contains(&word.keyword) {
                 trim_where = Some(self.parse_trim_where()?);
             }
         }
@@ -3676,8 +3690,8 @@ impl<'a> Parser<'a> {
             };
             return Ok(Subscript::Slice {
                 lower_bound,
-                upper_bound: None,
-                stride: None,
+                upper_bound: Box::new(None),
+                stride: Box::new(None),
             });
         }
 
@@ -3690,8 +3704,8 @@ impl<'a> Parser<'a> {
         let upper_bound = if self.consume_token(&Token::RBracket) {
             return Ok(Subscript::Slice {
                 lower_bound,
-                upper_bound: None,
-                stride: None,
+                upper_bound: Box::new(None),
+                stride: Box::new(None),
             });
         } else {
             Some(self.parse_expr()?)
@@ -3701,8 +3715,8 @@ impl<'a> Parser<'a> {
         if self.consume_token(&Token::RBracket) {
             return Ok(Subscript::Slice {
                 lower_bound,
-                upper_bound,
-                stride: None,
+                upper_bound: Box::new(upper_bound),
+                stride: Box::new(None),
             });
         }
 
@@ -3720,8 +3734,8 @@ impl<'a> Parser<'a> {
 
         Ok(Subscript::Slice {
             lower_bound,
-            upper_bound,
-            stride,
+            upper_bound: Box::new(upper_bound),
+            stride: Box::new(stride),
         })
     }
 
@@ -3741,7 +3755,7 @@ impl<'a> Parser<'a> {
     /// Parser is right after `[`
     fn parse_subscript(&mut self, chain: &mut Vec<AccessExpr>) -> Result<(), ParserError> {
         let subscript = self.parse_subscript_inner()?;
-        chain.push(AccessExpr::Subscript(subscript));
+        chain.push(AccessExpr::Subscript(Box::new(subscript)));
         Ok(())
     }
 
@@ -3791,7 +3805,7 @@ impl<'a> Parser<'a> {
                     let key = self.parse_expr()?;
                     self.expect_token(&Token::RBracket)?;
 
-                    path.push(JsonPathElem::Bracket { key });
+                    path.push(JsonPathElem::Bracket { key: Box::new(key) });
                 }
                 _ => {
                     self.prev_token();
@@ -4229,7 +4243,7 @@ impl<'a> Parser<'a> {
         if self.parse_keyword(expected) {
             Ok(self.get_current_token().clone())
         } else {
-            self.expected_ref(format!("{:?}", &expected).as_str(), self.peek_token_ref())
+            self.expected_ref(format!("{:?}", expected).as_str(), self.peek_token_ref())
         }
     }
 
@@ -4242,7 +4256,7 @@ impl<'a> Parser<'a> {
         if self.parse_keyword(expected) {
             Ok(())
         } else {
-            self.expected_ref(format!("{:?}", &expected).as_str(), self.peek_token_ref())
+            self.expected_ref(format!("{:?}", expected).as_str(), self.peek_token_ref())
         }
     }
 
@@ -4517,10 +4531,10 @@ impl<'a> Parser<'a> {
         loop {
             match &self.peek_nth_token_ref(0).token {
                 Token::EOF => break,
-                Token::Word(w) => {
-                    if w.quote_style.is_none() && terminal_keywords.contains(&w.keyword) {
-                        break;
-                    }
+                Token::Word(w)
+                    if w.quote_style.is_none() && terminal_keywords.contains(&w.keyword) =>
+                {
+                    break;
                 }
                 _ => {}
             }
@@ -5502,7 +5516,7 @@ impl<'a> Parser<'a> {
                 definition: if self.parse_keyword(Keyword::TABLE) {
                     MacroDefinition::Table(self.parse_query()?)
                 } else {
-                    MacroDefinition::Expr(self.parse_expr()?)
+                    MacroDefinition::Expr(Box::new(self.parse_expr()?))
                 },
             })
         } else {
@@ -5868,7 +5882,9 @@ impl<'a> Parser<'a> {
                         password = if self.parse_keyword(Keyword::NULL) {
                             Some(Password::NullPassword)
                         } else {
-                            Some(Password::Password(Expr::Value(self.parse_value()?)))
+                            Some(Password::Password(Box::new(Expr::Value(
+                                self.parse_value()?,
+                            ))))
                         };
                         Ok(())
                     }
@@ -6982,70 +6998,60 @@ impl<'a> Parser<'a> {
                         Keyword::LINES,
                         Keyword::NULL,
                     ]) {
-                        Some(Keyword::FIELDS) => {
-                            if self.parse_keywords(&[Keyword::TERMINATED, Keyword::BY]) {
+                        Some(Keyword::FIELDS)
+                            if self.parse_keywords(&[Keyword::TERMINATED, Keyword::BY]) =>
+                        {
+                            row_delimiters.push(HiveRowDelimiter {
+                                delimiter: HiveDelimiter::FieldsTerminatedBy,
+                                char: self.parse_identifier()?,
+                            });
+
+                            if self.parse_keywords(&[Keyword::ESCAPED, Keyword::BY]) {
                                 row_delimiters.push(HiveRowDelimiter {
-                                    delimiter: HiveDelimiter::FieldsTerminatedBy,
+                                    delimiter: HiveDelimiter::FieldsEscapedBy,
                                     char: self.parse_identifier()?,
                                 });
-
-                                if self.parse_keywords(&[Keyword::ESCAPED, Keyword::BY]) {
-                                    row_delimiters.push(HiveRowDelimiter {
-                                        delimiter: HiveDelimiter::FieldsEscapedBy,
-                                        char: self.parse_identifier()?,
-                                    });
-                                }
-                            } else {
-                                break;
                             }
                         }
-                        Some(Keyword::COLLECTION) => {
+                        Some(Keyword::COLLECTION)
                             if self.parse_keywords(&[
                                 Keyword::ITEMS,
                                 Keyword::TERMINATED,
                                 Keyword::BY,
-                            ]) {
-                                row_delimiters.push(HiveRowDelimiter {
-                                    delimiter: HiveDelimiter::CollectionItemsTerminatedBy,
-                                    char: self.parse_identifier()?,
-                                });
-                            } else {
-                                break;
-                            }
+                            ]) =>
+                        {
+                            row_delimiters.push(HiveRowDelimiter {
+                                delimiter: HiveDelimiter::CollectionItemsTerminatedBy,
+                                char: self.parse_identifier()?,
+                            });
                         }
-                        Some(Keyword::MAP) => {
+                        Some(Keyword::MAP)
                             if self.parse_keywords(&[
                                 Keyword::KEYS,
                                 Keyword::TERMINATED,
                                 Keyword::BY,
-                            ]) {
-                                row_delimiters.push(HiveRowDelimiter {
-                                    delimiter: HiveDelimiter::MapKeysTerminatedBy,
-                                    char: self.parse_identifier()?,
-                                });
-                            } else {
-                                break;
-                            }
+                            ]) =>
+                        {
+                            row_delimiters.push(HiveRowDelimiter {
+                                delimiter: HiveDelimiter::MapKeysTerminatedBy,
+                                char: self.parse_identifier()?,
+                            });
                         }
-                        Some(Keyword::LINES) => {
-                            if self.parse_keywords(&[Keyword::TERMINATED, Keyword::BY]) {
-                                row_delimiters.push(HiveRowDelimiter {
-                                    delimiter: HiveDelimiter::LinesTerminatedBy,
-                                    char: self.parse_identifier()?,
-                                });
-                            } else {
-                                break;
-                            }
+                        Some(Keyword::LINES)
+                            if self.parse_keywords(&[Keyword::TERMINATED, Keyword::BY]) =>
+                        {
+                            row_delimiters.push(HiveRowDelimiter {
+                                delimiter: HiveDelimiter::LinesTerminatedBy,
+                                char: self.parse_identifier()?,
+                            });
                         }
-                        Some(Keyword::NULL) => {
-                            if self.parse_keywords(&[Keyword::DEFINED, Keyword::AS]) {
-                                row_delimiters.push(HiveRowDelimiter {
-                                    delimiter: HiveDelimiter::NullDefinedAs,
-                                    char: self.parse_identifier()?,
-                                });
-                            } else {
-                                break;
-                            }
+                        Some(Keyword::NULL)
+                            if self.parse_keywords(&[Keyword::DEFINED, Keyword::AS]) =>
+                        {
+                            row_delimiters.push(HiveRowDelimiter {
+                                delimiter: HiveDelimiter::NullDefinedAs,
+                                char: self.parse_identifier()?,
+                            });
                         }
                         _ => {
                             break;
@@ -7460,7 +7466,10 @@ impl<'a> Parser<'a> {
             None => Expr::Identifier(self.parse_identifier()?),
         };
 
-        Ok(Some(SqlOption::KeyValue { key, value }))
+        Ok(Some(SqlOption::KeyValue {
+            key,
+            value: Box::new(value),
+        }))
     }
 
     pub fn parse_plain_options(&mut self) -> Result<Vec<SqlOption>, ParserError> {
@@ -7761,12 +7770,12 @@ impl<'a> Parser<'a> {
             } else {
                 None
             };
-            Ok(Some(ColumnOption::Identity(
+            Ok(Some(ColumnOption::Identity(Box::new(
                 IdentityPropertyKind::Identity(IdentityProperty {
                     parameters,
                     order: None,
                 }),
-            )))
+            ))))
         } else if dialect_of!(self is SQLiteDialect | GenericDialect)
             && self.parse_keywords(&[Keyword::ON, Keyword::CONFLICT])
         {
@@ -8274,7 +8283,10 @@ impl<'a> Parser<'a> {
                 self.expect_token(&Token::Eq)?;
                 let value = self.parse_expr()?;
 
-                Ok(SqlOption::KeyValue { key: name, value })
+                Ok(SqlOption::KeyValue {
+                    key: name,
+                    value: Box::new(value),
+                })
             }
         }
     }
@@ -8926,10 +8938,10 @@ impl<'a> Parser<'a> {
                 }),
             }))
         } else {
-            return self.expected_ref(
+            self.expected_ref(
                 "{RENAME TO | { RENAME | ADD } VALUE}",
                 self.peek_token_ref(),
-            );
+            )
         }
     }
 
@@ -9435,7 +9447,7 @@ impl<'a> Parser<'a> {
             let name = parser.parse_literal_string()?;
             let e = if parser.consume_token(&Token::Eq) {
                 let value = parser.parse_number()?;
-                EnumMember::NamedValue(name, value)
+                EnumMember::NamedValue(name, Box::new(value))
             } else {
                 EnumMember::Name(name)
             };
@@ -10028,8 +10040,8 @@ impl<'a> Parser<'a> {
                 self.expect_token(&Token::LParen)?;
                 let result = self.parse_comma_separated(|p| p.parse_tuple(true, true))?;
                 self.expect_token(&Token::RParen)?;
-                modifiers.push(GroupByWithModifier::GroupingSets(Expr::GroupingSets(
-                    result,
+                modifiers.push(GroupByWithModifier::GroupingSets(Box::new(
+                    Expr::GroupingSets(result),
                 )));
             };
             let group_by = match expressions {
@@ -10129,7 +10141,7 @@ impl<'a> Parser<'a> {
         if self.dialect.supports_insert_table_function() && self.parse_keyword(Keyword::FUNCTION) {
             let fn_name = self.parse_object_name(false)?;
             self.parse_function_call(fn_name)
-                .map(TableObject::TableFunction)
+                .map(|f| TableObject::TableFunction(Box::new(f)))
         } else {
             self.parse_object_name(false).map(TableObject::TableName)
         }
@@ -11008,7 +11020,10 @@ impl<'a> Parser<'a> {
                     } else {
                         None
                     };
-                    pipe_operators.push(PipeOperator::Limit { expr, offset })
+                    pipe_operators.push(PipeOperator::Limit {
+                        expr,
+                        offset: Box::new(offset),
+                    })
                 }
                 Keyword::AGGREGATE => {
                     let full_table_exprs = if self.peek_keyword(Keyword::GROUP) {
@@ -11757,7 +11772,7 @@ impl<'a> Parser<'a> {
                 // but we allow it for all the dialects
                 return Ok(Set::SetTimeZone {
                     local: scope == Some(ContextModifier::Local),
-                    value: self.parse_expr()?,
+                    value: Box::new(self.parse_expr()?),
                 }
                 .into());
             }
@@ -12111,7 +12126,9 @@ impl<'a> Parser<'a> {
                 self.parse_literal_string()?,
             )))
         } else if self.parse_keyword(Keyword::WHERE) {
-            Ok(Some(ShowStatementFilter::Where(self.parse_expr()?)))
+            Ok(Some(ShowStatementFilter::Where(Box::new(
+                self.parse_expr()?,
+            ))))
         } else {
             self.maybe_parse(|parser| -> Result<String, ParserError> {
                 parser.parse_literal_string()
@@ -12217,8 +12234,8 @@ impl<'a> Parser<'a> {
                     relation,
                     global,
                     join_operator: JoinOperator::AsOf {
-                        match_condition,
-                        constraint: self.parse_join_constraint(false)?,
+                        match_condition: Box::new(match_condition),
+                        constraint: Box::new(self.parse_join_constraint(false)?),
                     },
                 }
             } else {
@@ -12871,8 +12888,8 @@ impl<'a> Parser<'a> {
 
             XmlTableColumnOption::NamedInfo {
                 r#type,
-                path,
-                default,
+                path: Box::new(path),
+                default: Box::new(default),
                 nullable: !not_null,
             }
         };
@@ -13180,14 +13197,14 @@ impl<'a> Parser<'a> {
                 on_error = Some(error_handling);
             }
         }
-        Ok(JsonTableColumn::Named(JsonTableNamedColumn {
+        Ok(JsonTableColumn::Named(Box::new(JsonTableNamedColumn {
             name,
             r#type,
             path,
             exists,
             on_empty,
             on_error,
-        }))
+        })))
     }
 
     /// Parses MSSQL's `OPENJSON WITH` column definition.
@@ -13371,7 +13388,7 @@ impl<'a> Parser<'a> {
             Ok(JoinConstraint::Natural)
         } else if self.parse_keyword(Keyword::ON) {
             let constraint = self.parse_expr()?;
-            Ok(JoinConstraint::On(constraint))
+            Ok(JoinConstraint::On(Box::new(constraint)))
         } else if self.parse_keyword(Keyword::USING) {
             let columns = self.parse_parenthesized_qualified_column_list(Mandatory, false)?;
             Ok(JoinConstraint::Using(columns))
@@ -13992,16 +14009,16 @@ impl<'a> Parser<'a> {
                         } else {
                             None
                         };
-                        OnConflictAction::DoUpdate(DoUpdate {
+                        OnConflictAction::DoUpdate(Box::new(DoUpdate {
                             assignments,
                             selection,
-                        })
+                        }))
                     };
 
-                    Some(OnInsert::OnConflict(OnConflict {
+                    Some(OnInsert::OnConflict(Box::new(OnConflict {
                         conflict_target,
                         action,
-                    }))
+                    })))
                 } else {
                     self.expect_keyword_is(Keyword::DUPLICATE)?;
                     self.expect_keyword_is(Keyword::KEY)?;
@@ -14180,9 +14197,9 @@ impl<'a> Parser<'a> {
             self.maybe_parse(|p| {
                 let name = p.parse_expr()?;
                 let operator = p.parse_function_named_arg_operator()?;
-                let arg = p.parse_wildcard_expr()?.into();
+                let arg = Box::new(p.parse_wildcard_expr()?.into());
                 Ok(FunctionArg::ExprNamed {
-                    name,
+                    name: Box::new(name),
                     arg,
                     operator,
                 })
@@ -14380,7 +14397,7 @@ impl<'a> Parser<'a> {
         match self.parse_wildcard_expr()? {
             Expr::QualifiedWildcard(prefix, token) => Ok(SelectItem::QualifiedWildcard(
                 SelectItemQualifiedWildcardKind::ObjectName(prefix),
-                self.parse_wildcard_additional_options(token.0)?,
+                Box::new(self.parse_wildcard_additional_options(token.0)?),
             )),
             Expr::Wildcard(token) => Ok(SelectItem::Wildcard(
                 self.parse_wildcard_additional_options(token.0)?,
@@ -14414,8 +14431,8 @@ impl<'a> Parser<'a> {
             {
                 let wildcard_token = self.get_previous_token().clone();
                 Ok(SelectItem::QualifiedWildcard(
-                    SelectItemQualifiedWildcardKind::Expr(expr),
-                    self.parse_wildcard_additional_options(wildcard_token)?,
+                    SelectItemQualifiedWildcardKind::Expr(Box::new(expr)),
+                    Box::new(self.parse_wildcard_additional_options(wildcard_token)?),
                 ))
             }
             expr => self
@@ -14750,7 +14767,7 @@ impl<'a> Parser<'a> {
         let quantity = if self.consume_token(&Token::LParen) {
             let quantity = self.parse_expr()?;
             self.expect_token(&Token::RParen)?;
-            Some(TopQuantity::Expr(quantity))
+            Some(TopQuantity::Expr(Box::new(quantity)))
         } else {
             let next_token = self.next_token();
             let quantity = match next_token.token {
@@ -15385,7 +15402,7 @@ impl<'a> Parser<'a> {
         let include_final = self.parse_keyword(Keyword::FINAL);
         let deduplicate = if self.parse_keyword(Keyword::DEDUPLICATE) {
             if self.parse_keyword(Keyword::BY) {
-                Some(Deduplicate::ByExpression(self.parse_expr()?))
+                Some(Deduplicate::ByExpression(Box::new(self.parse_expr()?)))
             } else {
                 Some(Deduplicate::All)
             }

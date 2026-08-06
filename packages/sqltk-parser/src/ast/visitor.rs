@@ -553,7 +553,7 @@ where
 ///           uses_odbc_syntax: false,
 ///           args: FunctionArguments::List(FunctionArgumentList {
 ///               duplicate_treatment: None,
-///               args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(old_expr))],
+///               args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(old_expr)))],
 ///               clauses: vec![],
 ///           }),
 ///           null_treatment: None,
@@ -749,7 +749,7 @@ mod tests {
             .parse_statement()
             .unwrap();
 
-        s.visit(visitor);
+        let _ = s.visit(visitor);
         s
     }
 
@@ -938,7 +938,7 @@ mod tests {
             .unwrap();
 
         let mut visitor = QuickVisitor {};
-        s.visit(&mut visitor);
+        let _ = s.visit(&mut visitor);
     }
 }
 
@@ -977,7 +977,7 @@ mod visit_mut_tests {
             .parse_statement()
             .unwrap();
 
-        s.visit(visitor);
+        let _ = s.visit(visitor);
         s
     }
 

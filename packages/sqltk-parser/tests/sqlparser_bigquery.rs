@@ -354,11 +354,11 @@ fn parse_create_view_with_options() {
                         data_type: None,
                         options: Some(vec![ColumnOption::Options(vec![SqlOption::KeyValue {
                             key: Ident::new("description"),
-                            value: Expr::Value(
+                            value: Box::new(Expr::Value(
                                 Value::DoubleQuotedString("field age".to_string()).with_span(
                                     Span::new(Location::new(1, 42), Location::new(1, 52))
                                 )
-                            ),
+                            )),
                         }])]),
                     },
                 ],
@@ -378,10 +378,10 @@ fn parse_create_view_with_options() {
             assert_eq!(
                 &SqlOption::KeyValue {
                     key: Ident::new("description"),
-                    value: Expr::Value(
+                    value: Box::new(Expr::Value(
                         Value::DoubleQuotedString("a view that expires in 2 days".to_string())
                             .with_empty_span()
-                    ),
+                    )),
                 },
                 &options[2],
             );
@@ -505,11 +505,11 @@ fn parse_create_table_with_options() {
                                 name: None,
                                 option: ColumnOption::Options(vec![SqlOption::KeyValue {
                                     key: Ident::new("description"),
-                                    value: Expr::Value(
+                                    value: Box::new(Expr::Value(
                                         Value::DoubleQuotedString("field x".to_string()).with_span(
                                             Span::new(Location::new(1, 42), Location::new(1, 52))
                                         )
-                                    ),
+                                    )),
                                 },])
                             },
                         ]
@@ -521,11 +521,11 @@ fn parse_create_table_with_options() {
                             name: None,
                             option: ColumnOption::Options(vec![SqlOption::KeyValue {
                                 key: Ident::new("description"),
-                                value: Expr::Value(
+                                value: Box::new(Expr::Value(
                                     Value::DoubleQuotedString("field y".to_string()).with_span(
                                         Span::new(Location::new(1, 42), Location::new(1, 52))
                                     )
-                                ),
+                                )),
                             },])
                         }]
                     },
@@ -542,22 +542,22 @@ fn parse_create_table_with_options() {
                     CreateTableOptions::Options(vec![
                         SqlOption::KeyValue {
                             key: Ident::new("partition_expiration_days"),
-                            value: Expr::Value(
+                            value: Box::new(Expr::Value(
                                 number("1").with_span(Span::new(
                                     Location::new(1, 42),
                                     Location::new(1, 43)
                                 ))
-                            ),
+                            )),
                         },
                         SqlOption::KeyValue {
                             key: Ident::new("description"),
-                            value: Expr::Value(
+                            value: Box::new(Expr::Value(
                                 Value::DoubleQuotedString("table option description".to_string())
                                     .with_span(Span::new(
                                         Location::new(1, 42),
                                         Location::new(1, 52)
                                     ))
-                            ),
+                            )),
                         },
                     ])
                 ),
@@ -1688,11 +1688,11 @@ fn parse_join_constraint_unnest_alias() {
                 with_ordinality: false,
             },
             global: false,
-            join_operator: JoinOperator::Join(JoinConstraint::On(Expr::BinaryOp {
+            join_operator: JoinOperator::Join(JoinConstraint::On(Box::new(Expr::BinaryOp {
                 left: Box::new(Expr::Identifier("c1".into())),
                 op: BinaryOperator::Eq,
                 right: Box::new(Expr::Identifier("c2".into())),
-            })),
+            }))),
         }]
     );
 }
@@ -2077,13 +2077,13 @@ fn parse_map_access_expr() {
             "users",
         ))),
         access_chain: vec![
-            AccessExpr::Subscript(Subscript::Index {
+            AccessExpr::Subscript(Box::new(Subscript::Index {
                 index: Expr::UnaryOp {
                     op: UnaryOperator::Minus,
                     expr: Expr::value(number("1")).into(),
                 },
-            }),
-            AccessExpr::Subscript(Subscript::Index {
+            })),
+            AccessExpr::Subscript(Box::new(Subscript::Index {
                 index: Expr::Function(Function {
                     name: ObjectName::from(vec![Ident::with_span(
                         Span::new(Location::of(1, 11), Location::of(1, 22)),
@@ -2092,8 +2092,8 @@ fn parse_map_access_expr() {
                     parameters: FunctionArguments::None,
                     args: FunctionArguments::List(FunctionArgumentList {
                         duplicate_treatment: None,
-                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
-                            number("2").with_empty_span(),
+                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
+                            Expr::Value(number("2").with_empty_span()),
                         )))],
                         clauses: vec![],
                     }),
@@ -2103,15 +2103,15 @@ fn parse_map_access_expr() {
                     within_group: vec![],
                     uses_odbc_syntax: false,
                 }),
-            }),
-            AccessExpr::Dot(Expr::Identifier(Ident::with_span(
+            })),
+            AccessExpr::Dot(Box::new(Expr::Identifier(Ident::with_span(
                 Span::new(Location::of(1, 24), Location::of(1, 25)),
                 "a",
-            ))),
-            AccessExpr::Dot(Expr::Identifier(Ident::with_span(
+            )))),
+            AccessExpr::Dot(Box::new(Expr::Identifier(Ident::with_span(
                 Span::new(Location::of(1, 26), Location::of(1, 27)),
                 "b",
-            ))),
+            )))),
         ],
     };
     assert_eq!(expr, expected);
@@ -2150,7 +2150,9 @@ fn test_bigquery_create_function() {
             ))),
             options: Some(vec![SqlOption::KeyValue {
                 key: Ident::new("x"),
-                value: Expr::Value(Value::SingleQuotedString("y".into()).with_empty_span()),
+                value: Box::new(Expr::Value(
+                    Value::SingleQuotedString("y".into()).with_empty_span()
+                )),
             }]),
             behavior: None,
             using: None,

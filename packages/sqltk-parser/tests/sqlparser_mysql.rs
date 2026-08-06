@@ -349,7 +349,9 @@ fn parse_show_columns() {
                     parent_name: Some(ObjectName::from(vec![Ident::new("mytable")])),
                 }),
                 filter_position: Some(ShowStatementFilterPosition::Suffix(
-                    ShowStatementFilter::Where(mysql_and_generic().verified_expr("1 = 2"))
+                    ShowStatementFilter::Where(Box::new(
+                        mysql_and_generic().verified_expr("1 = 2")
+                    ))
                 )),
                 limit_from: None,
                 limit: None,
@@ -390,9 +392,9 @@ fn parse_show_status() {
     assert_eq!(
         mysql_and_generic().verified_stmt("SHOW STATUS WHERE value = 2"),
         Statement::ShowStatus {
-            filter: Some(ShowStatementFilter::Where(
+            filter: Some(ShowStatementFilter::Where(Box::new(
                 mysql_and_generic().verified_expr("value = 2")
-            )),
+            ))),
             session: false,
             global: false
         }
@@ -506,7 +508,9 @@ fn parse_show_tables() {
                 limit_from: None,
                 show_in: None,
                 filter_position: Some(ShowStatementFilterPosition::Suffix(
-                    ShowStatementFilter::Where(mysql_and_generic().verified_expr("1 = 2"))
+                    ShowStatementFilter::Where(Box::new(
+                        mysql_and_generic().verified_expr("1 = 2")
+                    ))
                 ))
             }
         }
@@ -572,9 +576,9 @@ fn parse_show_collation() {
     assert_eq!(
         mysql_and_generic().verified_stmt("SHOW COLLATION WHERE 1 = 2"),
         Statement::ShowCollation {
-            filter: Some(ShowStatementFilter::Where(
+            filter: Some(ShowStatementFilter::Where(Box::new(
                 mysql_and_generic().verified_expr("1 = 2")
-            )),
+            ))),
         }
     );
 }
@@ -891,7 +895,7 @@ fn parse_create_table_auto_increment_offset() {
 
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("AUTO_INCREMENT"),
-                value: Expr::Value(test_utils::number("123").with_empty_span())
+                value: Box::new(Expr::Value(test_utils::number("123").with_empty_span()))
             }));
         }
         _ => unreachable!(),
@@ -928,7 +932,7 @@ fn parse_create_table_multiple_options_order_independent() {
 
                 assert!(plain_options.contains(&SqlOption::KeyValue {
                     key: Ident::new("KEY_BLOCK_SIZE"),
-                    value: Expr::Value(test_utils::number("8").with_empty_span())
+                    value: Box::new(Expr::Value(test_utils::number("8").with_empty_span()))
                 }));
 
                 assert!(plain_options
@@ -936,7 +940,7 @@ fn parse_create_table_multiple_options_order_independent() {
 
                 assert!(plain_options.contains(&SqlOption::KeyValue {
                     key: Ident::new("ROW_FORMAT"),
-                    value: Expr::Identifier(Ident::new("DYNAMIC".to_owned()))
+                    value: Box::new(Expr::Identifier(Ident::new("DYNAMIC".to_owned())))
                 }));
             }
             _ => unreachable!(),
@@ -972,91 +976,99 @@ fn parse_create_table_with_all_table_options() {
 
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("COLLATE"),
-                value: Expr::Identifier(Ident::new("utf8mb4_0900_ai_ci".to_owned()))
+                value: Box::new(Expr::Identifier(Ident::new(
+                    "utf8mb4_0900_ai_ci".to_owned()
+                )))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("DEFAULT CHARSET"),
-                value: Expr::Identifier(Ident::new("utf8mb4".to_owned()))
+                value: Box::new(Expr::Identifier(Ident::new("utf8mb4".to_owned())))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("AUTO_INCREMENT"),
-                value: Expr::value(test_utils::number("123"))
+                value: Box::new(Expr::value(test_utils::number("123")))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("KEY_BLOCK_SIZE"),
-                value: Expr::value(test_utils::number("8"))
+                value: Box::new(Expr::value(test_utils::number("8")))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("ROW_FORMAT"),
-                value: Expr::Identifier(Ident::new("DYNAMIC".to_owned()))
+                value: Box::new(Expr::Identifier(Ident::new("DYNAMIC".to_owned())))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("PACK_KEYS"),
-                value: Expr::value(test_utils::number("1"))
+                value: Box::new(Expr::value(test_utils::number("1")))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("STATS_AUTO_RECALC"),
-                value: Expr::value(test_utils::number("1"))
+                value: Box::new(Expr::value(test_utils::number("1")))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("STATS_PERSISTENT"),
-                value: Expr::value(test_utils::number("0"))
+                value: Box::new(Expr::value(test_utils::number("0")))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("STATS_SAMPLE_PAGES"),
-                value: Expr::value(test_utils::number("128"))
+                value: Box::new(Expr::value(test_utils::number("128")))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("STATS_SAMPLE_PAGES"),
-                value: Expr::value(test_utils::number("128"))
+                value: Box::new(Expr::value(test_utils::number("128")))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("INSERT_METHOD"),
-                value: Expr::Identifier(Ident::new("FIRST".to_owned()))
+                value: Box::new(Expr::Identifier(Ident::new("FIRST".to_owned())))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("COMPRESSION"),
-                value: Expr::value(Value::SingleQuotedString("ZLIB".to_owned()))
+                value: Box::new(Expr::value(Value::SingleQuotedString("ZLIB".to_owned())))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("ENCRYPTION"),
-                value: Expr::value(Value::SingleQuotedString("Y".to_owned()))
+                value: Box::new(Expr::value(Value::SingleQuotedString("Y".to_owned())))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("MAX_ROWS"),
-                value: Expr::value(test_utils::number("10000"))
+                value: Box::new(Expr::value(test_utils::number("10000")))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("MIN_ROWS"),
-                value: Expr::value(test_utils::number("10"))
+                value: Box::new(Expr::value(test_utils::number("10")))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("AUTOEXTEND_SIZE"),
-                value: Expr::value(test_utils::number("64"))
+                value: Box::new(Expr::value(test_utils::number("64")))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("AVG_ROW_LENGTH"),
-                value: Expr::value(test_utils::number("128"))
+                value: Box::new(Expr::value(test_utils::number("128")))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("CHECKSUM"),
-                value: Expr::value(test_utils::number("1"))
+                value: Box::new(Expr::value(test_utils::number("1")))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("CONNECTION"),
-                value: Expr::value(Value::SingleQuotedString("mysql://localhost".to_owned()))
+                value: Box::new(Expr::value(Value::SingleQuotedString(
+                    "mysql://localhost".to_owned()
+                )))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("ENGINE_ATTRIBUTE"),
-                value: Expr::value(Value::SingleQuotedString("primary".to_owned()))
+                value: Box::new(Expr::value(Value::SingleQuotedString("primary".to_owned())))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("PASSWORD"),
-                value: Expr::value(Value::SingleQuotedString("secure_password".to_owned()))
+                value: Box::new(Expr::value(Value::SingleQuotedString(
+                    "secure_password".to_owned()
+                )))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("SECONDARY_ENGINE_ATTRIBUTE"),
-                value: Expr::value(Value::SingleQuotedString("secondary_attr".to_owned()))
+                value: Box::new(Expr::value(Value::SingleQuotedString(
+                    "secondary_attr".to_owned()
+                )))
             }));
             assert!(plain_options.contains(&SqlOption::Ident(Ident::new(
                 "START TRANSACTION".to_owned()
@@ -1082,11 +1094,15 @@ fn parse_create_table_with_all_table_options() {
 
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("DATA DIRECTORY"),
-                value: Expr::value(Value::SingleQuotedString("/var/lib/mysql/data".to_owned()))
+                value: Box::new(Expr::value(Value::SingleQuotedString(
+                    "/var/lib/mysql/data".to_owned()
+                )))
             }));
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("INDEX DIRECTORY"),
-                value: Expr::value(Value::SingleQuotedString("/var/lib/mysql/index".to_owned()))
+                value: Box::new(Expr::value(Value::SingleQuotedString(
+                    "/var/lib/mysql/index".to_owned()
+                )))
             }));
         }
         _ => unreachable!(),
@@ -1152,7 +1168,7 @@ fn parse_create_table_engine_default_charset() {
 
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("DEFAULT CHARSET"),
-                value: Expr::Identifier(Ident::new("utf8mb3".to_owned()))
+                value: Box::new(Expr::Identifier(Ident::new("utf8mb3".to_owned())))
             }));
 
             assert!(plain_options.contains(&SqlOption::NamedParenthesizedList(
@@ -1194,7 +1210,9 @@ fn parse_create_table_collate() {
 
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("COLLATE"),
-                value: Expr::Identifier(Ident::new("utf8mb4_0900_ai_ci".to_owned()))
+                value: Box::new(Expr::Identifier(Ident::new(
+                    "utf8mb4_0900_ai_ci".to_owned()
+                )))
             }));
         }
         _ => unreachable!(),
@@ -1220,7 +1238,9 @@ fn parse_create_table_both_options_and_as_query() {
 
             assert!(plain_options.contains(&SqlOption::KeyValue {
                 key: Ident::new("COLLATE"),
-                value: Expr::Identifier(Ident::new("utf8mb4_0900_ai_ci".to_owned()))
+                value: Box::new(Expr::Identifier(Ident::new(
+                    "utf8mb4_0900_ai_ci".to_owned()
+                )))
             }));
 
             assert_eq!(
@@ -2419,17 +2439,19 @@ fn parse_update_with_joins() {
                             index_hints: vec![],
                         },
                         global: false,
-                        join_operator: JoinOperator::Join(JoinConstraint::On(Expr::BinaryOp {
-                            left: Box::new(Expr::CompoundIdentifier(vec![
-                                Ident::new("o"),
-                                Ident::new("customer_id")
-                            ])),
-                            op: BinaryOperator::Eq,
-                            right: Box::new(Expr::CompoundIdentifier(vec![
-                                Ident::new("c"),
-                                Ident::new("id")
-                            ]))
-                        })),
+                        join_operator: JoinOperator::Join(JoinConstraint::On(Box::new(
+                            Expr::BinaryOp {
+                                left: Box::new(Expr::CompoundIdentifier(vec![
+                                    Ident::new("o"),
+                                    Ident::new("customer_id")
+                                ])),
+                                op: BinaryOperator::Eq,
+                                right: Box::new(Expr::CompoundIdentifier(vec![
+                                    Ident::new("c"),
+                                    Ident::new("id")
+                                ]))
+                            }
+                        ))),
                     }]
                 },
                 table
@@ -3451,14 +3473,14 @@ fn parse_json_table() {
             json_expr: Expr::Value((Value::SingleQuotedString("[1,2]".to_string())).with_empty_span()),
             json_path: Value::SingleQuotedString("$[*]".to_string()),
             columns: vec![
-                JsonTableColumn::Named(JsonTableNamedColumn {
+                JsonTableColumn::Named(Box::new(JsonTableNamedColumn {
                     name: Ident::new("x"),
                     r#type: DataType::Int(None),
                     path: Value::SingleQuotedString("$".to_string()),
                     exists: false,
                     on_empty: Some(JsonTableColumnErrorHandling::Default(Value::SingleQuotedString("0".to_string()))),
                     on_error: Some(JsonTableColumnErrorHandling::Null),
-                }),
+                })),
             ],
             alias: Some(TableAlias {
                 name: Ident::new("t"),

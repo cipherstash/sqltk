@@ -361,7 +361,7 @@ mod tests {
             .is_err());
     }
 
-    fn parser_for(sql: &str) -> Result<Parser, ParserError> {
+    fn parser_for(sql: &str) -> Result<Parser<'_>, ParserError> {
         Parser::new(&PostgreSqlDialect {}).try_with_sql(sql)
     }
 }

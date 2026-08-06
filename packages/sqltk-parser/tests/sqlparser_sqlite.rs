@@ -421,9 +421,9 @@ fn parse_window_function_with_filter() {
                 parameters: FunctionArguments::None,
                 args: FunctionArguments::List(FunctionArgumentList {
                     duplicate_treatment: None,
-                    args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+                    args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
                         Expr::Identifier(Ident::new("x"))
-                    ))],
+                    )))],
                     clauses: vec![],
                 }),
                 null_treatment: None,

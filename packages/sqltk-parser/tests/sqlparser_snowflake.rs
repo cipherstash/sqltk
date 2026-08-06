@@ -566,11 +566,11 @@ fn test_snowflake_create_table_with_autoincrement_columns() {
                         data_type: DataType::Int(None),
                         options: vec![ColumnOptionDef {
                             name: None,
-                            option: ColumnOption::Identity(IdentityPropertyKind::Autoincrement(
-                                IdentityProperty {
+                            option: ColumnOption::Identity(Box::new(
+                                IdentityPropertyKind::Autoincrement(IdentityProperty {
                                     parameters: None,
                                     order: Some(IdentityPropertyOrder::Order),
-                                }
+                                })
                             ))
                         }]
                     },
@@ -579,8 +579,8 @@ fn test_snowflake_create_table_with_autoincrement_columns() {
                         data_type: DataType::Int(None),
                         options: vec![ColumnOptionDef {
                             name: None,
-                            option: ColumnOption::Identity(IdentityPropertyKind::Autoincrement(
-                                IdentityProperty {
+                            option: ColumnOption::Identity(Box::new(
+                                IdentityPropertyKind::Autoincrement(IdentityProperty {
                                     parameters: Some(IdentityPropertyFormatKind::FunctionCall(
                                         IdentityParameters {
                                             seed: Expr::value(number("100")),
@@ -588,7 +588,7 @@ fn test_snowflake_create_table_with_autoincrement_columns() {
                                         }
                                     )),
                                     order: Some(IdentityPropertyOrder::NoOrder),
-                                }
+                                })
                             ))
                         }]
                     },
@@ -597,11 +597,11 @@ fn test_snowflake_create_table_with_autoincrement_columns() {
                         data_type: DataType::Int(None),
                         options: vec![ColumnOptionDef {
                             name: None,
-                            option: ColumnOption::Identity(IdentityPropertyKind::Identity(
-                                IdentityProperty {
+                            option: ColumnOption::Identity(Box::new(
+                                IdentityPropertyKind::Identity(IdentityProperty {
                                     parameters: None,
                                     order: None,
-                                }
+                                })
                             ))
                         }]
                     },
@@ -610,8 +610,8 @@ fn test_snowflake_create_table_with_autoincrement_columns() {
                         data_type: DataType::Int(None),
                         options: vec![ColumnOptionDef {
                             name: None,
-                            option: ColumnOption::Identity(IdentityPropertyKind::Identity(
-                                IdentityProperty {
+                            option: ColumnOption::Identity(Box::new(
+                                IdentityPropertyKind::Identity(IdentityProperty {
                                     parameters: Some(
                                         IdentityPropertyFormatKind::StartAndIncrement(
                                             IdentityParameters {
@@ -625,7 +625,7 @@ fn test_snowflake_create_table_with_autoincrement_columns() {
                                         )
                                     ),
                                     order: Some(IdentityPropertyOrder::Order),
-                                }
+                                })
                             ))
                         }]
                     },
@@ -797,11 +797,11 @@ fn test_snowflake_create_table_with_several_column_options() {
                         options: vec![
                             ColumnOptionDef {
                                 name: None,
-                                option: ColumnOption::Identity(IdentityPropertyKind::Identity(
-                                    IdentityProperty {
+                                option: ColumnOption::Identity(Box::new(
+                                    IdentityPropertyKind::Identity(IdentityProperty {
                                         parameters: None,
                                         order: None
-                                    }
+                                    })
                                 )),
                             },
                             ColumnOptionDef {
@@ -1139,11 +1139,11 @@ fn parse_semi_structured_data_traversal() {
             value: Box::new(Expr::Identifier(Ident::new("a"))),
             path: JsonPath {
                 path: vec![JsonPathElem::Bracket {
-                    key: Expr::BinaryOp {
+                    key: Box::new(Expr::BinaryOp {
                         left: Box::new(Expr::value(number("2"))),
                         op: BinaryOperator::Plus,
                         right: Box::new(Expr::value(number("2")))
-                    },
+                    }),
                 }]
             },
         }),
@@ -1220,7 +1220,7 @@ fn parse_semi_structured_data_traversal() {
                         quoted: false,
                     },
                     JsonPathElem::Bracket {
-                        key: Expr::value(number("0")),
+                        key: Box::new(Expr::value(number("0"))),
                     },
                     JsonPathElem::Dot {
                         key: "bar".to_owned(),
@@ -1242,7 +1242,7 @@ fn parse_semi_structured_data_traversal() {
             path: JsonPath {
                 path: vec![
                     JsonPathElem::Bracket {
-                        key: Expr::value(number("0")),
+                        key: Box::new(Expr::value(number("0"))),
                     },
                     JsonPathElem::Dot {
                         key: "foo".to_owned(),
@@ -1265,7 +1265,7 @@ fn parse_semi_structured_data_traversal() {
             value: Box::new(Expr::Identifier(Ident::new("a"))),
             path: JsonPath {
                 path: vec![JsonPathElem::Bracket {
-                    key: Expr::JsonAccess {
+                    key: Box::new(Expr::JsonAccess {
                         value: Box::new(Expr::Identifier(Ident::new("b"))),
                         path: JsonPath {
                             path: vec![JsonPathElem::Dot {
@@ -1273,7 +1273,7 @@ fn parse_semi_structured_data_traversal() {
                                 quoted: false
                             }]
                         }
-                    }
+                    })
                 }]
             }
         }
@@ -1308,7 +1308,7 @@ fn parse_semi_structured_data_traversal() {
             }),
             path: JsonPath {
                 path: vec![JsonPathElem::Bracket {
-                    key: Expr::value(number("1"))
+                    key: Box::new(Expr::value(number("1")))
                 }]
             }
         }
@@ -1426,10 +1426,10 @@ fn test_select_wildcard_with_exclude() {
         .verified_only_select("SELECT name.* EXCLUDE department_id FROM employee_table");
     let expected = SelectItem::QualifiedWildcard(
         SelectItemQualifiedWildcardKind::ObjectName(ObjectName::from(vec![Ident::new("name")])),
-        WildcardAdditionalOptions {
+        Box::new(WildcardAdditionalOptions {
             opt_exclude: Some(ExcludeSelectItem::Single(Ident::new("department_id"))),
             ..Default::default()
-        },
+        }),
     );
     assert_eq!(expected, select.projection[0]);
 
@@ -1463,7 +1463,7 @@ fn test_select_wildcard_with_rename() {
     );
     let expected = SelectItem::QualifiedWildcard(
         SelectItemQualifiedWildcardKind::ObjectName(ObjectName::from(vec![Ident::new("name")])),
-        WildcardAdditionalOptions {
+        Box::new(WildcardAdditionalOptions {
             opt_rename: Some(RenameSelectItem::Multiple(vec![
                 IdentWithAlias {
                     ident: Ident::new("department_id"),
@@ -1475,7 +1475,7 @@ fn test_select_wildcard_with_rename() {
                 },
             ])),
             ..Default::default()
-        },
+        }),
     );
     assert_eq!(expected, select.projection[0]);
 }
@@ -1569,9 +1569,9 @@ fn test_alter_table_clustering() {
                         uses_odbc_syntax: false,
                         parameters: FunctionArguments::None,
                         args: FunctionArguments::List(FunctionArgumentList {
-                            args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+                            args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
                                 Expr::Identifier(Ident::new("c3"))
-                            ))],
+                            )))],
                             duplicate_treatment: None,
                             clauses: vec![],
                         }),
@@ -2317,16 +2317,16 @@ fn test_copy_into_with_transformations() {
             );
             assert_eq!(
                 from_transformations.as_ref().unwrap()[3],
-                StageLoadSelectItemKind::SelectItem(SelectItem::UnnamedExpr(Expr::Value(
-                    Value::Number("4".parse().unwrap(), false).into()
+                StageLoadSelectItemKind::SelectItem(Box::new(SelectItem::UnnamedExpr(
+                    Expr::Value(Value::Number("4".parse().unwrap(), false).into())
                 )))
             );
             assert_eq!(
                 from_transformations.as_ref().unwrap()[4],
-                StageLoadSelectItemKind::SelectItem(SelectItem::ExprWithAlias {
+                StageLoadSelectItemKind::SelectItem(Box::new(SelectItem::ExprWithAlias {
                     expr: Expr::Value(Value::SingleQuotedString("5".parse().unwrap()).into()),
                     alias: Ident::new("const_str".to_string())
-                })
+                }))
             );
         }
         _ => unreachable!(),
@@ -2869,7 +2869,7 @@ fn asof_joins() {
                 relation: table_with_alias("quotes_unixtime", "qu"),
                 global: false,
                 join_operator: JoinOperator::AsOf {
-                    match_condition: Expr::BinaryOp {
+                    match_condition: Box::new(Expr::BinaryOp {
                         left: Box::new(Expr::CompoundIdentifier(vec![
                             Ident::new("tu"),
                             Ident::new("trade_time"),
@@ -2879,8 +2879,8 @@ fn asof_joins() {
                             Ident::new("qu"),
                             Ident::new("quote_time"),
                         ])),
-                    },
-                    constraint: JoinConstraint::None,
+                    }),
+                    constraint: Box::new(JoinConstraint::None),
                 },
             }],
         }
@@ -3640,7 +3640,7 @@ fn test_nested_join_without_parentheses() {
                             index_hints: vec![],
                         },
                         global: false,
-                        join_operator: JoinOperator::Inner(JoinConstraint::On(Expr::BinaryOp {
+                        join_operator: JoinOperator::Inner(JoinConstraint::On(Box::new(Expr::BinaryOp {
                             left: Box::new(Expr::CompoundIdentifier(vec![
                                 Ident::new("p".to_string()),
                                 Ident::new("customer_id".to_string())
@@ -3650,13 +3650,13 @@ fn test_nested_join_without_parentheses() {
                                 Ident::new("c".to_string()),
                                 Ident::new("customer_id".to_string())
                             ])),
-                        })),
+                        }))),
                     }]
                 }),
                 alias: None
             },
             global: false,
-            join_operator: JoinOperator::Inner(JoinConstraint::On(Expr::BinaryOp {
+            join_operator: JoinOperator::Inner(JoinConstraint::On(Box::new(Expr::BinaryOp {
                 left: Box::new(Expr::CompoundIdentifier(vec![
                     Ident::new("c".to_string()),
                     Ident::new("order_id".to_string())
@@ -3666,7 +3666,7 @@ fn test_nested_join_without_parentheses() {
                     Ident::new("o".to_string()),
                     Ident::new("order_id".to_string())
                 ])),
-            }))
+            })))
         }],
     );
 
@@ -3721,7 +3721,7 @@ fn test_nested_join_without_parentheses() {
                             index_hints: vec![],
                         },
                         global: false,
-                        join_operator: JoinOperator::Join(JoinConstraint::On(Expr::BinaryOp {
+                        join_operator: JoinOperator::Join(JoinConstraint::On(Box::new(Expr::BinaryOp {
                             left: Box::new(Expr::CompoundIdentifier(vec![
                                 Ident::new("p".to_string()),
                                 Ident::new("customer_id".to_string())
@@ -3731,13 +3731,13 @@ fn test_nested_join_without_parentheses() {
                                 Ident::new("c".to_string()),
                                 Ident::new("customer_id".to_string())
                             ])),
-                        })),
+                        }))),
                     }]
                 }),
                 alias: None
             },
             global: false,
-            join_operator: JoinOperator::Join(JoinConstraint::On(Expr::BinaryOp {
+            join_operator: JoinOperator::Join(JoinConstraint::On(Box::new(Expr::BinaryOp {
                 left: Box::new(Expr::CompoundIdentifier(vec![
                     Ident::new("c".to_string()),
                     Ident::new("order_id".to_string())
@@ -3747,7 +3747,7 @@ fn test_nested_join_without_parentheses() {
                     Ident::new("o".to_string()),
                     Ident::new("order_id".to_string())
                 ])),
-            }))
+            })))
         }],
     );
 
@@ -3802,7 +3802,7 @@ fn test_nested_join_without_parentheses() {
                             index_hints: vec![],
                         },
                         global: false,
-                        join_operator: JoinOperator::Left(JoinConstraint::On(Expr::BinaryOp {
+                        join_operator: JoinOperator::Left(JoinConstraint::On(Box::new(Expr::BinaryOp {
                             left: Box::new(Expr::CompoundIdentifier(vec![
                                 Ident::new("p".to_string()),
                                 Ident::new("customer_id".to_string())
@@ -3812,13 +3812,13 @@ fn test_nested_join_without_parentheses() {
                                 Ident::new("c".to_string()),
                                 Ident::new("customer_id".to_string())
                             ])),
-                        })),
+                        }))),
                     }]
                 }),
                 alias: None
             },
             global: false,
-            join_operator: JoinOperator::Left(JoinConstraint::On(Expr::BinaryOp {
+            join_operator: JoinOperator::Left(JoinConstraint::On(Box::new(Expr::BinaryOp {
                 left: Box::new(Expr::CompoundIdentifier(vec![
                     Ident::new("c".to_string()),
                     Ident::new("order_id".to_string())
@@ -3828,7 +3828,7 @@ fn test_nested_join_without_parentheses() {
                     Ident::new("o".to_string()),
                     Ident::new("order_id".to_string())
                 ])),
-            }))
+            })))
         }],
     );
 
@@ -3883,7 +3883,7 @@ fn test_nested_join_without_parentheses() {
                             index_hints: vec![],
                         },
                         global: false,
-                        join_operator: JoinOperator::Right(JoinConstraint::On(Expr::BinaryOp {
+                        join_operator: JoinOperator::Right(JoinConstraint::On(Box::new(Expr::BinaryOp {
                             left: Box::new(Expr::CompoundIdentifier(vec![
                                 Ident::new("p".to_string()),
                                 Ident::new("customer_id".to_string())
@@ -3893,13 +3893,13 @@ fn test_nested_join_without_parentheses() {
                                 Ident::new("c".to_string()),
                                 Ident::new("customer_id".to_string())
                             ])),
-                        })),
+                        }))),
                     }]
                 }),
                 alias: None
             },
             global: false,
-            join_operator: JoinOperator::Right(JoinConstraint::On(Expr::BinaryOp {
+            join_operator: JoinOperator::Right(JoinConstraint::On(Box::new(Expr::BinaryOp {
                 left: Box::new(Expr::CompoundIdentifier(vec![
                     Ident::new("c".to_string()),
                     Ident::new("order_id".to_string())
@@ -3909,7 +3909,7 @@ fn test_nested_join_without_parentheses() {
                     Ident::new("o".to_string()),
                     Ident::new("order_id".to_string())
                 ])),
-            }))
+            })))
         }],
     );
 
@@ -3965,7 +3965,7 @@ fn test_nested_join_without_parentheses() {
                         },
                         global: false,
                         join_operator: JoinOperator::FullOuter(JoinConstraint::On(
-                            Expr::BinaryOp {
+                            Box::new(Expr::BinaryOp {
                                 left: Box::new(Expr::CompoundIdentifier(vec![
                                     Ident::new("p".to_string()),
                                     Ident::new("customer_id".to_string())
@@ -3975,14 +3975,14 @@ fn test_nested_join_without_parentheses() {
                                     Ident::new("c".to_string()),
                                     Ident::new("customer_id".to_string())
                                 ])),
-                            }
+                            })
                         )),
                     }]
                 }),
                 alias: None
             },
             global: false,
-            join_operator: JoinOperator::FullOuter(JoinConstraint::On(Expr::BinaryOp {
+            join_operator: JoinOperator::FullOuter(JoinConstraint::On(Box::new(Expr::BinaryOp {
                 left: Box::new(Expr::CompoundIdentifier(vec![
                     Ident::new("c".to_string()),
                     Ident::new("order_id".to_string())
@@ -3992,7 +3992,7 @@ fn test_nested_join_without_parentheses() {
                     Ident::new("o".to_string()),
                     Ident::new("order_id".to_string())
                 ])),
-            }))
+            })))
         }],
     );
 }
