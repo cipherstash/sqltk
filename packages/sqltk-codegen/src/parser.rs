@@ -94,7 +94,6 @@ impl SqlParserAstAnalyser {
                 Item::Mod(ItemMod {
                     content: Some((_, items)),
                     ident,
-                    vis: _,
                     ..
                 }) => {
                     path.push(ident.clone());

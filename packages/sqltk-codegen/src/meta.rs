@@ -97,7 +97,7 @@ pub struct SqlParserTypeDef {
 }
 
 pub enum AstNode {
-    SqlParserTypeDef(SqlParserTypeDef),
+    SqlParserTypeDef(Box<SqlParserTypeDef>),
     TerminalNode(TerminalNode),
 }
 

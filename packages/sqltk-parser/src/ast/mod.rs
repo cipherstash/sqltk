@@ -522,7 +522,7 @@ pub enum JsonPathElem {
     /// e.g. `obj['foo']`.
     ///
     /// See <https://docs.snowflake.com/en/user-guide/querying-semistructured#bracket-notation>.
-    Bracket { key: Expr },
+    Bracket { key: Box<Expr> },
 }
 
 /// A JSON path.
@@ -1112,8 +1112,8 @@ pub enum Subscript {
     /// ```
     Slice {
         lower_bound: Option<Expr>,
-        upper_bound: Option<Expr>,
-        stride: Option<Expr>,
+        upper_bound: Box<Option<Expr>>,
+        stride: Box<Option<Expr>>,
     },
 }
 
@@ -1130,10 +1130,10 @@ impl fmt::Display for Subscript {
                     write!(f, "{lower}")?;
                 }
                 write!(f, ":")?;
-                if let Some(upper) = upper_bound {
+                if let Some(upper) = upper_bound.as_ref() {
                     write!(f, "{upper}")?;
                 }
-                if let Some(stride) = stride {
+                if let Some(stride) = stride.as_ref() {
                     write!(f, ":")?;
                     write!(f, "{stride}")?;
                 }
@@ -1150,9 +1150,9 @@ impl fmt::Display for Subscript {
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub enum AccessExpr {
     /// Accesses a field using dot notation, e.g. `foo.bar.baz`.
-    Dot(Expr),
+    Dot(Box<Expr>),
     /// Accesses a field or array element using bracket notation, e.g. `foo['bar']`.
-    Subscript(Subscript),
+    Subscript(Box<Subscript>),
 }
 
 impl fmt::Display for AccessExpr {
@@ -2101,7 +2101,7 @@ impl fmt::Display for CommentObject {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub enum Password {
-    Password(Expr),
+    Password(Box<Expr>),
     NullPassword,
 }
 
@@ -2662,10 +2662,9 @@ impl fmt::Display for Declare {
 }
 
 /// Sql options of a `CREATE TABLE` statement.
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[derive(Debug, Default, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
-#[derive(Default)]
 pub enum CreateTableOptions {
     #[default]
     None,
@@ -2822,7 +2821,7 @@ pub enum Set {
     /// Note: this is a PostgreSQL-specific statements
     /// `SET TIME ZONE <value>` is an alias for `SET timezone TO <value>` in PostgreSQL
     /// However, we allow it for all dialects.
-    SetTimeZone { local: bool, value: Expr },
+    SetTimeZone { local: bool, value: Box<Expr> },
     /// ```sql
     /// SET NAMES 'charset_name' [COLLATE 'collation_name']
     /// ```
@@ -6072,7 +6071,7 @@ pub enum MinMaxValue {
     // NO MINVALUE/NO MAXVALUE
     None,
     // MINVALUE <expr> / MAXVALUE <expr>
-    Some(Expr),
+    Some(Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
@@ -6083,7 +6082,7 @@ pub enum OnInsert {
     /// ON DUPLICATE KEY UPDATE (MySQL when the key already exists, then execute an update instead)
     DuplicateKeyUpdate(Vec<Assignment>),
     /// ON CONFLICT is a PostgreSQL and Sqlite extension
-    OnConflict(OnConflict),
+    OnConflict(Box<OnConflict>),
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
@@ -6113,7 +6112,7 @@ pub enum ConflictTarget {
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub enum OnConflictAction {
     DoNothing,
-    DoUpdate(DoUpdate),
+    DoUpdate(Box<DoUpdate>),
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
@@ -6851,7 +6850,7 @@ impl fmt::Display for AssignmentTarget {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub enum FunctionArgExpr {
-    Expr(Expr),
+    Expr(Box<Expr>),
     /// Qualified wildcard, e.g. `alias.*` or `schema.table.*`.
     QualifiedWildcard(ObjectName),
     /// An unqualified `*`
@@ -6863,7 +6862,7 @@ impl From<Expr> for FunctionArgExpr {
         match wildcard_expr {
             Expr::QualifiedWildcard(prefix, _) => Self::QualifiedWildcard(prefix),
             Expr::Wildcard(_) => Self::Wildcard,
-            expr => Self::Expr(expr),
+            expr => Self::Expr(Box::new(expr)),
         }
     }
 }
@@ -6923,8 +6922,8 @@ pub enum FunctionArg {
     ///
     /// Enabled when `Dialect::supports_named_fn_args_with_expr_name` returns 'true'
     ExprNamed {
-        name: Expr,
-        arg: FunctionArgExpr,
+        name: Box<Expr>,
+        arg: Box<FunctionArgExpr>,
         operator: FunctionArgOperator,
     },
     Unnamed(FunctionArgExpr),
@@ -7594,7 +7593,7 @@ pub enum SqlOption {
     /// Any option that consists of a key value pair where the value is an expression. e.g.
     ///
     ///   WITH(DISTRIBUTION = ROUND_ROBIN)
-    KeyValue { key: Ident, value: Expr },
+    KeyValue { key: Ident, value: Box<Expr> },
     /// One or more table partitions and represents which partition the boundary values belong to,
     /// e.g.
     ///
@@ -7824,7 +7823,7 @@ impl fmt::Display for TransactionModifier {
 pub enum ShowStatementFilter {
     Like(String),
     ILike(String),
-    Where(Expr),
+    Where(Box<Expr>),
     NoKeyword(String),
 }
 
@@ -8716,7 +8715,7 @@ impl fmt::Display for MacroArg {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub enum MacroDefinition {
-    Expr(Expr),
+    Expr(Box<Expr>),
     Table(Box<Query>),
 }
 
@@ -9452,7 +9451,7 @@ pub enum TableObject {
     /// INSERT INTO TABLE FUNCTION remote('localhost', default.simple_table)
     /// ```
     /// [Clickhouse](https://clickhouse.com/docs/en/sql-reference/table-functions)
-    TableFunction(Function),
+    TableFunction(Box<Function>),
 }
 
 impl fmt::Display for TableObject {

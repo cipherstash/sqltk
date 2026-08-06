@@ -6,7 +6,32 @@ use proc_macro2::TokenStream;
 
 use quote::{quote, ToTokens, TokenStreamExt};
 
-use std::{collections::HashSet, fs::File, io::Write, path::PathBuf};
+use std::{
+    collections::HashSet,
+    fs::File,
+    io::Write,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
+
+fn rustfmt(source: &str) -> Option<String> {
+    let mut child = Command::new("rustfmt")
+        .args(["--edition", "2021", "--emit", "stdout"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .ok()?;
+
+    child.stdin.as_mut()?.write_all(source.as_bytes()).ok()?;
+
+    let output = child.wait_with_output().ok()?;
+    if output.status.success() {
+        String::from_utf8(output.stdout).ok()
+    } else {
+        None
+    }
+}
 
 pub struct Codegen {
     meta: SqlParserMetaQuery,
@@ -34,7 +59,7 @@ impl Codegen {
         let transformable_impls_for_main_nodes = main_nodes.iter().map(|(type_path, type_def)| {
             TransformableImpl::new(
                 type_path.clone(),
-                AstNode::SqlParserTypeDef(type_def.clone()),
+                AstNode::SqlParserTypeDef(Box::new(type_def.clone())),
             )
         });
 
@@ -51,18 +76,20 @@ impl Codegen {
         });
 
         let mut file = File::create(dest_file)
-            .unwrap_or_else(|_| panic!("Could not open {}", &dest_file.display()));
+            .unwrap_or_else(|_| panic!("Could not open {}", dest_file.display()));
 
         let parsed = syn::parse_file(&generated_code.to_string());
         let formatted = parsed.map(|parsed| prettyplease::unparse(&parsed));
 
         match formatted {
-            Ok(formatted) => file
-                .write_all(formatted.as_bytes())
-                .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display())),
+            Ok(formatted) => {
+                let canonical = rustfmt(&formatted).unwrap_or(formatted);
+                file.write_all(canonical.as_bytes())
+                    .unwrap_or_else(|_| panic!("Could not write to {}", dest_file.display()))
+            }
             Err(_) => file
                 .write_all(generated_code.to_string().as_bytes())
-                .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display())),
+                .unwrap_or_else(|_| panic!("Could not write to {}", dest_file.display())),
         }
     }
 
@@ -74,9 +101,8 @@ impl Codegen {
         let reachability = Reachability::derive(&self.meta);
 
         if let Some(reachability_debug_file) = reachability_debug_file {
-            let mut file = File::create(reachability_debug_file).unwrap_or_else(|_| {
-                panic!("Could not open {}", &reachability_debug_file.display())
-            });
+            let mut file = File::create(reachability_debug_file)
+                .unwrap_or_else(|_| panic!("Could not open {}", reachability_debug_file.display()));
 
             for (ty, source_node_reachable) in &reachability {
                 let _ = file.write(
@@ -98,7 +124,7 @@ impl Codegen {
         let visitable_impls_for_main_nodes = main_nodes.into_iter().map(|(type_path, type_def)| {
             VisitableImpl::new(
                 type_path,
-                AstNode::SqlParserTypeDef(type_def),
+                AstNode::SqlParserTypeDef(Box::new(type_def)),
                 reachability.clone(),
                 terminal_nodes.clone(),
             )
@@ -122,14 +148,15 @@ impl Codegen {
         });
 
         let mut file = File::create(dest_file)
-            .unwrap_or_else(|_| panic!("Could not open {}", &dest_file.display()));
+            .unwrap_or_else(|_| panic!("Could not open {}", dest_file.display()));
 
         let formatted = prettyplease::unparse(
             &syn::parse_file(&generated_code.to_string())
                 .expect("BUG! Generated Rust code could not be parsed"),
         );
 
-        file.write_all(formatted.as_bytes())
-            .unwrap_or_else(|_| panic!("Could not write to {}", &dest_file.display()));
+        let canonical = rustfmt(&formatted).unwrap_or(formatted);
+        file.write_all(canonical.as_bytes())
+            .unwrap_or_else(|_| panic!("Could not write to {}", dest_file.display()));
     }
 }

@@ -495,15 +495,15 @@ fn parse_create_table_with_defaults() {
                 vec![
                     SqlOption::KeyValue {
                         key: "fillfactor".into(),
-                        value: Expr::value(number("20"))
+                        value: Box::new(Expr::value(number("20")))
                     },
                     SqlOption::KeyValue {
                         key: "user_catalog_table".into(),
-                        value: Expr::Value((Value::Boolean(true)).with_empty_span())
+                        value: Box::new(Expr::Value((Value::Boolean(true)).with_empty_span()))
                     },
                     SqlOption::KeyValue {
                         key: "autovacuum_vacuum_threshold".into(),
-                        value: Expr::value(number("100"))
+                        value: Box::new(Expr::value(number("100")))
                     },
                 ]
             );
@@ -1802,16 +1802,19 @@ fn parse_pg_on_conflict() {
     );
     match stmt {
         Statement::Insert(Insert {
-            on:
-                Some(OnInsert::OnConflict(OnConflict {
-                    conflict_target: Some(ConflictTarget::Columns(cols)),
-                    action,
-                })),
+            on: Some(OnInsert::OnConflict(boxed)),
             ..
         }) => {
+            let OnConflict {
+                conflict_target: Some(ConflictTarget::Columns(cols)),
+                action,
+            } = *boxed
+            else {
+                unreachable!()
+            };
             assert_eq!(vec![Ident::from("did")], cols);
             assert_eq!(
-                OnConflictAction::DoUpdate(DoUpdate {
+                OnConflictAction::DoUpdate(Box::new(DoUpdate {
                     assignments: vec![Assignment {
                         target: AssignmentTarget::ColumnName(ObjectName::from(
                             vec!["dname".into()]
@@ -1819,7 +1822,7 @@ fn parse_pg_on_conflict() {
                         value: Expr::CompoundIdentifier(vec!["EXCLUDED".into(), "dname".into()])
                     },],
                     selection: None
-                }),
+                })),
                 action
             );
         }
@@ -1834,16 +1837,19 @@ fn parse_pg_on_conflict() {
     );
     match stmt {
         Statement::Insert(Insert {
-            on:
-                Some(OnInsert::OnConflict(OnConflict {
-                    conflict_target: Some(ConflictTarget::Columns(cols)),
-                    action,
-                })),
+            on: Some(OnInsert::OnConflict(boxed)),
             ..
         }) => {
+            let OnConflict {
+                conflict_target: Some(ConflictTarget::Columns(cols)),
+                action,
+            } = *boxed
+            else {
+                unreachable!()
+            };
             assert_eq!(vec![Ident::from("did"), Ident::from("area"),], cols);
             assert_eq!(
-                OnConflictAction::DoUpdate(DoUpdate {
+                OnConflictAction::DoUpdate(Box::new(DoUpdate {
                     assignments: vec![
                         Assignment {
                             target: AssignmentTarget::ColumnName(ObjectName::from(vec![
@@ -1862,7 +1868,7 @@ fn parse_pg_on_conflict() {
                         },
                     ],
                     selection: None
-                }),
+                })),
                 action
             );
         }
@@ -1876,13 +1882,16 @@ fn parse_pg_on_conflict() {
     );
     match stmt {
         Statement::Insert(Insert {
-            on:
-                Some(OnInsert::OnConflict(OnConflict {
-                    conflict_target: None,
-                    action,
-                })),
+            on: Some(OnInsert::OnConflict(boxed)),
             ..
         }) => {
+            let OnConflict {
+                conflict_target: None,
+                action,
+            } = *boxed
+            else {
+                unreachable!()
+            };
             assert_eq!(OnConflictAction::DoNothing, action);
         }
         _ => unreachable!(),
@@ -1896,16 +1905,19 @@ fn parse_pg_on_conflict() {
     );
     match stmt {
         Statement::Insert(Insert {
-            on:
-                Some(OnInsert::OnConflict(OnConflict {
-                    conflict_target: Some(ConflictTarget::Columns(cols)),
-                    action,
-                })),
+            on: Some(OnInsert::OnConflict(boxed)),
             ..
         }) => {
+            let OnConflict {
+                conflict_target: Some(ConflictTarget::Columns(cols)),
+                action,
+            } = *boxed
+            else {
+                unreachable!()
+            };
             assert_eq!(vec![Ident::from("did")], cols);
             assert_eq!(
-                OnConflictAction::DoUpdate(DoUpdate {
+                OnConflictAction::DoUpdate(Box::new(DoUpdate {
                     assignments: vec![Assignment {
                         target: AssignmentTarget::ColumnName(ObjectName::from(
                             vec!["dname".into()]
@@ -1925,7 +1937,7 @@ fn parse_pg_on_conflict() {
                             (Value::Placeholder("$2".to_string())).with_empty_span()
                         ))
                     })
-                }),
+                })),
                 action
             );
         }
@@ -1940,19 +1952,22 @@ fn parse_pg_on_conflict() {
     );
     match stmt {
         Statement::Insert(Insert {
-            on:
-                Some(OnInsert::OnConflict(OnConflict {
-                    conflict_target: Some(ConflictTarget::OnConstraint(cname)),
-                    action,
-                })),
+            on: Some(OnInsert::OnConflict(boxed)),
             ..
         }) => {
+            let OnConflict {
+                conflict_target: Some(ConflictTarget::OnConstraint(cname)),
+                action,
+            } = *boxed
+            else {
+                unreachable!()
+            };
             assert_eq!(
                 ObjectName::from(vec![Ident::from("distributors_did_pkey")]),
                 cname
             );
             assert_eq!(
-                OnConflictAction::DoUpdate(DoUpdate {
+                OnConflictAction::DoUpdate(Box::new(DoUpdate {
                     assignments: vec![Assignment {
                         target: AssignmentTarget::ColumnName(ObjectName::from(
                             vec!["dname".into()]
@@ -1972,7 +1987,7 @@ fn parse_pg_on_conflict() {
                             (Value::Placeholder("$2".to_string())).with_empty_span()
                         ))
                     })
-                }),
+                })),
                 action
             );
         }
@@ -2146,7 +2161,7 @@ fn parse_pg_unary_ops() {
     ];
 
     for (str_op, op) in pg_unary_ops {
-        let select = pg().verified_only_select(&format!("SELECT {}a", &str_op));
+        let select = pg().verified_only_select(&format!("SELECT {}a", str_op));
         assert_eq!(
             SelectItem::UnnamedExpr(Expr::UnaryOp {
                 op: *op,
@@ -2162,7 +2177,7 @@ fn parse_pg_postfix_factorial() {
     let postfix_factorial = &[("!", UnaryOperator::PGPostfixFactorial)];
 
     for (str_op, op) in postfix_factorial {
-        let select = pg().verified_only_select(&format!("SELECT a{}", &str_op));
+        let select = pg().verified_only_select(&format!("SELECT a{}", str_op));
         assert_eq!(
             SelectItem::UnnamedExpr(Expr::UnaryOp {
                 op: *op,
@@ -2183,7 +2198,7 @@ fn parse_pg_regex_match_ops() {
     ];
 
     for (str_op, op) in pg_regex_match_ops {
-        let select = pg().verified_only_select(&format!("SELECT 'abc' {} '^a'", &str_op));
+        let select = pg().verified_only_select(&format!("SELECT 'abc' {} '^a'", str_op));
         assert_eq!(
             SelectItem::UnnamedExpr(Expr::BinaryOp {
                 left: Box::new(Expr::Value(
@@ -2209,7 +2224,7 @@ fn parse_pg_like_match_ops() {
     ];
 
     for (str_op, op) in pg_like_match_ops {
-        let select = pg().verified_only_select(&format!("SELECT 'abc' {} 'a_c%'", &str_op));
+        let select = pg().verified_only_select(&format!("SELECT 'abc' {} 'a_c%'", str_op));
         assert_eq!(
             SelectItem::UnnamedExpr(Expr::BinaryOp {
                 left: Box::new(Expr::Value(
@@ -2236,9 +2251,9 @@ fn parse_array_index_expr() {
     assert_eq!(
         &Expr::CompoundFieldAccess {
             root: Box::new(Expr::Identifier(Ident::new("foo"))),
-            access_chain: vec![AccessExpr::Subscript(Subscript::Index {
+            access_chain: vec![AccessExpr::Subscript(Box::new(Subscript::Index {
                 index: num[0].clone()
-            })],
+            }))],
         },
         expr_from_projection(only(&select.projection)),
     );
@@ -2249,12 +2264,12 @@ fn parse_array_index_expr() {
         &Expr::CompoundFieldAccess {
             root: Box::new(Expr::Identifier(Ident::new("foo"))),
             access_chain: vec![
-                AccessExpr::Subscript(Subscript::Index {
+                AccessExpr::Subscript(Box::new(Subscript::Index {
                     index: num[0].clone()
-                }),
-                AccessExpr::Subscript(Subscript::Index {
+                })),
+                AccessExpr::Subscript(Box::new(Subscript::Index {
                     index: num[0].clone()
-                })
+                }))
             ],
         },
         expr_from_projection(only(&select.projection)),
@@ -2266,23 +2281,23 @@ fn parse_array_index_expr() {
         &Expr::CompoundFieldAccess {
             root: Box::new(Expr::Identifier(Ident::new("bar"))),
             access_chain: vec![
-                AccessExpr::Subscript(Subscript::Index {
+                AccessExpr::Subscript(Box::new(Subscript::Index {
                     index: num[0].clone()
-                }),
-                AccessExpr::Subscript(Subscript::Index {
+                })),
+                AccessExpr::Subscript(Box::new(Subscript::Index {
                     index: Expr::Identifier(Ident {
                         value: "baz".to_string(),
                         quote_style: Some('"'),
                         span: Span::empty(),
                     })
-                }),
-                AccessExpr::Subscript(Subscript::Index {
+                })),
+                AccessExpr::Subscript(Box::new(Subscript::Index {
                     index: Expr::Identifier(Ident {
                         value: "fooz".to_string(),
                         quote_style: Some('"'),
                         span: Span::empty(),
                     })
-                }),
+                })),
             ],
         },
         expr_from_projection(only(&select.projection)),
@@ -2311,12 +2326,12 @@ fn parse_array_index_expr() {
                 format: None,
             }))),
             access_chain: vec![
-                AccessExpr::Subscript(Subscript::Index {
+                AccessExpr::Subscript(Box::new(Subscript::Index {
                     index: num[1].clone()
-                }),
-                AccessExpr::Subscript(Subscript::Index {
+                })),
+                AccessExpr::Subscript(Box::new(Subscript::Index {
                     index: num[2].clone()
-                }),
+                })),
             ],
         },
         expr_from_projection(only(&select.projection)),
@@ -2352,16 +2367,16 @@ fn parse_array_subscript() {
             "(ARRAY[1, 2, 3, 4, 5, 6])[2:5]",
             Subscript::Slice {
                 lower_bound: Some(Expr::value(number("2"))),
-                upper_bound: Some(Expr::value(number("5"))),
-                stride: None,
+                upper_bound: Box::new(Some(Expr::value(number("5")))),
+                stride: Box::new(None),
             },
         ),
         (
             "(ARRAY[1, 2, 3, 4, 5, 6])[2:5:3]",
             Subscript::Slice {
                 lower_bound: Some(Expr::value(number("2"))),
-                upper_bound: Some(Expr::value(number("5"))),
-                stride: Some(Expr::value(number("3"))),
+                upper_bound: Box::new(Some(Expr::value(number("5")))),
+                stride: Box::new(Some(Expr::value(number("3")))),
             },
         ),
         (
@@ -2372,36 +2387,36 @@ fn parse_array_subscript() {
                     op: BinaryOperator::Minus,
                     right: Box::new(Expr::value(number("3"))),
                 }),
-                upper_bound: Some(Expr::BinaryOp {
+                upper_bound: Box::new(Some(Expr::BinaryOp {
                     left: Box::new(call("array_length", [Expr::Identifier(Ident::new("arr"))])),
                     op: BinaryOperator::Minus,
                     right: Box::new(Expr::value(number("1"))),
-                }),
-                stride: None,
+                })),
+                stride: Box::new(None),
             },
         ),
         (
             "(ARRAY[1, 2, 3, 4, 5, 6])[:5]",
             Subscript::Slice {
                 lower_bound: None,
-                upper_bound: Some(Expr::value(number("5"))),
-                stride: None,
+                upper_bound: Box::new(Some(Expr::value(number("5")))),
+                stride: Box::new(None),
             },
         ),
         (
             "(ARRAY[1, 2, 3, 4, 5, 6])[2:]",
             Subscript::Slice {
                 lower_bound: Some(Expr::value(number("2"))),
-                upper_bound: None,
-                stride: None,
+                upper_bound: Box::new(None),
+                stride: Box::new(None),
             },
         ),
         (
             "(ARRAY[1, 2, 3, 4, 5, 6])[:]",
             Subscript::Slice {
                 lower_bound: None,
-                upper_bound: None,
-                stride: None,
+                upper_bound: Box::new(None),
+                stride: Box::new(None),
             },
         ),
     ];
@@ -2413,7 +2428,7 @@ fn parse_array_subscript() {
         let Some(AccessExpr::Subscript(subscript)) = access_chain.last() else {
             panic!("expected subscript");
         };
-        assert_eq!(expect, *subscript);
+        assert_eq!(expect, **subscript);
     }
 
     pg_and_generic().verified_expr("schedule[:2][2:]");
@@ -2433,14 +2448,14 @@ fn parse_array_multi_subscript() {
                 ]
             )),
             access_chain: vec![
-                AccessExpr::Subscript(Subscript::Slice {
+                AccessExpr::Subscript(Box::new(Subscript::Slice {
                     lower_bound: Some(Expr::value(number("1"))),
-                    upper_bound: Some(Expr::value(number("2"))),
-                    stride: None,
-                }),
-                AccessExpr::Subscript(Subscript::Index {
+                    upper_bound: Box::new(Some(Expr::value(number("2")))),
+                    stride: Box::new(None),
+                })),
+                AccessExpr::Subscript(Box::new(Subscript::Index {
                     index: Expr::value(number("2")),
-                }),
+                })),
             ],
         },
         expr,
@@ -2558,19 +2573,19 @@ fn parse_create_indices_with_operator_classes() {
                         args: FunctionArguments::List(FunctionArgumentList {
                             duplicate_treatment: None,
                             args: vec![
-                                FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Identifier(
-                                    Ident {
+                                FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
+                                    Expr::Identifier(Ident {
                                         value: "first_name".to_owned(),
                                         quote_style: None,
                                         span: Span::empty(),
-                                    },
+                                    }),
                                 ))),
-                                FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Identifier(
-                                    Ident {
+                                FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
+                                    Expr::Identifier(Ident {
                                         value: "last_name".to_owned(),
                                         quote_style: None,
                                         span: Span::empty(),
-                                    },
+                                    }),
                                 ))),
                             ],
                             clauses: vec![],
@@ -3317,7 +3332,9 @@ fn test_composite_value() {
     );
     assert_eq!(
         access_chain.as_slice(),
-        &[AccessExpr::Dot(Expr::Identifier(Ident::new("name")))]
+        &[AccessExpr::Dot(Box::new(Expr::Identifier(Ident::new(
+            "name"
+        ))))]
     );
 
     assert_eq!(
@@ -3329,7 +3346,9 @@ fn test_composite_value() {
                     Ident::new("item")
                 ])))
                 .into(),
-                access_chain: vec![AccessExpr::Dot(Expr::Identifier(Ident::new("price")))]
+                access_chain: vec![AccessExpr::Dot(Box::new(Expr::Identifier(Ident::new(
+                    "price"
+                ))))]
             }),
             op: BinaryOperator::Gt,
             right: Box::new(Expr::value(number("9")))
@@ -3349,8 +3368,8 @@ fn test_composite_value() {
                 parameters: FunctionArguments::None,
                 args: FunctionArguments::List(FunctionArgumentList {
                     duplicate_treatment: None,
-                    args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Array(
-                        Array {
+                    args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
+                        Expr::Array(Array {
                             elem: vec![
                                 Expr::Value(
                                     (Value::SingleQuotedString("i".to_string())).with_empty_span()
@@ -3360,7 +3379,7 @@ fn test_composite_value() {
                                 ),
                             ],
                             named: true
-                        }
+                        })
                     )))],
                     clauses: vec![],
                 }),
@@ -3369,7 +3388,7 @@ fn test_composite_value() {
                 over: None,
                 within_group: vec![],
             })))),
-            access_chain: vec![AccessExpr::Dot(Expr::Identifier(Ident::new("n")))],
+            access_chain: vec![AccessExpr::Dot(Box::new(Expr::Identifier(Ident::new("n"))))],
         },
         expr_from_projection(&select.projection[0])
     );
@@ -3745,9 +3764,9 @@ fn parse_create_role() {
             assert_eq!(*bypassrls, Some(true));
             assert_eq!(
                 *password,
-                Some(Password::Password(Expr::Value(
+                Some(Password::Password(Box::new(Expr::Value(
                     (Value::SingleQuotedString("abcdef".into())).with_empty_span()
-                )))
+                ))))
             );
             assert_eq!(*superuser, Some(true));
             assert_eq!(*create_db, Some(false));
@@ -3842,9 +3861,9 @@ fn parse_alter_role() {
                     RoleOption::BypassRLS(true),
                     RoleOption::ConnectionLimit(Expr::value(number("100"))),
                     RoleOption::Password({
-                        Password::Password(Expr::Value(
+                        Password::Password(Box::new(Expr::Value(
                             (Value::SingleQuotedString("abcdef".into())).with_empty_span(),
-                        ))
+                        )))
                     }),
                     RoleOption::ValidUntil(Expr::Value(
                         (Value::SingleQuotedString("2025-01-01".into(),)).with_empty_span()
@@ -3893,7 +3912,7 @@ fn parse_alter_role() {
                     quote_style: None,
                     span: Span::empty(),
                 }]),
-                config_value: SetConfigValue::FromCurrent,
+                config_value: Box::new(SetConfigValue::FromCurrent),
                 in_database: None
             },
         }
@@ -3914,9 +3933,9 @@ fn parse_alter_role() {
                     quote_style: None,
                     span: Span::empty(),
                 }]),
-                config_value: SetConfigValue::Value(Expr::Value(
+                config_value: Box::new(SetConfigValue::Value(Box::new(Expr::Value(
                     (number("100000")).with_empty_span()
-                )),
+                )))),
                 in_database: Some(ObjectName::from(vec![Ident {
                     value: "database_name".into(),
                     quote_style: None,
@@ -3941,9 +3960,9 @@ fn parse_alter_role() {
                     quote_style: None,
                     span: Span::empty(),
                 }]),
-                config_value: SetConfigValue::Value(Expr::Value(
+                config_value: Box::new(SetConfigValue::Value(Box::new(Expr::Value(
                     (number("100000")).with_empty_span()
-                )),
+                )))),
                 in_database: Some(ObjectName::from(vec![Ident {
                     value: "database_name".into(),
                     quote_style: None,
@@ -3968,7 +3987,7 @@ fn parse_alter_role() {
                     quote_style: None,
                     span: Span::empty(),
                 }]),
-                config_value: SetConfigValue::Default,
+                config_value: Box::new(SetConfigValue::Default),
                 in_database: Some(ObjectName::from(vec![Ident {
                     value: "database_name".into(),
                     quote_style: None,
@@ -4749,9 +4768,9 @@ fn parse_create_table_with_partition_by() {
                         FunctionArguments::List(FunctionArgumentList {
                             duplicate_treatment: None,
                             clauses: vec![],
-                            args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+                            args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
                                 Expr::Identifier(Ident::new("a"))
-                            ))],
+                            )))],
                         }),
                         f.args
                     );
@@ -4783,11 +4802,11 @@ fn parse_join_constraint_unnest_alias() {
                 with_ordinality: false,
             },
             global: false,
-            join_operator: JoinOperator::Join(JoinConstraint::On(Expr::BinaryOp {
+            join_operator: JoinOperator::Join(JoinConstraint::On(Box::new(Expr::BinaryOp {
                 left: Box::new(Expr::Identifier("c1".into())),
                 op: BinaryOperator::Eq,
                 right: Box::new(Expr::Identifier("c2".into())),
-            })),
+            }))),
         }]
     );
 }
@@ -5091,13 +5110,13 @@ fn parse_create_table_with_options() {
                 vec![
                     SqlOption::KeyValue {
                         key: "foo".into(),
-                        value: Expr::Value(
+                        value: Box::new(Expr::Value(
                             (Value::SingleQuotedString("bar".into())).with_empty_span()
-                        ),
+                        )),
                     },
                     SqlOption::KeyValue {
                         key: "a".into(),
-                        value: Expr::value(number("123")),
+                        value: Box::new(Expr::value(number("123"))),
                     },
                 ],
                 with_options

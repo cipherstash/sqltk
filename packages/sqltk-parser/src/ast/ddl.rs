@@ -321,8 +321,8 @@ pub enum AlterPolicyOperation {
     },
     Apply {
         to: Option<Vec<Owner>>,
-        using: Option<Expr>,
-        with_check: Option<Expr>,
+        using: Box<Option<Expr>>,
+        with_check: Box<Option<Expr>>,
     },
 }
 
@@ -340,10 +340,10 @@ impl fmt::Display for AlterPolicyOperation {
                 if let Some(to) = to {
                     write!(f, " TO {}", display_comma_separated(to))?;
                 }
-                if let Some(using) = using {
+                if let Some(using) = using.as_ref() {
                     write!(f, " USING ({using})")?;
                 }
-                if let Some(with_check) = with_check {
+                if let Some(with_check) = with_check.as_ref() {
                     write!(f, " WITH CHECK ({with_check})")?;
                 }
                 Ok(())
@@ -1706,7 +1706,7 @@ pub enum ColumnOption {
     /// ```
     /// [MS SQL Server]: https://learn.microsoft.com/en-us/sql/t-sql/statements/create-table-transact-sql-identity-property
     /// [Snowflake]: https://docs.snowflake.com/en/sql-reference/sql/create-table
-    Identity(IdentityPropertyKind),
+    Identity(Box<IdentityPropertyKind>),
     /// SQLite specific: ON CONFLICT option on column definition
     /// <https://www.sqlite.org/lang_conflict.html>
     OnConflict(Keyword),
@@ -2114,7 +2114,7 @@ impl fmt::Display for Partition {
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub enum Deduplicate {
     All,
-    ByExpression(Expr),
+    ByExpression(Box<Expr>),
 }
 
 impl fmt::Display for Deduplicate {

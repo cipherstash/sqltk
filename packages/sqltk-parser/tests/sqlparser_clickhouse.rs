@@ -50,7 +50,7 @@ fn parse_map_access_expr() {
                     quote_style: None,
                     span: Span::empty(),
                 })),
-                access_chain: vec![AccessExpr::Subscript(Subscript::Index {
+                access_chain: vec![AccessExpr::Subscript(Box::new(Subscript::Index {
                     index: call(
                         "indexOf",
                         [
@@ -58,7 +58,7 @@ fn parse_map_access_expr() {
                             Expr::value(Value::SingleQuotedString("endpoint".to_string()))
                         ]
                     ),
-                })],
+                }))],
             })],
             into: None,
             from: vec![TableWithJoins {
@@ -77,7 +77,7 @@ fn parse_map_access_expr() {
                 right: Box::new(BinaryOp {
                     left: Box::new(Expr::CompoundFieldAccess {
                         root: Box::new(Identifier(Ident::new("string_value"))),
-                        access_chain: vec![AccessExpr::Subscript(Subscript::Index {
+                        access_chain: vec![AccessExpr::Subscript(Box::new(Subscript::Index {
                             index: call(
                                 "indexOf",
                                 [
@@ -85,7 +85,7 @@ fn parse_map_access_expr() {
                                     Expr::value(Value::SingleQuotedString("app".to_string()))
                                 ]
                             ),
-                        })],
+                        }))],
                     }),
                     op: BinaryOperator::NotEq,
                     right: Box::new(Expr::value(Value::SingleQuotedString("foo".to_string()))),
@@ -499,7 +499,9 @@ fn parse_optimize_table() {
             assert!(include_final);
             assert_eq!(
                 deduplicate,
-                Some(Deduplicate::ByExpression(Identifier(Ident::new("id"))))
+                Some(Deduplicate::ByExpression(Box::new(Identifier(Ident::new(
+                    "id"
+                )))))
             );
         }
         _ => unreachable!(),
@@ -764,8 +766,8 @@ fn parse_create_table_with_primary_key() {
                 assert_eq!(
                     actual.args,
                     FunctionArguments::List(FunctionArgumentList {
-                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Identifier(
-                            Ident::new(arg)
+                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
+                            Identifier(Ident::new(arg))
                         )),)],
                         duplicate_treatment: None,
                         clauses: vec![],
@@ -872,7 +874,7 @@ fn parse_create_table_with_variant_default_expressions() {
                                 uses_odbc_syntax: false,
                                 args: FunctionArguments::List(FunctionArgumentList {
                                     args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
-                                        Identifier(Ident::new("c"))
+                                        Box::new(Identifier(Ident::new("c")))
                                     ))],
                                     duplicate_treatment: None,
                                     clauses: vec![],
@@ -1015,11 +1017,15 @@ fn parse_select_parametric_function() {
                     assert_eq!(args.args.len(), 2);
                     assert_eq!(
                         args.args[0],
-                        FunctionArg::Unnamed(FunctionArgExpr::Expr(Identifier(Ident::from("x"))))
+                        FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Identifier(
+                            Ident::from("x")
+                        ))))
                     );
                     assert_eq!(
                         args.args[1],
-                        FunctionArg::Unnamed(FunctionArgExpr::Expr(Identifier(Ident::from("y"))))
+                        FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Identifier(
+                            Ident::from("y")
+                        ))))
                     );
 
                     let parameters = match f.parameters {
@@ -1029,15 +1035,15 @@ fn parse_select_parametric_function() {
                     assert_eq!(parameters.args.len(), 2);
                     assert_eq!(
                         parameters.args[0],
-                        FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                        FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                             (Value::Number("0.5".parse().unwrap(), false)).with_empty_span()
-                        )))
+                        ))))
                     );
                     assert_eq!(
                         parameters.args[1],
-                        FunctionArg::Unnamed(FunctionArgExpr::Expr(Expr::Value(
+                        FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(Expr::Value(
                             (Value::Number("0.6".parse().unwrap(), false)).with_empty_span()
-                        )))
+                        ))))
                     );
                 }
                 _ => unreachable!(),
@@ -1539,9 +1545,9 @@ fn parse_select_table_function_settings() {
     check_settings(
         "SELECT * FROM table_function(arg, SETTINGS s0 = 3, s1 = 's')",
         &TableFunctionArgs {
-            args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+            args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
                 Expr::Identifier("arg".into()),
-            ))],
+            )))],
 
             settings: Some(vec![
                 Setting {
@@ -1558,9 +1564,9 @@ fn parse_select_table_function_settings() {
     check_settings(
         r#"SELECT * FROM table_function(arg)"#,
         &TableFunctionArgs {
-            args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
+            args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(Box::new(
                 Expr::Identifier("arg".into()),
-            ))],
+            )))],
             settings: None,
         },
     );

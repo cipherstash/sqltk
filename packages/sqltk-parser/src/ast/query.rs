@@ -619,7 +619,7 @@ pub enum SelectItemQualifiedWildcardKind {
     ObjectName(ObjectName),
     /// Select star on an arbitrary expression.
     /// e.g. `STRUCT<STRING>('foo').*`
-    Expr(Expr),
+    Expr(Box<Expr>),
 }
 
 /// One item of the comma-separated list following `SELECT`
@@ -633,7 +633,10 @@ pub enum SelectItem {
     ExprWithAlias { expr: Expr, alias: Ident },
     /// An expression, followed by a wildcard expansion.
     /// e.g. `alias.*`, `STRUCT<STRING>('foo').*`
-    QualifiedWildcard(SelectItemQualifiedWildcardKind, WildcardAdditionalOptions),
+    QualifiedWildcard(
+        SelectItemQualifiedWildcardKind,
+        Box<WildcardAdditionalOptions>,
+    ),
     /// An unqualified `*`
     Wildcard(WildcardAdditionalOptions),
 }
@@ -1334,7 +1337,6 @@ pub enum TableFactor {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
-
 pub enum TableSampleKind {
     /// Table sample located before the table alias option
     BeforeTableAlias(Box<TableSample>),
@@ -2279,8 +2281,8 @@ pub enum JoinOperator {
     ///
     /// See <https://docs.snowflake.com/en/sql-reference/constructs/asof-join>.
     AsOf {
-        match_condition: Expr,
-        constraint: JoinConstraint,
+        match_condition: Box<Expr>,
+        constraint: Box<JoinConstraint>,
     },
     /// STRAIGHT_JOIN (non-standard)
     ///
@@ -2292,7 +2294,7 @@ pub enum JoinOperator {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub enum JoinConstraint {
-    On(Expr),
+    On(Box<Expr>),
     Using(Vec<ObjectName>),
     Natural,
     None,
@@ -2559,7 +2561,10 @@ pub enum PipeOperator {
     /// Syntax: `|> LIMIT <n> [OFFSET <m>]`
     ///
     /// See more at <https://cloud.google.com/bigquery/docs/reference/standard-sql/pipe-syntax#limit_pipe_operator>
-    Limit { expr: Expr, offset: Option<Expr> },
+    Limit {
+        expr: Expr,
+        offset: Box<Option<Expr>>,
+    },
     /// Filters the results of the input table.
     ///
     /// Syntax: `|> WHERE <condition>`
@@ -2635,7 +2640,7 @@ impl fmt::Display for PipeOperator {
             }
             PipeOperator::Limit { expr, offset } => {
                 write!(f, "LIMIT {}", expr)?;
-                if let Some(offset) = offset {
+                if let Some(offset) = offset.as_ref() {
                     write!(f, " OFFSET {}", offset)?;
                 }
                 Ok(())
@@ -2700,7 +2705,7 @@ pub struct LockClause {
 
 impl fmt::Display for LockClause {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "FOR {}", &self.lock_type)?;
+        write!(f, "FOR {}", self.lock_type)?;
         if let Some(ref of) = self.of {
             write!(f, " OF {of}")?;
         }
@@ -2787,7 +2792,7 @@ pub struct Top {
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub enum TopQuantity {
     // A parenthesized expression. MSSQL only.
-    Expr(Expr),
+    Expr(Box<Expr>),
     // An unparenthesized integer constant.
     Constant(u64),
 }
@@ -2868,7 +2873,7 @@ pub enum GroupByWithModifier {
     /// e.g. GROUP BY year , month GROUPING SETS((year,month),(year),(month))
     ///
     /// [Hive]: <https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=30151323#EnhancedAggregation,Cube,GroupingandRollup-GROUPINGSETSclause>
-    GroupingSets(Expr),
+    GroupingSets(Box<Expr>),
 }
 
 impl fmt::Display for GroupByWithModifier {
@@ -3115,7 +3120,7 @@ impl fmt::Display for ForJson {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum JsonTableColumn {
     /// A named column with a JSON path
-    Named(JsonTableNamedColumn),
+    Named(Box<JsonTableNamedColumn>),
     /// The FOR ORDINALITY column, which is a special column that returns the index of the current row in a JSON array.
     ForOrdinality(Ident),
     /// A set of nested columns, which extracts data from a nested JSON array.
@@ -3304,9 +3309,9 @@ pub enum XmlTableColumnOption {
         /// The type of the column to be extracted.
         r#type: DataType,
         /// The path to the column to be extracted. If None, defaults to the column name.
-        path: Option<Expr>,
+        path: Box<Option<Expr>>,
         /// Default value if path does not match
-        default: Option<Expr>,
+        default: Box<Option<Expr>>,
         /// Whether the column is nullable (NULL=true, NOT NULL=false)
         nullable: bool,
     },
@@ -3347,10 +3352,10 @@ impl fmt::Display for XmlTableColumn {
                 nullable,
             } => {
                 write!(f, " {}", r#type)?;
-                if let Some(p) = path {
+                if let Some(p) = path.as_ref() {
                     write!(f, " PATH {}", p)?;
                 }
-                if let Some(d) = default {
+                if let Some(d) = default.as_ref() {
                     write!(f, " DEFAULT {}", d)?;
                 }
                 if !*nullable {

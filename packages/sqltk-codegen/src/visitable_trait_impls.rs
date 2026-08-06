@@ -207,7 +207,7 @@ impl VisitableImpl {
             false
         } else {
             *self.reachability.get(&normalised).unwrap_or_else(|| {
-                panic!("Could not find type {:?} in reachability data", &field.ty)
+                panic!("Could not find type {:?} in reachability data", field.ty)
             })
         }
     }

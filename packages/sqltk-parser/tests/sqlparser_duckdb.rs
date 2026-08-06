@@ -158,10 +158,10 @@ fn test_select_wildcard_with_exclude() {
         duckdb().verified_only_select("SELECT name.* EXCLUDE department_id FROM employee_table");
     let expected = SelectItem::QualifiedWildcard(
         SelectItemQualifiedWildcardKind::ObjectName(ObjectName::from(vec![Ident::new("name")])),
-        WildcardAdditionalOptions {
+        Box::new(WildcardAdditionalOptions {
             opt_exclude: Some(ExcludeSelectItem::Single(Ident::new("department_id"))),
             ..Default::default()
-        },
+        }),
     );
     assert_eq!(expected, select.projection[0]);
 
@@ -190,11 +190,11 @@ fn test_create_macro() {
         temporary: false,
         name: ObjectName::from(vec![Ident::new("schema"), Ident::new("add")]),
         args: Some(vec![MacroArg::new("a"), MacroArg::new("b")]),
-        definition: MacroDefinition::Expr(Expr::BinaryOp {
+        definition: MacroDefinition::Expr(Box::new(Expr::BinaryOp {
             left: Box::new(Expr::Identifier(Ident::new("a"))),
             op: BinaryOperator::Plus,
             right: Box::new(Expr::Identifier(Ident::new("b"))),
-        }),
+        })),
     };
     assert_eq!(expected, macro_);
 }
@@ -213,11 +213,11 @@ fn test_create_macro_default_args() {
                 default_expr: Some(Expr::value(number("5"))),
             },
         ]),
-        definition: MacroDefinition::Expr(Expr::BinaryOp {
+        definition: MacroDefinition::Expr(Box::new(Expr::BinaryOp {
             left: Box::new(Expr::Identifier(Ident::new("a"))),
             op: BinaryOperator::Plus,
             right: Box::new(Expr::Identifier(Ident::new("b"))),
-        }),
+        })),
     };
     assert_eq!(expected, macro_);
 }
@@ -625,16 +625,16 @@ fn test_duckdb_named_argument_function_with_assignment_operator() {
                 args: vec![
                     FunctionArg::Named {
                         name: Ident::new("a"),
-                        arg: FunctionArgExpr::Expr(Expr::Value(
+                        arg: FunctionArgExpr::Expr(Box::new(Expr::Value(
                             (Value::SingleQuotedString("1".to_owned())).with_empty_span()
-                        )),
+                        ))),
                         operator: FunctionArgOperator::Assignment
                     },
                     FunctionArg::Named {
                         name: Ident::new("b"),
-                        arg: FunctionArgExpr::Expr(Expr::Value(
+                        arg: FunctionArgExpr::Expr(Box::new(Expr::Value(
                             (Value::SingleQuotedString("2".to_owned())).with_empty_span()
-                        )),
+                        ))),
                         operator: FunctionArgOperator::Assignment
                     },
                 ],
@@ -669,9 +669,9 @@ fn test_array_index() {
                 ],
                 named: false
             })),
-            access_chain: vec![AccessExpr::Subscript(Subscript::Index {
+            access_chain: vec![AccessExpr::Subscript(Box::new(Subscript::Index {
                 index: Expr::value(number("3"))
-            })]
+            }))]
         },
         expr
     );

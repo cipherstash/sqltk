@@ -3767,8 +3767,8 @@ impl crate::Visitable for sqltk_parser::ast::Expr {
                         subquery,
                         negated,
                     } => {
-                        subquery.accept(visitor)?;
                         expr.accept(visitor)?;
+                        subquery.accept(visitor)?;
                         negated.accept(visitor)?;
                     }
                     sqltk_parser::ast::Expr::InUnnest {
